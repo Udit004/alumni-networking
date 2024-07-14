@@ -1,0 +1,286 @@
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: rgb(253, 216, 222);
+    
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #333;
+    color: #fff;
+    padding: 18px 20px;
+}
+
+.dropdown, .header-logo, .dropdown {
+    display: flex;
+    align-items: center;
+}
+
+.header-logo img {
+    height: 55px; /* Adjust as needed */
+}
+
+.header-logo h1 {
+    margin: 0 0 0 10px;
+    font-size: 24px;
+}
+
+.header-nav a, .header-search input, .dropdown button {
+    text-decoration: none;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.header-nav a:hover,.dropdown button:hover .dropdown-content a:hover {
+    background-color: #000000;
+    border-radius: 20px;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #5e5c5c;
+    z-index: 1;
+    flex-direction: column;
+}
+
+.dropdown:hover .dropdown-content {
+    display: flex;
+}
+
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.header-search {
+    display: flex;
+    align-items: center;
+}
+
+.header-search .search-icon {
+    color: white;
+    font-size: 22px;
+    padding-right: 10px;
+    padding-top: 21px;
+}
+
+.header-search input {
+    border: 1px solid #555;
+    background: rgba(255, 255, 255, 0.5); /* Semi-transparent background */
+    color: black;
+    border-radius: 8px;
+    outline: none;
+    padding: 9px 20px;
+    cursor: auto;
+}
+
+.header-search input::placeholder {
+    color: #ddd;
+}
+
+.advertisement img {
+    width: 100%;
+    height: auto;
+    opacity: 0.9; /* Adjust the opacity value as needed */
+}
+
+
+.advertisement {
+    position: relative;
+    text-align: center;
+}
+
+.advert-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 35px;
+    font-weight: bold;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background for readability */
+    padding: 20px;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    padding: 20px;
+    max-width: 1200px;
+    margin: auto;
+}
+
+.product-box {
+    background-color: white;
+    padding: 10px;
+    box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.product-box img {
+    width: 100%;
+    height: auto;
+}
+
+footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 40px; /* Height of your footer */
+    background-color: black;
+    color: white;
+    text-align: center;
+    padding: 0px 0;
+    z-index: 10; /* Ensures it stays on top */
+    font-size: 15px;
+}
+
+body {
+    padding-bottom: 70px; /* More than the height of the footer to ensure space */
+}
+
+
+button {
+    background-color: #4CAF50; /* Vibrant Green */
+    color: white;
+    border: none;
+    border-radius: 5px; /* Rounded corners */
+    padding: 12px 20px;
+    cursor: pointer;
+    text-transform: uppercase; /* Makes the text uppercase */
+    font-weight: bold; /* Makes the font bold */
+    transition: background-color 0.3s, transform 0.2s; /* Smooth transition for hover effects */
+    outline: none; /* Removes the outline */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for 3D effect */
+}
+
+button:hover {
+    background-color: #45a049; /* A slightly darker green */
+    transform: scale(1.05); /* Slightly increase the size */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* More pronounced shadow on hover */
+}
+
+.section-title {
+    text-align: center;
+    font-size: 40px; /* Large font size for emphasis */
+    font-weight: bold; /* Bold font for impact */
+    color: #333; /* Dark gray for a sophisticated look */
+    margin: 50px 0; /* Adequate spacing above and below */
+    text-transform: uppercase; /* Uppercase text for stylistic choice */
+    letter-spacing: 3px; /* Spacing between letters for a more distinct look */
+    background-color: #e1dcdc; /* Light background to make the text pop */
+    padding: 20px; /* Padding around the text */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    border-radius: 5px; /* Rounded corners for a modern look */
+    font-family: 'Broadway', sans-serif;
+}
+
+.gallery-link {
+    display: block;
+    text-decoration: none; /* Removes underline from links */
+}
+
+.gallery-section {
+    padding: 20px;
+    text-align: center;
+    background: url('background-image.jpg') no-repeat center center; /* Set your background image */
+    background-size: cover;
+    position: relative;
+    color: #fff; /* Ensure text color contrasts well with your background */
+}
+
+.gallery-section::before {
+    content: "";
+    position: absolute;
+    top: 0; 
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5); /* Black background with 50% opacity */
+    z-index: 1;
+}
+
+.gallery-title, .gallery-grid {
+    position: relative;
+    z-index: 2; /* Ensures text and images appear above the semi-transparent overlay */
+}
+
+.gallery-title {
+    font-size: 32px;
+    margin-bottom: 20px;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.gallery-item {
+    background-color: white;
+    border: 1px solid #ddd;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.gallery-item img {
+    width: 100%;
+    height: auto;
+}
+
+.gallery-caption {
+    padding-top: 5px;
+    font-size: 16px;
+    color: #666;
+}
+.main-content { /* Assuming all content is wrapped in this class */
+    margin-bottom: 50px; /* Adjust the value based on your design needs */
+}
+
+/* or specifically for the gallery if it's the last content block before the footer */
+.gallery-section {
+    margin-bottom: 50px; /* Adjust accordingly */
+}
+
+.image-with-text {
+    position: relative; /* Needed to position the inner elements absolutely */
+    text-align: center; /* Center the text horizontally */
+    height: 500px; /* Specify the height of the section */
+    overflow: hidden; /* Ensures no overflow of content */
+}
+
+.image-with-text img {
+    width: 100%; /* Ensure the image covers the entire container width */
+    height: 105%; /* Ensure the image covers the height of the container */
+    object-fit: cover; /* Cover the container without distorting aspect ratio */
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+input[type="text"], textarea, button {
+    width: 98%; /* Full width of form elements */
+    padding: 16px;
+    margin-top: 18px;
+    box-sizing: border-box; /* Border box for padding inclusion */
+}
+
+.feed{
+    display: flex; /* Enables Flexbox */
+    justify-content: center; /* Horizontally centers the child within the container */
+    align-items: center; /* Vertically centers the child within the container */
+}
