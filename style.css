@@ -6,25 +6,25 @@
 }
 
 h1 {
-    font-size: 50px;
-    line-height: 60px;
+    font-size: 20px;
+    line-height: 20px;
     color: #222;
 }
 
 h2 {
-    font-size: 46px;
+    font-size: 15px;
     line-height: 54px;
     color: #222;
 }
 
 h4 {
-    font-size: 20px;
+    font-size: 10px;
     color: #222;
 }
 
 h6 {
     font-weight: 700;
-    font-size: 12px;
+    font-size: 5px;
 }
 
 p {
@@ -35,4 +35,8 @@ p {
 
 .section-p1 {
     padding: 48px 84px;
+}
+
+#titles {
+    width: 380px;
 }
