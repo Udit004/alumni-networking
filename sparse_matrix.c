@@ -3,6 +3,12 @@
 #include<stdio.h>
 #include<stdlib.h>
 
+typedef struct sparseMatrix
+{
+    int row;
+    int col;
+    float val;
+}triplet;
 
 int **allocate(int **mat, int r, int c)  //allocation of matrix
 {
@@ -71,7 +77,8 @@ int main()
 {
     int i,j,r,c,k=1;   //Declare row for triple format
     int u=0;
-    int **matrix, **triplet, **transpose;
+    int **matrix;
+    triplet * tmat1, *transpose
 
     printf("enter the row and column of matrix: ");  //taking input of rows and column
     scanf("%d%d",&r,&c);
