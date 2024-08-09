@@ -3,6 +3,8 @@
 #include<stdio.h>
 #include<stdlib.h>
 
+printf("This code is sparse matrix");
+
 typedef struct sparseMatrix
 {
     int row;
