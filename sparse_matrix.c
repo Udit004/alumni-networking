@@ -2,6 +2,8 @@
 
 #include<stdio.h>
 #include<stdlib.h>
+#include<sunil.h.>
+
 
 int **allocate(int **mat, int r, int c)  //allocation of matrix
 {
