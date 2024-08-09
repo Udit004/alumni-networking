@@ -17,12 +17,15 @@ int **allocate(int **mat, int r, int c)  //allocation of matrix
 
 void insert(int** mat, int r, int c)   //inserting data in matrix
 {
-    int i, j;
-    for(i=0; i<r; i++)
-    {
-        for(j=0; j<c; j++)
-        {
-            scanf("%d",&mat[i][j]);
+    srand(time(0));
+    for (int i = 0; i < r; i++) {
+        for (int j = 0; j < c; j++) {
+            int randomVal = rand() % 10;
+            if (randomVal < 6) {
+                mat[i][j] = 0;  // 60% chance of being zero
+            } else {
+                mat[i][j] = rand() % 100 + 1;  // Random non-zero value between 1 and 100
+            }
         }
     }
 }
