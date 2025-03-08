@@ -1,0 +1,24 @@
+.hero-section{
+    background-image: url(../images/seminar.png);
+    background-size: cover;
+    background-position: center;
+    justify-content: center;
+    color: rgba(255, 225, 0, 0.67);
+
+}
+
+.features-section{
+    justify-content: center;
+    display: grid;
+}
+
+.join-option {
+    justify-content: center;
+    display: flex;
+}
+
+.footer{
+    position: fixed;
+    bottom: 0px;
+    width: 100%;
+}

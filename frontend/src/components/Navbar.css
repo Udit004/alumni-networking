@@ -1,0 +1,27 @@
+.nav-list {
+
+    padding-left: 25rem;
+}
+
+
+.nav-item{
+    padding-left: 3rem;
+}
+
+.navbar {
+    background-color: white;
+    padding: 15px 30px;
+    box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  .navbar-brand {
+    font-weight: bold;
+    font-size: 20px;
+  }
+  
+  .navbar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    background: white;
+  }
