@@ -12,10 +12,11 @@ import Events from "./pages/Events";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import AlumniDashboard from "./pages/AlumniDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { useAuth } from "./AuthContext";
+import Profile from"./pages/Profile";
+// import { useAuth } from "./AuthContext";
 
 function App() {
-  const { role } = useAuth();
+  // const { role } = useAuth();
   return (
     <Router>
       <Navbar />
@@ -36,6 +37,9 @@ function App() {
         <Route path="/alumni-dashboard" element={
           <ProtectedRoute element={<AlumniDashboard />} allowedRoles={["alumni"]} />
         } />
+        <Route path="/profile" element={<ProtectedRoute element={<Profile />} allowedRoles={["student", "teacher", "alumni"]} />} />
+
+
 
         {/* Default Route */}
         <Route path="/" element={<Login />} />

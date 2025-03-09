@@ -1,0 +1,16 @@
+.container {
+    max-width: 800px;
+  }
+  
+  .card {
+    border-radius: 12px;
+  }
+  
+  .card h2 {
+    font-weight: bold;
+  }
+  
+  button {
+    width: 48%;
+  }
+  

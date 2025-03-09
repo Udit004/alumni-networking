@@ -3,14 +3,17 @@ import { auth, db } from "../firebaseConfig";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import './Login.css';
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -22,7 +25,7 @@ const Login = () => {
       if (userDoc.exists()) {
         const role = userDoc.data().role;
 
-        alert(`Login successful! Role: ${role}`);
+        alert(`Login successful! Redirecting to ${role} dashboard.`);
 
         // Redirect based on user role
         if (role === "student") {
@@ -31,22 +34,26 @@ const Login = () => {
           navigate("/teacher-dashboard");
         } else if (role === "alumni") {
           navigate("/alumni-dashboard");
+        } else {
+          alert("Invalid role. Contact admin.");
         }
       } else {
-        alert("No user data found!");
+        alert("User data not found!");
       }
     } catch (error) {
-      alert(error.message);
+      alert("Login failed: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
+    <div className="login-container">
       <h2>Login</h2>
       <form onSubmit={handleLogin}>
         <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} required />
         <input type="password" placeholder="Password" onChange={(e) => setPassword(e.target.value)} required />
-        <button type="submit">Login</button>
+        <button type="submit" disabled={loading}>{loading ? "Logging in..." : "Login"}</button>
       </form>
     </div>
   );

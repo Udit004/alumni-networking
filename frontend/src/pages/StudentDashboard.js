@@ -18,7 +18,7 @@ const StudentDashboard = () => {
       <h2>Welcome, {user?.email}!</h2>
       <h3>📚 Student Dashboard</h3>
       <p>Access courses, connect with alumni, and grow your career.</p>
-      <button onClick={handleLogout}>Logout</button>
+      {/* <button onClick={handleLogout}>Logout</button> */}
     </div>
   );
 };
