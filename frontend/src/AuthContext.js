@@ -7,32 +7,39 @@ import { doc, getDoc } from "firebase/firestore";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null); 
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setLoading(true); // Ensure loading is set at the start
+
       if (currentUser) {
+        console.log("AuthContext: User logged in:", currentUser);
+
         setUser(currentUser);
 
         try {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           if (userDoc.exists()) {
-            setRole(userDoc.data().role);
+            const userData = userDoc.data();
+            setRole(userData.role || null); // Explicitly handle missing role
           } else {
-            console.log("No role found in Firestore");
+            console.log("AuthContext: No role found in Firestore");
             setRole(null);
           }
         } catch (error) {
-          console.error("Error fetching user role:", error);
+          console.error("AuthContext: Error fetching user role:", error);
           setRole(null);
         }
       } else {
+        console.log("AuthContext: User logged out");
         setUser(null);
         setRole(null);
       }
-      setLoading(false);
+
+      setLoading(false); 
     });
 
     return () => unsubscribe();
@@ -45,5 +52,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use AuthContext
 export const useAuth = () => useContext(AuthContext);

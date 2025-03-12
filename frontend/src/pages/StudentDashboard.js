@@ -1,17 +1,17 @@
 import React from "react";
 import { useAuth } from "../AuthContext";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebaseConfig";
-import { useNavigate } from "react-router-dom";
+// import { signOut } from "firebase/auth";
+// import { auth } from "../firebaseConfig";
+// import { useNavigate } from "react-router-dom";
 
 const StudentDashboard = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    navigate("/login");
-  };
+  // const handleLogout = async () => {
+  //   await signOut(auth);
+  //   navigate("/login");
+  // };
 
   return (
     <div>
