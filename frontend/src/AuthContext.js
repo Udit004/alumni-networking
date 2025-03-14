@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { auth, db } from "./firebaseConfig";  // ✅ Ensure Firebase is correctly imported
+import { auth, db } from "./firebaseConfig";  
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
@@ -13,18 +13,17 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setLoading(true); // Ensure loading is set at the start
+      setLoading(true);
 
       if (currentUser) {
         console.log("AuthContext: User logged in:", currentUser);
-
         setUser(currentUser);
 
         try {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            setRole(userData.role || null); // Explicitly handle missing role
+            setRole(userData.role || null);
           } else {
             console.log("AuthContext: No role found in Firestore");
             setRole(null);
@@ -52,4 +51,7 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext); // ✅ Correctly defined
+
+// ❌ Remove the extra import here
+// import { useAuth } from "../AuthContext"; 

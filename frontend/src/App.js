@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import './App.css';
+// import './App.css';
+import './global.css';
 import Home from "./pages/Home";
 import Login from "./pages/Login";  
 import Signup from "./pages/Signup";  
@@ -14,6 +15,7 @@ import AlumniDashboard from "./pages/AlumniDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Profile from"./pages/Profile";
 // import { useAuth } from "./AuthContext";
+
 
 function App() {
   // const { role } = useAuth();

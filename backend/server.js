@@ -1,22 +1,48 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+require("dotenv").config();
+const eventRoutes = require("./routes/eventRoutes");
 
-const app = express();
+const app = express();  
+const PORT = 5000;
+const HOST = "0.0.0.0";
+
+// ✅ Allow CORS from all origins
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); 
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => console.log('MongoDB Connected'))
-  .catch(err => console.log(err));
+const MONGO_URI = process.env.MONGO_URI;
 
-app.get('/', (req, res) => {
-  res.send('Alumni Networking Backend Running!');
+// ✅ Connect to MongoDB
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("✅ Connected to MongoDB Atlas"))
+    .catch(err => console.error("❌ MongoDB Connection Error:", err));
+
+// ✅ Use event routes
+app.use("/api/events", eventRoutes);
+
+// 🏠 Default route
+app.get("/", (req, res) => {
+    res.send("🎉 Welcome to the Alumni Networking API!");
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ✅ Listen on 0.0.0.0 to allow external access
+app.listen(PORT, HOST, () => {
+    console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
+    console.log(`🌍 Access it from other devices via: http://YOUR_LOCAL_IP:${PORT}`);
+});
+
+// ✅ MongoDB connection event
+mongoose.connection.on("connected", () => {
+    console.log("✅ Connected to MongoDB Atlas:", mongoose.connection.name);
+});
+
+// const cors = require("cors");
+
+app.use(cors({
+    origin: "*", // Allow all origins (for testing)
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
