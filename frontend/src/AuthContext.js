@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { auth, db } from "./firebaseConfig";  
+import { auth, db } from "./firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
@@ -7,7 +7,7 @@ import { doc, getDoc } from "firebase/firestore";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); 
+  const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -16,29 +16,35 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
 
       if (currentUser) {
-        console.log("AuthContext: User logged in:", currentUser);
+        console.log("✅ AuthContext: User logged in:", currentUser);
         setUser(currentUser);
 
         try {
-          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          const userDocRef = doc(db, "users", currentUser.uid);
+          const userDoc = await getDoc(userDocRef);
+
           if (userDoc.exists()) {
             const userData = userDoc.data();
+            console.log("✅ AuthContext: User role fetched:", userData.role);
             setRole(userData.role || null);
+            localStorage.setItem("role", userData.role); // Store role for persistence
           } else {
-            console.log("AuthContext: No role found in Firestore");
+            console.log("⚠️ AuthContext: No role found in Firestore");
             setRole(null);
+            localStorage.removeItem("role");
           }
         } catch (error) {
-          console.error("AuthContext: Error fetching user role:", error);
+          console.error("❌ AuthContext: Error fetching user role:", error);
           setRole(null);
         }
       } else {
-        console.log("AuthContext: User logged out");
+        console.log("🔴 AuthContext: User logged out");
         setUser(null);
         setRole(null);
+        localStorage.removeItem("role");
       }
 
-      setLoading(false); 
+      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -51,7 +57,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext); // ✅ Correctly defined
-
-// ❌ Remove the extra import here
-// import { useAuth } from "../AuthContext"; 
+export const useAuth = () => useContext(AuthContext);

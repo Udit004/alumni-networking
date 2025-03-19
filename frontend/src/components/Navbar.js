@@ -64,7 +64,7 @@ function Navbar() {
                       {role === "alumni" && <li><Link className="dropdown-item" to="/alumni-dashboard">Dashboard</Link></li>}
                     </>
                   )}
-                  <li><Link className="dropdown-item" to="/profile">View Profile</Link></li>
+                  <li><Link className="dropdown-item" to="/profile">Edit Profile</Link></li>
                   <li><button className="dropdown-item text-danger" onClick={handleLogout}>Logout</button></li>
                 </ul>
               </li>
