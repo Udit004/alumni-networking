@@ -10,7 +10,10 @@ require("./models/Event");
 const eventRoutes = require("./routes/eventRoutes");
 
 const app = express();
-const PORT = "https://alumni-networking.onrender.com" || 5000;
+const PORT = process.env.PORT || 5000; // Use the port from environment variables or default to 5000
+console.log(`Server will run on port: ${PORT}`);
+
+
 const HOST = "0.0.0.0";
 const MONGO_URI = process.env.MONGO_URI;
 

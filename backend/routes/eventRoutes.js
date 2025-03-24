@@ -64,9 +64,13 @@ router.get("/", async (req, res) => {
             .populate("createdBy", "name email")
             .populate("registeredUsers", "name email"); // ✅ Fixed population
 
+        console.log("✅ Fetched Events:", events);
         res.json(events);
+
     } catch (error) {
         console.error("❌ Error fetching events:", error);
+        console.log("🔍 Error details:", error.message);
+
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
