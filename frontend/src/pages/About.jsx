@@ -24,7 +24,7 @@ const About = () => {
 
       {/* Mission Section */}
       <div className=" image flex flex-col md:flex-row items-center md:items-start">
-        <img src="https://th.bing.com/th/id/OIP.U726JNAAYHYuDwDUEtPahAHaFt?rs=1&pid=ImgDetMain" className="w-full max-w-md object-contain" alt="Alumni" />
+        <img src="/assets/alumni.jpeg" className="w-full max-w-md object-contain" alt="Alumni" />
         <div className="ml-4">
           <h2 className="text-2xl font-bold">Our Mission</h2>
           <p>We aim to build a strong and engaged alumni network...</p>

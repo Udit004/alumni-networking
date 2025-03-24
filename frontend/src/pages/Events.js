@@ -9,7 +9,9 @@ const Events = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const API_URL = "https://alumni-networking.onrender.com/api/events"; 
+  const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://192.168.43.177:5000/api/events'
+    : 'https://alumni-networking.onrender.com/api/events';
 
   // 🔄 Fetch Events from Backend
   useEffect(() => {
