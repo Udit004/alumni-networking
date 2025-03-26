@@ -3,6 +3,7 @@ import { auth, db } from "../firebaseConfig";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import "./Signup.css";
 
 
@@ -36,6 +37,20 @@ const Signup = () => {
         role,
         createdAt: new Date(),
       });
+
+      // Create user in MongoDB
+      try {
+        await axios.post(`${process.env.REACT_APP_API_URL}/api/users`, {
+          firebaseUID: user.uid,
+          name,
+          email,
+          role
+        });
+        console.log("✅ User created in MongoDB successfully");
+      } catch (error) {
+        console.error("❌ Error creating user in MongoDB:", error);
+        // Don't throw here, as the user is already created in Firebase
+      }
 
       alert("Signup successful!");
       navigate("/login"); // Redirect to login page after signup

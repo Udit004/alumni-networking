@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "alumni-networking-89f98",
+  "private_key_id": "9e50bf3631eb4decd83ba3a31781032855c1464a",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCt5KOpu3/rVYly\npgo0Aqlhffpb5ZzXmCaZS3Brh6wtiYOMTd+NvnO3y4VeE4j+g9WYJuZqfHefYbRH\nDrPm7YnT4jkMWDSbYamrV0hl+sXScZEGZ8MWl2gPO0a45uoiKheYgosBD3y9k3VX\n2T83Nci3OOYlD/DTJV7i36sRxwVstWsn34mwwGEt/Ne6+hgiHYgR422dMxpSINo0\nQcVB1b03xaMiTEhopxb312Vvx4ZFDPAGOs/wOaQ0H+pXjQPt95+rUwULf1dCYT++\nzLLYo5bf1lj0DJbou3zBk6IcGNVXlin7WYe6O+ozf4obXah5fXLffR0qyjmSVW+R\nTKA0jqNZAgMBAAECggEAAWWbHxwu8o+yKrc3GkR/654t65O1cXHItCp5uYmyS1oR\nMhGXE+X0X6mQsz2pJb8eumMQwP/gwNcfVqeBZz/ACN8Gmzj1dTo6JuBjulG1JS9h\n3VN8j4i4VWK0Vmogv0veewNDcvSyNxU4M31aPkH5mWd7tz0AuO6kdNAJzd+Tl6+0\nJtaJcidSt7X9F9xMBfBuow7mgMLPnyE4gauZxr4tUHjOwgWKVxPkkoCbY3rgKJxI\nwFPI9Ft1AJCORcoL7VHyX9mSnzka6bMrmDycBQahpLOx5p/BosEEgNtNMcM+s6Qo\nIl55dcbAubxo4Lf014EqGdKCkoIoa+rsvzEY86b4AQKBgQDbL66vaylUmhzMAcHo\nIZUroS1uI+aKF23tpQyigtfXFPP+1gl3iJIGXZ5Nmh1YuOfZ48DJb1FIz8rZoH4d\nPZgPe5etuje9GaOUaofXWBrrDKn9G7uyl632sj/LEWbM8OaJZVQkrMfZVRh9v/p+\n3dsCufotIbJgivSuNkwj7mz8AQKBgQDLGX61J1zvEp64qcyfqIGNFq6a02Z2PjbT\ndzT87ak1lb5OJ/V2kGVCkJWSH0ZJpzrPS2RWJZFm0265rhA8xSuYRiAmbQIAIEKj\n9XhUJqh5TMP4fgU4m9P3qdQD0PJOaKpIiuNqDQUXxMpmIbT22OIax3PYZAQ9gnFC\npQqpcccHWQKBgCisC20vpGa3hjpw5QtvF+AVs3lpngDn4hUj+Fk7kFOv5qrWCsGs\njPQzcQmTXHi3LwamlYKLbnjlXg3OEzjX0hylYXryQB+N32XN8tEJ30zYd76o48Z7\nEOPjJaVH4FyNIypBrEB180un17iV5CSghGBYJE01oIT7o/Wjy7MrLfwBAoGBAI9q\nc2TsZN2VImt3y7y6OrEsYSOHQAUjLYfp14r7L89c7EM4SEbu8/IrMtM6LmH4KrkS\nncmPQbuAdeG8Hk8rU/t1GWLI+u6n2Sb6QXv6yGDPalrgckNlFir+y23ecBwaIJSV\nLr1GcGA2YE36Y1UkFZWfXhhhl/TvVZcgAAVjCI4RAoGBAL/8lkBACtrAnogbq5Td\ntSefpe2Uvyj46wGQCwlb7yFzR1LIpbZjElXIrEe07DL6UdZQZuES/dbFiWconviW\nv5QlOCfw8zJvxwPym52llICQDrHy7+qnwTuwNhwwdsGy99+dIBGAKVjaPmso1KWo\nN3pmxn7K5hY96AOArs5a6Ivx\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@alumni-networking-89f98.iam.gserviceaccount.com",
+  "client_id": "102748525548213028012",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40alumni-networking-89f98.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

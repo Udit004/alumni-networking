@@ -1,7 +1,13 @@
 import React, { useState } from "react";
+import { useAuth } from "../AuthContext";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import config from "../config";
 import './CreateEvent.css';
 
 const EventCreate = () => {
+  const navigate = useNavigate();
+  const { user, role } = useAuth();
   const [eventData, setEventData] = useState({
     title: "",
     description: "",
@@ -16,8 +22,51 @@ const EventCreate = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Creating Event:", eventData);
-    // Implement API call here
+
+    if (!user) {
+      alert("Please log in to create an event");
+      return;
+    }
+
+    try {
+      // First, try to get the MongoDB user ID using Firebase UID
+      let mongoUserId;
+      try {
+        const userResponse = await axios.get(`${config.endpoints.users}/${user.uid}`);
+        mongoUserId = userResponse.data._id;
+      } catch (error) {
+        if (error.response?.status === 404) {
+          // User doesn't exist in MongoDB, create them
+          const createUserResponse = await axios.post(config.endpoints.users, {
+            firebaseUID: user.uid,
+            name: user.displayName || "User",
+            email: user.email,
+            role: role.charAt(0).toUpperCase() + role.slice(1)
+          });
+          mongoUserId = createUserResponse.data._id;
+        } else {
+          throw error;
+        }
+      }
+
+      // Create the event with MongoDB user ID
+      const response = await axios.post(config.endpoints.events, {
+        title: eventData.title,
+        description: eventData.description,
+        date: eventData.date,
+        time: eventData.time,
+        location: eventData.location,
+        createdBy: mongoUserId,
+        createdByRole: role.charAt(0).toUpperCase() + role.slice(1)
+      });
+
+      console.log("✅ Event created successfully:", response.data);
+      alert("Event created successfully!");
+      navigate("/events");
+    } catch (error) {
+      console.error("❌ Error creating event:", error);
+      alert(error.response?.data?.message || "Failed to create event");
+    }
   };
 
   return (
@@ -98,9 +147,9 @@ const EventCreate = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold py-2 rounded-lg transition duration-300 flex justify-center items-center gap-2"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-300"
           >
-            🚀 Create Event
+            Create Event
           </button>
         </form>
       </div>

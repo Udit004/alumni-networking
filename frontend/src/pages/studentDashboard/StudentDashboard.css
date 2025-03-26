@@ -1,0 +1,53 @@
+.sidebar {
+  overflow: hidden; /* hide excess content */
+  transition: width 0.3s ease-in-out; /* add transition effect */
+}
+
+.sidebar:hover {
+  width: 250px; /* expand width on hover */
+}.sidebar button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #333;
+  border: none;
+  padding: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.sidebar button:hover {
+  background-color: #444;
+}
+
+.sidebar .nav-link {
+  padding: 10px; /* add padding to nav links */
+  display: flex; /* make nav links flex */
+  align-items: center; /* center nav link content */
+}
+
+.sidebar .nav-link i {
+  margin-right: 10px; /* add margin to icons */
+}
+
+.sidebar .nav-link span {
+  display: none; /* hide text on narrow sidebar */
+}
+
+.sidebar:hover .nav-link span {
+  display: block; /* show text on hover */
+}.sidebar {
+  transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+.sidebar.d-none {
+  width: 0;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.sidebar:not(.d-none) {
+  width: 250px;
+  opacity: 1;
+  visibility: visible;
+}

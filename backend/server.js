@@ -8,11 +8,11 @@ require("./models/user");
 require("./models/Event");
 
 const eventRoutes = require("./routes/eventRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000; // Use the port from environment variables or default to 5000
 console.log(`Server will run on port: ${PORT}`);
-
 
 const HOST = "0.0.0.0";
 const MONGO_URI = process.env.MONGO_URI;
@@ -40,6 +40,7 @@ mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
 
 // ✅ Import & Use Routes
 app.use("/api/events", eventRoutes);
+app.use("/api/users", userRoutes);
 
 // 🏠 Default route
 app.get("/", (req, res) => {

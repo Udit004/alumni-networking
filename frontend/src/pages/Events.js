@@ -10,7 +10,7 @@ const Events = () => {
   const [error, setError] = useState("");
 
   const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://192.168.43.177:5000/api/events'
+    ? 'http://localhost:5000/api/events'
     : 'https://alumni-networking.onrender.com/api/events';
 
   // 🔄 Fetch Events from Backend
@@ -45,13 +45,13 @@ const Events = () => {
 
     try {
       // 🔹 Step 1: Fetch MongoDB User ID using Firebase UID
-      const userRes = await fetch(`http://192.168.43.177:5000/api/getUserByFirebaseUID/${user.uid}`);
+      const userRes = await fetch(`http://localhost:5000/api/getUserByFirebaseUID/${user.uid}`);
       if (!userRes.ok) throw new Error("Failed to fetch user data");
 
       const userData = await userRes.json();
 
       // 🔹 Step 2: Register for the event using MongoDB User ID
-      const response = await fetch(`http://192.168.43.177:5000/api/events/${eventId}/register`, {
+      const response = await fetch(`http://localhost:5000/api/events/${eventId}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: userData._id }),
@@ -69,6 +69,34 @@ const Events = () => {
   const filteredEvents = events.filter((event) =>
     event.title?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const registerForEvent = async (eventId) => {
+    if (!user) {
+        alert("You must be logged in to register.");
+        return;
+    }
+
+    try {
+        const response = await fetch(`http://localhost:5000/api/events/${eventId}/register`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ userId: user.uid }), // Firebase UID
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            alert("Registration successful!");
+        } else {
+            alert("Error: " + data.message);
+        }
+    } catch (error) {
+        console.error("Error registering:", error);
+        alert("Server error");
+    }
+};
+
 
   return (
     <div className="container mx-auto p-6">
