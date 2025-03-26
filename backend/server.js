@@ -19,9 +19,15 @@ const MONGO_URI = process.env.MONGO_URI;
 
 // ✅ Middleware
 app.use(cors({
-    origin: "*", 
+    origin: [
+        "http://localhost:3000",
+        "https://alumni-networking-89f98.web.app",
+        "https://alumni-networking-89f98.firebaseapp.com",
+        "https://alumni-networking.onrender.com"
+    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
 }));
 app.use(express.json());
 

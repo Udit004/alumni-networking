@@ -3,7 +3,7 @@ const config = {
   isDevelopment: process.env.NODE_ENV === 'development',
   isProduction: process.env.NODE_ENV === 'production',
   
-  // API endpoints
+  // API endpoints with error handling
   endpoints: {
     users: `${process.env.REACT_APP_API_URL}/api/users`,
     events: `${process.env.REACT_APP_API_URL}/api/events`,
@@ -17,6 +17,17 @@ const config = {
     storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  },
+
+  // Helper function to check if backend is available
+  checkBackendAvailability: async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}`);
+      return response.ok;
+    } catch (error) {
+      console.error('Backend availability check failed:', error);
+      return false;
+    }
   }
 };
 

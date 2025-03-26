@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../AuthContext";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,20 @@ const EventCreate = () => {
     time: "",
     location: "",
   });
+  const [isBackendAvailable, setIsBackendAvailable] = useState(true);
+
+  useEffect(() => {
+    // Check backend availability when component mounts
+    const checkBackend = async () => {
+      const isAvailable = await config.checkBackendAvailability();
+      setIsBackendAvailable(isAvailable);
+      if (!isAvailable) {
+        alert("Backend service is currently unavailable. Please try again later.");
+        navigate("/events");
+      }
+    };
+    checkBackend();
+  }, [navigate]);
 
   const handleChange = (e) => {
     setEventData({ ...eventData, [e.target.name]: e.target.value });
@@ -25,6 +39,11 @@ const EventCreate = () => {
 
     if (!user) {
       alert("Please log in to create an event");
+      return;
+    }
+
+    if (!isBackendAvailable) {
+      alert("Backend service is currently unavailable. Please try again later.");
       return;
     }
 
@@ -65,9 +84,24 @@ const EventCreate = () => {
       navigate("/events");
     } catch (error) {
       console.error("❌ Error creating event:", error);
-      alert(error.response?.data?.message || "Failed to create event");
+      if (error.response?.status === 404) {
+        alert("Backend service is currently unavailable. Please try again later.");
+      } else {
+        alert(error.response?.data?.message || "Failed to create event");
+      }
     }
   };
+
+  if (!isBackendAvailable) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-gray-100 to-blue-50 p-6">
+        <div className="bg-white shadow-xl rounded-xl p-8 w-full max-w-2xl text-center">
+          <h2 className="text-3xl font-bold text-red-600 mb-4">⚠️ Service Unavailable</h2>
+          <p className="text-gray-600">The backend service is currently unavailable. Please try again later.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-gray-100 to-blue-50 p-6">
