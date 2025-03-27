@@ -17,18 +17,31 @@ console.log(`Server will run on port: ${PORT}`);
 const HOST = "0.0.0.0";
 const MONGO_URI = process.env.MONGO_URI;
 
-// ✅ Middleware
-app.use(cors({
-    origin: [
-        "http://localhost:3000",
-        "https://alumni-networking-89f98.web.app",
-        "https://alumni-networking-89f98.firebaseapp.com",
-        "https://alumni-networking.onrender.com"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true
-}));
+// ✅ CORS Configuration
+app.use((req, res, next) => {
+    const allowedOrigins = [
+        'http://localhost:3000',
+        'https://alumni-networking.vercel.app',
+        'https://alumni-networking-89f98.web.app',
+        'https://alumni-networking-89f98.firebaseapp.com'
+    ];
+
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
+
+    next();
+});
+
 app.use(express.json());
 
 // ✅ Connect to MongoDB
@@ -51,6 +64,12 @@ app.use("/api/users", userRoutes);
 // 🏠 Default route
 app.get("/", (req, res) => {
     res.send("🎉 Welcome to the Alumni Networking API!");
+});
+
+// ✅ Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('❌ Error:', err);
+    res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
 
 // ✅ List Available Routes
