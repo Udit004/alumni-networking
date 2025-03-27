@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Event = require("../models/Event");
 const User = require("../models/user");
+const mongoose = require("mongoose");
 
 // ✅ GET ALL EVENTS
 router.get("/", async (req, res) => {
@@ -54,44 +55,69 @@ router.post("/", async (req, res) => {
 // 📌 Register a user for an event
 router.post("/:eventId/register", async (req, res) => {
     try {
-        const { userId } = req.body; // This is the Firebase UID coming from the frontend
+        const { userId, firebaseUID } = req.body;
         const { eventId } = req.params;
 
-        console.log("📥 Received Registration Request for Event:", eventId);
-        console.log("🔹 Firebase User ID:", userId);
+        console.log("📥 Registration Request:", {
+            eventId,
+            userId,
+            firebaseUID
+        });
 
-        // 🔍 Step 1: Find user in MongoDB by their Firebase UID
-        const user = await User.findOne({ firebaseUID: userId });
-
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
+        // 🔍 Step 1: Validate the event ID
+        if (!mongoose.Types.ObjectId.isValid(eventId)) {
+            console.error("❌ Invalid event ID format:", eventId);
+            return res.status(400).json({ message: "Invalid event ID format" });
         }
-
-        console.log("✅ Found User in MongoDB:", user);
 
         // 🔍 Step 2: Find the event
         const event = await Event.findById(eventId);
         if (!event) {
+            console.error("❌ Event not found:", eventId);
             return res.status(404).json({ message: "Event not found" });
         }
 
-        // 🔄 Step 3: Check if the user is already registered
+        // 🔍 Step 3: Find and validate user
+        let user;
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+            user = await User.findById(userId);
+        }
+        
+        if (!user && firebaseUID) {
+            user = await User.findOne({ firebaseUID });
+        }
+
+        if (!user) {
+            console.error("❌ User not found");
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        console.log("✅ Found User:", user);
+
+        // 🔄 Step 4: Check if user is already registered
         const alreadyRegistered = event.registeredUsers.some(
             (r) => r.userId.toString() === user._id.toString()
         );
 
         if (alreadyRegistered) {
+            console.log("⚠️ User already registered");
             return res.status(400).json({ message: "User already registered for this event" });
         }
 
-        // 🎟 Step 4: Register the user with their MongoDB ObjectId
+        // 🎟 Step 5: Register the user
         event.registeredUsers.push({ userId: user._id });
-
-        // 💾 Step 5: Save the updated event
         await event.save();
 
+        // 🔄 Step 6: Get updated event with populated data
+        const updatedEvent = await Event.findById(eventId)
+            .populate("registeredUsers.userId", "name email")
+            .populate("createdBy", "name email");
+
         console.log("✅ Registration successful for:", user.name);
-        res.status(200).json({ message: "Registration successful" });
+        res.status(200).json({ 
+            message: "Registration successful",
+            event: updatedEvent
+        });
 
     } catch (error) {
         console.error("❌ Error in registration:", error);

@@ -2,6 +2,20 @@ const express = require('express');
 const User = require('../models/user');
 const router = express.Router();
 
+// Get user by Firebase UID
+router.get('/firebase/:firebaseUID', async (req, res) => {
+    try {
+        const user = await User.findOne({ firebaseUID: req.params.firebaseUID });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json(user);
+    } catch (error) {
+        console.error('Error fetching user:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
 // Create a new user
 router.post('/', async (req, res) => {
     try {
@@ -34,20 +48,6 @@ router.post('/', async (req, res) => {
         res.status(201).json(user);
     } catch (error) {
         console.error('Error creating user:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
-    }
-});
-
-// Get user by Firebase UID
-router.get('/:firebaseUID', async (req, res) => {
-    try {
-        const user = await User.findOne({ firebaseUID: req.params.firebaseUID });
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        res.json(user);
-    } catch (error) {
-        console.error('Error fetching user:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
