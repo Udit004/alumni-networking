@@ -7,7 +7,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";  
 import Navbar from "./components/Navbar"; 
 import Contact from "./pages/Contact";
-import StudentDashboard from "./pages/StudentDashboard";
+import StudentDashboard from "./pages/studentDashboard/StudentDashboard";
 import About from "./pages/About";
 import Events from "./pages/Events";
 import CreateEvent from "./pages/CreateEvent";
