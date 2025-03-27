@@ -11,8 +11,8 @@ import StudentDashboard from "./pages/studentDashboard/StudentDashboard";
 import About from "./pages/About";
 import Events from "./pages/Events";
 import CreateEvent from "./pages/CreateEvent";
-import TeacherDashboard from "./pages/TeacherDashboard";
-import AlumniDashboard from "./pages/AlumniDashboard";
+import TeacherDashboard from "./pages/teacherDashboard/TeacherDashboard";
+import AlumniDashboard from "./pages/alumniDashboard/AlumniDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Profile from"./pages/Profile";
 

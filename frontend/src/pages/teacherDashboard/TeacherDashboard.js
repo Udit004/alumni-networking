@@ -1,92 +1,105 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import "./TeacherDashboard.css";
 
 const TeacherDashboard = () => {
-  const [activeSection, setActiveSection] = useState("profile");
+  const [isNavExpanded, setIsNavExpanded] = useState(true);
+  const [activeSection, setActiveSection] = useState("overview");
 
   return (
-    <div className="d-flex">
-      {/* Sidebar */}
-      <div
-        className="sidebar bg-dark text-white vh-100 p-3"
-        style={{
-          width: "250px",
-          position: "fixed",
-          transition: "width 0.3s ease-in-out",
-        }}
-      >
-        <button
-          className="btn btn-secondary justify-content-center"
-          onClick={() => {
-            const sidebar = document.querySelector(".sidebar");
-            if (sidebar.style.width === "250px") {
-              sidebar.style.width = "50px";
-            } else {
-              sidebar.style.width = "250px";
-            }
-          }}
-        >
-          <i className="fas fa-bars" />
-        </button>
-
-        <h4 className="text-center">Teacher Dashboard</h4>
-        <nav className="nav flex-column align-items-center">
-          <button
-            className={`nav-link text-white ${
-              activeSection === "profile" ? "active bg-secondary" : ""
-            }`}
+    <div className="page-container">
+      <div className={`side-navbar ${isNavExpanded ? 'expanded' : 'collapsed'}`}>
+        <div className="nav-header">
+          <h3 className={`nav-title ${!isNavExpanded ? 'hidden' : ''}`}>Teacher Dashboard</h3>
+          <button 
+            className="toggle-nav-btn"
+            onClick={() => setIsNavExpanded(!isNavExpanded)}
+          >
+            {isNavExpanded ? '◀' : '▶'}
+          </button>
+        </div>
+        <nav className="nav-menu">
+          <button 
+            className={`nav-item ${activeSection === "overview" ? "active" : ""}`}
+            onClick={() => setActiveSection("overview")}
+          >
+            <span className="nav-icon">📊</span>
+            <span className={`nav-text ${!isNavExpanded ? 'hidden' : ''}`}>Overview</span>
+          </button>
+          <button 
+            className={`nav-item ${activeSection === "profile" ? "active" : ""}`}
             onClick={() => setActiveSection("profile")}
           >
-            <i className="fas fa-user" /> Profile
+            <span className="nav-icon">👤</span>
+            <span className={`nav-text ${!isNavExpanded ? 'hidden' : ''}`}>Profile</span>
           </button>
-          <button
-            className={`nav-link text-white ${
-              activeSection === "events" ? "active bg-secondary" : ""
-            }`}
+          <button 
+            className={`nav-item ${activeSection === "events" ? "active" : ""}`}
             onClick={() => setActiveSection("events")}
           >
-            <i className="fas fa-calendar" /> Manage Events
+            <span className="nav-icon">📅</span>
+            <span className={`nav-text ${!isNavExpanded ? 'hidden' : ''}`}>My Events</span>
           </button>
-          <button
-            className={`nav-link text-white ${
-              activeSection === "students" ? "active bg-secondary" : ""
-            }`}
-            onClick={() => setActiveSection("students")}
-          >
-            <i className="fas fa-users" /> Student Management
-          </button>
-          <button
-            className={`nav-link text-white ${
-              activeSection === "courses" ? "active bg-secondary" : ""
-            }`}
+          <button 
+            className={`nav-item ${activeSection === "courses" ? "active" : ""}`}
             onClick={() => setActiveSection("courses")}
           >
-            <i className="fas fa-book" /> Course Management
+            <span className="nav-icon">📚</span>
+            <span className={`nav-text ${!isNavExpanded ? 'hidden' : ''}`}>My Courses</span>
           </button>
-          <button
-            className={`nav-link text-white ${
-              activeSection === "mentorship" ? "active bg-secondary" : ""
-            }`}
-            onClick={() => setActiveSection("mentorship")}
+          <button 
+            className={`nav-item ${activeSection === "students" ? "active" : ""}`}
+            onClick={() => setActiveSection("students")}
           >
-            <i className="fas fa-user-tie" /> Mentorship Programs
+            <span className="nav-icon">👥</span>
+            <span className={`nav-text ${!isNavExpanded ? 'hidden' : ''}`}>Students</span>
           </button>
-          <button
-            className={`nav-link text-white ${
-              activeSection === "analytics" ? "active bg-secondary" : ""
-            }`}
+          <button 
+            className={`nav-item ${activeSection === "analytics" ? "active" : ""}`}
             onClick={() => setActiveSection("analytics")}
           >
-            <i className="fas fa-chart-bar" /> Analytics
+            <span className="nav-icon">📈</span>
+            <span className={`nav-text ${!isNavExpanded ? 'hidden' : ''}`}>Analytics</span>
+          </button>
+          <button 
+            className={`nav-item ${activeSection === "settings" ? "active" : ""}`}
+            onClick={() => setActiveSection("settings")}
+          >
+            <span className="nav-icon">⚙️</span>
+            <span className={`nav-text ${!isNavExpanded ? 'hidden' : ''}`}>Settings</span>
           </button>
         </nav>
       </div>
 
-      {/* Main Content */}
-      <div className="content p-4" style={{ marginLeft: "250px", width: "100%" }}>
+      <div className="main-content">
+        {activeSection === "overview" && (
+          <div className="dashboard-section">
+            <h2>Overview</h2>
+            <div className="stats-grid">
+              <div className="stat-card">
+                <h3>Total Students</h3>
+                <p>150</p>
+              </div>
+              <div className="stat-card">
+                <h3>Active Courses</h3>
+                <p>5</p>
+              </div>
+              <div className="stat-card">
+                <h3>Upcoming Events</h3>
+                <p>3</p>
+              </div>
+              <div className="stat-card">
+                <h3>Attendance Rate</h3>
+                <p>85%</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeSection === "profile" && (
-          <div>
-            <h3>Teacher Profile</h3>
+          <div className="dashboard-section">
+            <h2>Profile</h2>
             <div className="row">
               <div className="col-md-6">
                 <div className="card">
@@ -119,8 +132,8 @@ const TeacherDashboard = () => {
         )}
 
         {activeSection === "events" && (
-          <div>
-            <h3>Manage Events</h3>
+          <div className="dashboard-section">
+            <h2>My Events</h2>
             <div className="card">
               <div className="card-body">
                 <h5 className="card-title">Create New Event</h5>
@@ -154,9 +167,40 @@ const TeacherDashboard = () => {
           </div>
         )}
 
+        {activeSection === "courses" && (
+          <div className="dashboard-section">
+            <h2>My Courses</h2>
+            <div className="card">
+              <div className="card-body">
+                <h5 className="card-title">Your Courses</h5>
+                <div className="row">
+                  <div className="col-md-4 mb-3">
+                    <div className="card">
+                      <div className="card-body">
+                        <h5 className="card-title">Data Structures</h5>
+                        <p className="card-text">CS101</p>
+                        <button className="btn btn-primary">Manage</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-4 mb-3">
+                    <div className="card">
+                      <div className="card-body">
+                        <h5 className="card-title">Algorithms</h5>
+                        <p className="card-text">CS102</p>
+                        <button className="btn btn-primary">Manage</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeSection === "students" && (
-          <div>
-            <h3>Student Management</h3>
+          <div className="dashboard-section">
+            <h2>Students</h2>
             <div className="card">
               <div className="card-body">
                 <h5 className="card-title">Enrolled Students</h5>
@@ -188,74 +232,9 @@ const TeacherDashboard = () => {
           </div>
         )}
 
-        {activeSection === "courses" && (
-          <div>
-            <h3>Course Management</h3>
-            <div className="card">
-              <div className="card-body">
-                <h5 className="card-title">Your Courses</h5>
-                <div className="row">
-                  <div className="col-md-4 mb-3">
-                    <div className="card">
-                      <div className="card-body">
-                        <h5 className="card-title">Data Structures</h5>
-                        <p className="card-text">CS101</p>
-                        <button className="btn btn-primary">Manage</button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-md-4 mb-3">
-                    <div className="card">
-                      <div className="card-body">
-                        <h5 className="card-title">Algorithms</h5>
-                        <p className="card-text">CS102</p>
-                        <button className="btn btn-primary">Manage</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeSection === "mentorship" && (
-          <div>
-            <h3>Mentorship Programs</h3>
-            <div className="card">
-              <div className="card-body">
-                <h5 className="card-title">Active Mentees</h5>
-                <div className="table-responsive">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Student Name</th>
-                        <th>Department</th>
-                        <th>Progress</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>Jane Smith</td>
-                        <td>Computer Science</td>
-                        <td>In Progress</td>
-                        <td>
-                          <button className="btn btn-sm btn-primary">View Progress</button>
-                          <button className="btn btn-sm btn-success">Schedule Meeting</button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {activeSection === "analytics" && (
-          <div>
-            <h3>Analytics Dashboard</h3>
+          <div className="dashboard-section">
+            <h2>Analytics</h2>
             <div className="row">
               <div className="col-md-4 mb-4">
                 <div className="card">
@@ -285,6 +264,13 @@ const TeacherDashboard = () => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeSection === "settings" && (
+          <div className="dashboard-section">
+            <h2>Settings</h2>
+            {/* Settings content */}
           </div>
         )}
       </div>

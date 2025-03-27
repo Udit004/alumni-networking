@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../AuthContext";
 import { Link } from "react-router-dom";
 import config from "../config";
+import "./Events.css";
 
 const Events = () => {
   const { user, role, loading: authLoading } = useAuth();
@@ -9,6 +10,7 @@ const Events = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState("all"); // all, upcoming, past
 
   const API_URL = process.env.REACT_APP_API_URL;
 
@@ -27,7 +29,9 @@ const Events = () => {
         const data = await res.json();
         if (!Array.isArray(data)) throw new Error("Unexpected API response format.");
 
-        setEvents(data);
+        // Sort events by date
+        const sortedEvents = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+        setEvents(sortedEvents);
       } catch (err) {
         setError("Failed to load events. Please try again.");
         console.error("Error fetching events:", err);
@@ -58,7 +62,7 @@ const Events = () => {
             firebaseUID: user.uid,
             name: user.displayName || 'User',
             email: user.email,
-            role: role.charAt(0).toUpperCase() + role.slice(1) // Capitalize role
+            role: role.charAt(0).toUpperCase() + role.slice(1)
           })
         });
         
@@ -67,15 +71,12 @@ const Events = () => {
         }
         
         const userData = await createUserRes.json();
-        console.log("Created new user:", userData);
-        return handleRegister(eventId); // Retry registration with new user
+        return handleRegister(eventId);
       }
 
       const userData = await userRes.json();
-      console.log("Found existing user:", userData);
 
-      // 🔹 Step 2: Register for the event using MongoDB User ID
-      console.log("Attempting to register for event:", eventId, "with user:", userData._id);
+      // 🔹 Step 2: Register for the event
       const response = await fetch(`${API_URL}/api/events/${eventId}/register`, {
         method: "POST",
         headers: { 
@@ -84,13 +85,12 @@ const Events = () => {
         },
         body: JSON.stringify({ 
           userId: userData._id,
-          firebaseUID: user.uid // Send both IDs for verification
+          firebaseUID: user.uid
         })
       });
 
-      console.log("Registration response status:", response.status);
       const responseText = await response.text();
-      console.log("Registration response text:", responseText);
+      let registrationData;
 
       if (!response.ok) {
         let errorMessage;
@@ -103,17 +103,13 @@ const Events = () => {
         throw new Error(errorMessage || "Registration failed");
       }
 
-      let registrationData;
       try {
         registrationData = JSON.parse(responseText);
       } catch (e) {
-        console.error("Failed to parse registration response:", e);
         throw new Error("Invalid response from server");
       }
 
-      console.log("Registration successful:", registrationData);
-
-      // 🔹 Step 3: Update the events list with the returned event data
+      // 🔹 Step 3: Update the events list
       const updatedEvents = events.map(event => {
         if (event._id === eventId) {
           return registrationData.event || {
@@ -132,64 +128,143 @@ const Events = () => {
     }
   };
 
-  // 🔍 Filter events based on search input
-  const filteredEvents = events.filter((event) =>
-    event.title?.toLowerCase().includes(search.toLowerCase())
-  );
+  // 🔍 Filter events based on search input and date filter
+  const filteredEvents = events.filter((event) => {
+    const matchesSearch = event.title?.toLowerCase().includes(search.toLowerCase());
+    const eventDate = new Date(event.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let matchesDateFilter = true;
+    if (filter === "upcoming") {
+      matchesDateFilter = eventDate >= today;
+    } else if (filter === "past") {
+      matchesDateFilter = eventDate < today;
+    }
+
+    return matchesSearch && matchesDateFilter;
+  });
+
+  const getEventStatus = (eventDate) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const event = new Date(eventDate);
+    event.setHours(0, 0, 0, 0);
+
+    if (event < today) return "past";
+    if (event.getTime() === today.getTime()) return "today";
+    return "upcoming";
+  };
 
   return (
-    <div className="container mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-4">📅 Upcoming Events</h2>
-
-      {error && <p className="text-red-500">{error}</p>}
-
-      <input
-        type="text"
-        placeholder="Search events..."
-        className="w-full p-2 mb-4 border rounded"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+    <div className="events-container">
+      <div className="events-header">
+        <h2 className="events-title">📅 Events</h2>
+        <div className="events-filters">
+          <div className="search-box">
+            <input
+              type="text"
+              placeholder="Search events..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <span className="search-icon">🔍</span>
+          </div>
+          <div className="filter-buttons">
+            <button 
+              className={`filter-btn ${filter === "all" ? "active" : ""}`}
+              onClick={() => setFilter("all")}
+            >
+              All Events
+            </button>
+            <button 
+              className={`filter-btn ${filter === "upcoming" ? "active" : ""}`}
+              onClick={() => setFilter("upcoming")}
+            >
+              Upcoming
+            </button>
+            <button 
+              className={`filter-btn ${filter === "past" ? "active" : ""}`}
+              onClick={() => setFilter("past")}
+            >
+              Past
+            </button>
+          </div>
+        </div>
+      </div>
 
       {(role === "teacher" || role === "alumni") && (
-        <Link to="/create-event">
-          <button className="bg-blue-500 text-white px-4 py-2 rounded mb-4 hover:bg-blue-600">
-            ➕ Create Event
-          </button>
+        <Link to="/create-event" className="create-event-btn">
+          <span className="btn-icon">➕</span>
+          Create New Event
         </Link>
       )}
 
+      {error && <div className="error-message">{error}</div>}
+
       {loading || authLoading ? (
-        <p className="text-gray-500">Loading events...</p>
-      ) : filteredEvents.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredEvents.map((event) => (
-            <div key={event._id} className="p-4 border rounded shadow bg-white">
-              <h3 className="text-xl font-semibold">{event.title}</h3>
-              <p className="text-gray-600">{event.description}</p>
-              <div className="mt-2">
-                <p className="text-sm text-gray-500">📅 {new Date(event.date).toLocaleDateString()}</p>
-                <p className="text-sm text-gray-500">⏰ {event.time}</p>
-                <p className="text-sm text-gray-500">📍 {event.location}</p>
-              </div>
-              {user && role === "student" && (
-                event.registeredUsers.some(r => r.userId === user.uid) ? (
-                  <button className="bg-gray-500 text-white px-3 py-1 rounded mt-2 cursor-not-allowed">
-                    ✅ Registered
-                  </button>
-                ) : (
-                  <button 
-                    className="bg-green-500 text-white px-3 py-1 rounded mt-2 hover:bg-green-600"
-                    onClick={() => handleRegister(event._id)}
-                  >
-                    🎟 Register
-                  </button>
-                )
-              )}
-            </div>
-          ))}
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading events...</p>
         </div>
-      ) : <p className="text-gray-500">No events available.</p>}
+      ) : filteredEvents.length > 0 ? (
+        <div className="events-grid">
+          {filteredEvents.map((event) => {
+            const status = getEventStatus(event.date);
+            const isRegistered = user && event.registeredUsers.some(r => r.userId === user.uid);
+            
+            return (
+              <div key={event._id} className={`event-card ${status}`}>
+                <div className="event-status-badge">
+                  {status === "upcoming" ? "Upcoming" : status === "today" ? "Today" : "Past"}
+                </div>
+                <div className="event-content">
+                  <h3 className="event-title">{event.title}</h3>
+                  <p className="event-description">{event.description}</p>
+                  <div className="event-details">
+                    <div className="detail-item">
+                      <span className="detail-icon">📅</span>
+                      <span>{new Date(event.date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-icon">⏰</span>
+                      <span>{event.time}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-icon">📍</span>
+                      <span>{event.location}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-icon">👥</span>
+                      <span>{event.registeredUsers?.length || 0} Registered</span>
+                    </div>
+                  </div>
+                  {user && role === "student" && (
+                    <div className="event-actions">
+                      {isRegistered ? (
+                        <button className="action-btn registered" disabled>
+                          ✅ Registered
+                        </button>
+                      ) : (
+                        <button 
+                          className="action-btn register"
+                          onClick={() => handleRegister(event._id)}
+                        >
+                          🎟 Register Now
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="no-events">
+          <p>No events found matching your criteria.</p>
+        </div>
+      )}
     </div>
   );
 };
