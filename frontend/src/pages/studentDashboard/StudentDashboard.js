@@ -30,7 +30,7 @@ const StudentDashboard = () => {
       <div className={`side-navbar ${isNavExpanded ? 'expanded' : 'collapsed'}`}>
         <div className="nav-header">
           <h3 className={`nav-title ${!isNavExpanded ? 'hidden' : ''}`}>Student Dashboard</h3>
-          <button 
+          <button
             className="toggle-nav-btn"
             onClick={() => setIsNavExpanded(!isNavExpanded)}
           >
@@ -39,14 +39,14 @@ const StudentDashboard = () => {
         </div>
         <div className="nav-menu">
           {menuItems.map((item) => (
-            <button
+          <button
               key={item.id}
               className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
               onClick={() => handleSectionClick(item.id)}
-            >
+          >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-text">{item.label}</span>
-            </button>
+          </button>
           ))}
         </div>
       </div>
@@ -185,11 +185,11 @@ const StudentDashboard = () => {
                   <div className="detail-item">
                     <span className="detail-label">LinkedIn:</span>
                     <a href="#" className="detail-value">View Profile</a>
-                  </div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
           {activeSection === 'events' && <EnrolledEvents />}
 
@@ -228,8 +228,8 @@ const StudentDashboard = () => {
                   <button className="continue-btn">Continue Learning</button>
                 </div>
               </div>
-            </div>
-          )}
+          </div>
+        )}
 
           {activeSection === 'mentorship' && (
             <div className="mentorship-section">
@@ -265,8 +265,8 @@ const StudentDashboard = () => {
                   <button className="schedule-btn">Schedule Session</button>
                 </div>
               </div>
-            </div>
-          )}
+          </div>
+        )}
 
           {activeSection === 'jobs' && (
             <div className="jobs-section">
@@ -315,8 +315,8 @@ const StudentDashboard = () => {
                   <button className="apply-btn">Apply Now</button>
                 </div>
               </div>
-            </div>
-          )}
+          </div>
+        )}
 
           {activeSection === 'forum' && (
             <div className="forum-section">
@@ -356,8 +356,8 @@ const StudentDashboard = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+          </div>
+        )}
 
           {activeSection === 'settings' && (
             <div className="settings-section">
@@ -402,8 +402,8 @@ const StudentDashboard = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+          </div>
+        )}
         </div>
       </div>
     </div>

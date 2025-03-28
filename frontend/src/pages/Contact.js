@@ -24,8 +24,12 @@ const Contact = () => {
     setSuccess(false);
 
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      console.log('Using API URL:', apiUrl); // For debugging
+      const apiUrl = process.env.REACT_APP_API_URL;
+      console.log('Using API URL:', apiUrl);
+
+      if (!apiUrl) {
+        throw new Error('API URL is not configured. Please check environment variables.');
+      }
 
       const response = await fetch(`${apiUrl}/api/contact`, {
         method: 'POST',
@@ -48,9 +52,29 @@ const Contact = () => {
         subject: '',
         message: '',
       });
+      
+      // Show success message
+      setStatus({
+        type: "success",
+        message: "Message sent successfully!"
+      });
     } catch (err) {
       console.error('Error submitting form:', err);
-      setError(err.message || 'An unexpected error occurred. Please try again.');
+      
+      // Handle specific error cases
+      if (err.message === 'Failed to fetch') {
+        setError('Unable to connect to the server. Please check your internet connection or try again later.');
+      } else if (err.message.includes('API URL')) {
+        setError('Server configuration error. Please contact support.');
+      } else {
+        setError(err.message || 'An unexpected error occurred. Please try again.');
+      }
+      
+      // Show error message
+      setStatus({
+        type: "error",
+        message: err.message || 'Failed to send message. Please try again.'
+      });
     } finally {
       setLoading(false);
     }

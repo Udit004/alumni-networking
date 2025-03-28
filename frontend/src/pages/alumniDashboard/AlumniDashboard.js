@@ -336,7 +336,7 @@ const AlumniDashboard = () => {
                     Past
                   </button>
                 </div>
-              </div>
+      </div>
 
               {error && <div className="error-message">{error}</div>}
 

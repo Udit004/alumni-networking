@@ -23,7 +23,7 @@ const allowedOrigins = [
     'https://alumni-networking.vercel.app',
     'https://alumni-networking-89f98.web.app',
     'https://alumni-networking-89f98.firebaseapp.com',
-    'https://your-production-domain.com' // Add your production domain here
+    'https://alumni-network-backend.onrender.com'
 ];
 
 // CORS Configuration
