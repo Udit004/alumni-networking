@@ -23,7 +23,7 @@ const allowedOrigins = [
     'https://alumni-networking.vercel.app',
     'https://alumni-networking-89f98.web.app',
     'https://alumni-networking-89f98.firebaseapp.com',
-    'https://alumni-network-backend.onrender.com'
+    'https://alumni-networking.onrender.com'
 ];
 
 // CORS Configuration
@@ -33,6 +33,7 @@ app.use(cors({
         if (!origin) return callback(null, true);
         
         if (allowedOrigins.indexOf(origin) === -1) {
+            console.log('Blocked origin:', origin); // Debug log
             const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
             return callback(new Error(msg), false);
         }
@@ -45,6 +46,12 @@ app.use(cors({
 
 // Middleware
 app.use(express.json());
+
+// Debug middleware
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path}`);
+    next();
+});
 
 // Routes
 app.use("/api/events", eventRoutes);
@@ -69,14 +76,13 @@ mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
         console.log("✅ Connected to MongoDB Atlas");
         app.listen(PORT, HOST, () => {
             console.log(`🚀 Server running at http://localhost:${PORT}`);
+            // Log available routes
+            console.log("\n✅ Available Routes:");
+            const expressListRoutes = require("express-list-routes");
+            expressListRoutes(app);
         });
     })
     .catch(err => {
         console.error("❌ MongoDB Connection Error:", err);
         process.exit(1);
     });
-
-// ✅ List Available Routes
-const expressListRoutes = require("express-list-routes");
-console.log("\n✅ Available Routes:");
-expressListRoutes(app);

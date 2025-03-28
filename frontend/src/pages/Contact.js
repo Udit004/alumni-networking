@@ -35,11 +35,19 @@ const Contact = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify(formData),
+        credentials: 'include'
       });
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        data = await response.json();
+      } else {
+        throw new Error('Server returned non-JSON response');
+      }
 
       if (!response.ok) {
         throw new Error(data.message || data.error || 'Failed to send message');
@@ -53,7 +61,6 @@ const Contact = () => {
         message: '',
       });
       
-      // Show success message
       setStatus({
         type: "success",
         message: "Message sent successfully!"
@@ -61,19 +68,21 @@ const Contact = () => {
     } catch (err) {
       console.error('Error submitting form:', err);
       
-      // Handle specific error cases
+      let errorMessage;
       if (err.message === 'Failed to fetch') {
-        setError('Unable to connect to the server. Please check your internet connection or try again later.');
+        errorMessage = 'Unable to connect to the server. Please check your internet connection.';
+      } else if (err.message.includes('Server returned non-JSON')) {
+        errorMessage = 'Server error. Please try again later.';
       } else if (err.message.includes('API URL')) {
-        setError('Server configuration error. Please contact support.');
+        errorMessage = 'Server configuration error. Please contact support.';
       } else {
-        setError(err.message || 'An unexpected error occurred. Please try again.');
+        errorMessage = err.message || 'An unexpected error occurred. Please try again.';
       }
-      
-      // Show error message
+
+      setError(errorMessage);
       setStatus({
         type: "error",
-        message: err.message || 'Failed to send message. Please try again.'
+        message: errorMessage
       });
     } finally {
       setLoading(false);
