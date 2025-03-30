@@ -4,18 +4,46 @@ const Event = require("../models/Event");
 const User = require("../models/user");
 const mongoose = require("mongoose");
 
-// ✅ GET ALL EVENTS
+// 📌 Get all events
 router.get("/", async (req, res) => {
     try {
-        const events = await Event.find({})
-            .populate("createdBy", "name email")
-            .populate("registeredUsers.userId", "name email");
+        const events = await Event.find()
+            .populate("registeredUsers.userId", "name email")
+            .populate("createdBy", "name email");
 
-        console.log("✅ Fetched Events:", events);
-        res.json(events);
+        console.log(`📋 Found ${events.length} events`);
+        res.status(200).json(events);
     } catch (error) {
         console.error("❌ Error fetching events:", error);
-        console.log("🔍 Error details:", error.message);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+// 📌 Get a specific event by ID
+router.get("/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 🔍 Validate ID format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            console.error("❌ Invalid event ID format:", id);
+            return res.status(400).json({ message: "Invalid event ID format" });
+        }
+
+        // 🔍 Find the event
+        const event = await Event.findById(id)
+            .populate("registeredUsers.userId", "name email")
+            .populate("createdBy", "name email");
+
+        if (!event) {
+            console.error("❌ Event not found:", id);
+            return res.status(404).json({ message: "Event not found" });
+        }
+
+        console.log("✅ Event found:", event.title);
+        res.status(200).json(event);
+    } catch (error) {
+        console.error("❌ Error fetching event:", error);
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
@@ -23,93 +51,49 @@ router.get("/", async (req, res) => {
 // 📌 Create a new event
 router.post("/", async (req, res) => {
     try {
-        const { title, description, date, time, location, createdBy, createdByRole } = req.body;
+        const { title, description, date, location, organizer, userId, firebaseUID } = req.body;
 
-        // Validate and log received data
-        console.log("📥 Received event creation request with data:", {
-            title, description, date, time, location, 
-            createdBy: typeof createdBy === 'object' ? 'Object' : createdBy, 
-            createdByRole
-        });
+        console.log("📝 Creating event:", { title, organizer, userId, firebaseUID });
 
-        // Validate required fields
-        if (!title || !description || !date || !time || !location || !createdBy || !createdByRole) {
-            console.error("❌ Validation failed. Missing fields:", {
-                title: !title,
-                description: !description,
-                date: !date,
-                time: !time,
-                location: !location,
-                createdBy: !createdBy,
-                createdByRole: !createdByRole
-            });
-            return res.status(400).json({ message: "All fields are required" });
-        }
-
-        // Check if createdByRole is valid
-        const validRoles = ["student", "teacher", "alumni", "Student", "Teacher", "Alumni"];
-        if (!validRoles.includes(createdByRole)) {
-            console.error("❌ Invalid role:", createdByRole);
-            return res.status(400).json({ message: "Invalid role provided" });
-        }
-
-        // Format the role correctly (capitalize first letter)
-        const formattedRole = createdByRole.charAt(0).toUpperCase() + createdByRole.slice(1).toLowerCase();
+        // 🔍 Step 1: Find the user who is creating the event
+        let user;
         
-        // Handle different types of createdBy values
-        let finalCreatedBy = createdBy;
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+            user = await User.findById(userId);
+        }
         
-        // If createdBy is a string but not a valid ObjectId, try to find the user by Firebase UID
-        if (typeof createdBy === 'string' && !mongoose.Types.ObjectId.isValid(createdBy)) {
-            try {
-                console.log("🔍 Looking up user by Firebase UID:", createdBy);
-                const user = await User.findOne({ firebaseUID: createdBy });
-                if (user) {
-                    console.log("✅ Found user by Firebase UID, using MongoDB ID instead:", user._id);
-                    finalCreatedBy = user._id;
-                } else {
-                    console.log("⚠️ No user found with Firebase UID, using original value");
-                }
-            } catch (err) {
-                console.error("❌ Error looking up user by Firebase UID:", err);
-                // Continue with original value if lookup fails
-            }
+        if (!user && firebaseUID) {
+            user = await User.findOne({ firebaseUID });
         }
 
-        // Create new event
-        const event = new Event({
+        if (!user) {
+            console.error("❌ User not found");
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // 📌 Step 2: Create the event
+        const newEvent = new Event({
             title,
             description,
             date,
-            time,
             location,
-            createdBy: finalCreatedBy,
-            createdByRole: formattedRole
+            organizer,
+            createdBy: user._id,
+            createdAt: new Date(),
+            registeredUsers: []
         });
 
-        // Save event
-        await event.save();
+        // 💾 Step 3: Save the event
+        await newEvent.save();
+        console.log("✅ Event created:", newEvent._id);
 
-        console.log("✅ Event created successfully:", event);
-        res.status(201).json(event);
+        res.status(201).json({
+            message: "Event created successfully",
+            event: newEvent
+        });
+
     } catch (error) {
         console.error("❌ Error creating event:", error);
-        
-        // Provide more detailed error response
-        if (error.name === 'ValidationError') {
-            console.error("Validation error details:", error.errors);
-            return res.status(400).json({ 
-                message: "Validation error", 
-                details: Object.values(error.errors).map(err => err.message) 
-            });
-        } else if (error.name === 'CastError') {
-            console.error("Cast error details:", error);
-            return res.status(400).json({ 
-                message: "Invalid data format", 
-                details: `${error.path}: ${error.value} is not a valid ${error.kind}` 
-            });
-        }
-        
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
@@ -141,6 +125,7 @@ router.post("/:eventId/register", async (req, res) => {
 
         // 🔍 Step 3: Find and validate user
         let user;
+        
         if (mongoose.Types.ObjectId.isValid(userId)) {
             user = await User.findById(userId);
         }
@@ -173,7 +158,16 @@ router.post("/:eventId/register", async (req, res) => {
         // 🔄 Step 6: Get updated event with populated data
         const updatedEvent = await Event.findById(eventId)
             .populate("registeredUsers.userId", "name email")
-            .populate("createdBy", "name email");
+            .populate({
+                path: "createdBy",
+                select: "name email",
+                match: (doc) => {
+                    if (mongoose.Types.ObjectId.isValid(doc.createdBy)) {
+                        return { _id: doc.createdBy };
+                    }
+                    return { firebaseUID: doc.createdBy };
+                }
+            });
 
         console.log("✅ Registration successful for:", user.name);
         res.status(200).json({ 
@@ -204,6 +198,54 @@ router.get("/enrolled/:userId", async (req, res) => {
         res.json(events);
     } catch (error) {
         console.error("❌ Error fetching enrolled events:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+// �� Get events created by or registered by a specific user
+router.get("/user/:userId", async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { firebaseUID } = req.query;
+
+        console.log("🔍 Looking for events by user:", { userId, firebaseUID });
+
+        // 🔍 Find the user
+        let user;
+        
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+            user = await User.findById(userId);
+        }
+        
+        if (!user && firebaseUID) {
+            user = await User.findOne({ firebaseUID });
+        }
+
+        if (!user) {
+            console.error("❌ User not found");
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        console.log("✅ Found user:", user.name);
+
+        // 🔍 Find events created by the user
+        const createdEvents = await Event.find({ createdBy: user._id })
+            .populate("registeredUsers.userId", "name email")
+            .populate("createdBy", "name email");
+
+        // 🔍 Find events the user has registered for
+        const registeredEvents = await Event.find({ "registeredUsers.userId": user._id })
+            .populate("registeredUsers.userId", "name email")
+            .populate("createdBy", "name email");
+
+        console.log(`📋 Found ${createdEvents.length} created events and ${registeredEvents.length} registered events`);
+        
+        res.status(200).json({
+            createdEvents,
+            registeredEvents
+        });
+    } catch (error) {
+        console.error("❌ Error fetching user events:", error);
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });

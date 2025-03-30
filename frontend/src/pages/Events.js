@@ -70,32 +70,7 @@ const Events = () => {
     }
 
     try {
-      // 🔹 Step 1: Get user from MongoDB
-      const userRes = await fetch(`${API_URL}/api/users/firebase/${user.uid}`);
-      if (!userRes.ok) {
-        // If user doesn't exist, create them
-        const createUserRes = await fetch(`${API_URL}/api/users`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            firebaseUID: user.uid,
-            name: user.displayName || 'User',
-            email: user.email,
-            role: role.charAt(0).toUpperCase() + role.slice(1)
-          })
-        });
-        
-        if (!createUserRes.ok) {
-          throw new Error("Failed to create/fetch user");
-        }
-        
-        const userData = await createUserRes.json();
-        return handleRegister(eventId);
-      }
-
-      const userData = await userRes.json();
-
-      // 🔹 Step 2: Register for the event
+      // 🔹 Step 1: Register for the event with Firebase UID
       const response = await fetch(`${API_URL}/api/events/${eventId}/register`, {
         method: "POST",
         headers: { 
@@ -103,7 +78,6 @@ const Events = () => {
           'Accept': 'application/json'
         },
         body: JSON.stringify({ 
-          userId: userData._id,
           firebaseUID: user.uid
         })
       });
@@ -128,17 +102,13 @@ const Events = () => {
         throw new Error("Invalid response from server");
       }
 
-      // 🔹 Step 3: Update the events list
-      const updatedEvents = events.map(event => {
+      // 🔹 Step 2: Update the events list
+      setEvents(prev => prev.map(event => {
         if (event._id === eventId) {
-          return registrationData.event || {
-            ...event,
-            registeredUsers: [...event.registeredUsers, { userId: userData._id }]
-          };
+          return registrationData.event || event;
         }
         return event;
-      });
-      setEvents(updatedEvents);
+      }));
 
       alert("✅ Successfully registered for the event!");
     } catch (error) {

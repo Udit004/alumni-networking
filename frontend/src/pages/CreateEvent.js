@@ -164,8 +164,9 @@ const EventCreate = () => {
         date: formattedDate,
         time: eventData.time,
         location: eventData.location.trim(),
-        createdBy: mongoUserId,
-        createdByRole: formattedRole
+        organizer: currentUser.displayName || "Unknown Organizer",
+        userId: mongoUserId,
+        firebaseUID: currentUser.uid
       };
       
       if (process.env.NODE_ENV === 'development') {
@@ -173,7 +174,7 @@ const EventCreate = () => {
       }
 
       try {
-        // Create the event with MongoDB user ID
+        // Create the event with Firebase UID
         const response = await axios.post(config.endpoints.events, eventPayload);
         
         if (process.env.NODE_ENV === 'development') {
@@ -187,50 +188,21 @@ const EventCreate = () => {
         }, 1500);
       } catch (err) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('❌ Error creating event with MongoDB ID:', err);
+          console.error('❌ Error creating event:', err);
+          console.error('Error response data:', err.response?.data);
+          console.error('Error response status:', err.response?.status);
+          console.error('Error message:', err.message);
         }
         
-        // If MongoDB ID fails, try with Firebase UID as fallback
-        try {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Attempting with Firebase UID instead...');
-          }
-          
-          const fallbackPayload = {
-            ...eventPayload,
-            createdBy: currentUser.uid,
-            // Keep the formatted role
-          };
-          
-          const response = await axios.post(config.endpoints.events, fallbackPayload);
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.log('✅ Event created successfully with Firebase UID: ', response.data);
-          }
-          setSuccess('Event created successfully!');
-          
-          // Redirect to events page after success
-          setTimeout(() => {
-            navigate('/events');
-          }, 1500);
-        } catch (fallbackErr) {
-          if (process.env.NODE_ENV === 'development') {
-            console.error('❌ Fallback also failed:', fallbackErr);
-            console.error('Error response data:', fallbackErr.response?.data);
-            console.error('Error response status:', fallbackErr.response?.status);
-            console.error('Error message:', fallbackErr.message);
-          }
-          
-          // Handle specific error cases
-          if (fallbackErr.response?.status === 404) {
-            setError("Backend service is currently unavailable. Please try again later.");
-          } else if (fallbackErr.response?.status === 500) {
-            setError("Internal server error. Please try again later or contact support.");
-          } else if (fallbackErr.response?.data?.message) {
-            setError(fallbackErr.response.data.message);
-          } else {
-            setError('Failed to create event. Please try again.');
-          }
+        // Handle specific error cases
+        if (err.response?.status === 404) {
+          setError("Backend service is currently unavailable. Please try again later.");
+        } else if (err.response?.status === 500) {
+          setError("Internal server error. Please try again later or contact support.");
+        } else if (err.response?.data?.message) {
+          setError(err.response.data.message);
+        } else {
+          setError('Failed to create event. Please try again.');
         }
       }
     } catch (outerErr) {
