@@ -1,11 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { auth, db } from "../firebaseConfig";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Signup.css";
-
 
 const Signup = () => {
   // New state variables for additional fields
@@ -17,7 +16,26 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student"); // Default role
+  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check initial dark mode state
+    setIsDarkMode(document.documentElement.classList.contains('dark'));
+    
+    // Monitor for dark mode changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          setIsDarkMode(document.documentElement.classList.contains('dark'));
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, { attributes: true });
+    
+    return () => observer.disconnect();
+  }, []);
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -60,7 +78,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="signup-container">
+    <div className={`signup-container ${isDarkMode ? 'dark-mode' : ''}`}>
       <h2>Sign Up</h2>
       <form onSubmit={handleSignup}>
         <input

@@ -25,9 +25,55 @@ router.post("/", async (req, res) => {
     try {
         const { title, description, date, time, location, createdBy, createdByRole } = req.body;
 
+        // Validate and log received data
+        console.log("📥 Received event creation request with data:", {
+            title, description, date, time, location, 
+            createdBy: typeof createdBy === 'object' ? 'Object' : createdBy, 
+            createdByRole
+        });
+
         // Validate required fields
         if (!title || !description || !date || !time || !location || !createdBy || !createdByRole) {
+            console.error("❌ Validation failed. Missing fields:", {
+                title: !title,
+                description: !description,
+                date: !date,
+                time: !time,
+                location: !location,
+                createdBy: !createdBy,
+                createdByRole: !createdByRole
+            });
             return res.status(400).json({ message: "All fields are required" });
+        }
+
+        // Check if createdByRole is valid
+        const validRoles = ["student", "teacher", "alumni", "Student", "Teacher", "Alumni"];
+        if (!validRoles.includes(createdByRole)) {
+            console.error("❌ Invalid role:", createdByRole);
+            return res.status(400).json({ message: "Invalid role provided" });
+        }
+
+        // Format the role correctly (capitalize first letter)
+        const formattedRole = createdByRole.charAt(0).toUpperCase() + createdByRole.slice(1).toLowerCase();
+        
+        // Handle different types of createdBy values
+        let finalCreatedBy = createdBy;
+        
+        // If createdBy is a string but not a valid ObjectId, try to find the user by Firebase UID
+        if (typeof createdBy === 'string' && !mongoose.Types.ObjectId.isValid(createdBy)) {
+            try {
+                console.log("🔍 Looking up user by Firebase UID:", createdBy);
+                const user = await User.findOne({ firebaseUID: createdBy });
+                if (user) {
+                    console.log("✅ Found user by Firebase UID, using MongoDB ID instead:", user._id);
+                    finalCreatedBy = user._id;
+                } else {
+                    console.log("⚠️ No user found with Firebase UID, using original value");
+                }
+            } catch (err) {
+                console.error("❌ Error looking up user by Firebase UID:", err);
+                // Continue with original value if lookup fails
+            }
         }
 
         // Create new event
@@ -37,8 +83,8 @@ router.post("/", async (req, res) => {
             date,
             time,
             location,
-            createdBy,
-            createdByRole
+            createdBy: finalCreatedBy,
+            createdByRole: formattedRole
         });
 
         // Save event
@@ -48,6 +94,22 @@ router.post("/", async (req, res) => {
         res.status(201).json(event);
     } catch (error) {
         console.error("❌ Error creating event:", error);
+        
+        // Provide more detailed error response
+        if (error.name === 'ValidationError') {
+            console.error("Validation error details:", error.errors);
+            return res.status(400).json({ 
+                message: "Validation error", 
+                details: Object.values(error.errors).map(err => err.message) 
+            });
+        } else if (error.name === 'CastError') {
+            console.error("Cast error details:", error);
+            return res.status(400).json({ 
+                message: "Invalid data format", 
+                details: `${error.path}: ${error.value} is not a valid ${error.kind}` 
+            });
+        }
+        
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });

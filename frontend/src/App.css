@@ -1,7 +1,3 @@
-
-
-
-
 .App {
   text-align: center;
 }
@@ -39,4 +35,23 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Dark mode specific overrides */
+html.dark nav {
+  background-color: #111827 !important; /* dark:bg-gray-900 equivalent */
+}
+
+html.dark .bg-white {
+  background-color: #111827 !important;
+}
+
+html.dark .feature-card,
+html.dark .testimonial-card {
+  background-color: #111827 !important; 
+  color: white !important;
+}
+
+html.dark .card {
+  background-color: #111827 !important;
 }

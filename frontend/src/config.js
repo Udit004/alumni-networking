@@ -1,34 +1,49 @@
-const config = {
-  apiUrl: process.env.REACT_APP_API_URL,
-  isDevelopment: process.env.NODE_ENV === 'development',
-  isProduction: process.env.NODE_ENV === 'production',
-  
-  // API endpoints with error handling
-  endpoints: {
-    users: `${process.env.REACT_APP_API_URL}/api/users`,
-    events: `${process.env.REACT_APP_API_URL}/api/events`,
-  },
-  
-  // Firebase config
-  firebase: {
-    apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.REACT_APP_FIREBASE_APP_ID,
-  },
+// API Configuration
+import axios from 'axios';
 
-  // Helper function to check if backend is available
+// Determine API base URL based on environment
+const getApiBaseUrl = () => {
+  // For production environments
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.REACT_APP_API_URL || 'https://alumni-networking.onrender.com/api';
+  }
+  // For development
+  return 'http://localhost:5000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Extract the base URL without /api
+const BASE_URL = API_BASE_URL.replace(/\/api$/, '');
+
+const config = {
+  apiUrl: BASE_URL,
+  endpoints: {
+    users: `${API_BASE_URL}/users`,
+    events: `${API_BASE_URL}/events`,
+    auth: `${API_BASE_URL}/auth`,
+    courses: `${API_BASE_URL}/courses`,
+    jobs: `${API_BASE_URL}/jobs`,
+    profiles: `${API_BASE_URL}/profiles`,
+  },
+  
+  // Function to check if the backend is available
   checkBackendAvailability: async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}`);
-      return response.ok;
+      await axios.get(`${API_BASE_URL}/health`, { timeout: 5000 });
+      return true;
     } catch (error) {
-      console.error('Backend availability check failed:', error);
+      console.error("Backend availability check failed:", error);
       return false;
     }
-  }
+  },
+  
+  // Default timeout for API requests
+  requestTimeout: 10000,
+  
+  // Default image placeholder
+  defaultProfileImage: '/images/default-profile.png',
+  defaultEventImage: '/images/default-event.png',
 };
 
 export default config; 

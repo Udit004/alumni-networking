@@ -8,6 +8,12 @@
     border-radius: 8px;
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  .dark .signup-container {
+    background: #1e293b;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
   }
   
   .signup-container h2 {
@@ -15,6 +21,10 @@
     margin-bottom: 20px;
     font-size: 28px;
     color: #333;
+  }
+  
+  .dark .signup-container h2 {
+    color: #f3f4f6;
   }
   
   .signup-container form {
@@ -29,13 +39,27 @@
     font-size: 16px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    transition: border-color 0.3s ease;
+    transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+    background-color: #fff;
+    color: #333;
+  }
+
+  .dark .signup-container form input,
+  .dark .signup-container form select {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #f3f4f6;
   }
   
   .signup-container form input:focus,
   .signup-container form select:focus {
     border-color: #007bff;
     outline: none;
+  }
+  
+  .dark .signup-container form input:focus,
+  .dark .signup-container form select:focus {
+    border-color: #3b82f6;
   }
   
   .signup-container form button {
@@ -49,7 +73,15 @@
     transition: background-color 0.3s ease;
   }
   
+  .dark .signup-container form button {
+    background: #3b82f6;
+  }
+  
   .signup-container form button:hover {
     background: #0056b3;
+  }
+  
+  .dark .signup-container form button:hover {
+    background: #2563eb;
   }
   

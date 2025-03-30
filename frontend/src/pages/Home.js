@@ -1,12 +1,30 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import "./Home.css"; // Importing the updated CSS
 
 const Home = () => {
+  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
+
   useEffect(() => {
     AOS.init({ duration: 1000 });
+    
+    // Check initial dark mode state
+    setIsDarkMode(document.documentElement.classList.contains('dark'));
+    
+    // Monitor for dark mode changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          setIsDarkMode(document.documentElement.classList.contains('dark'));
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, { attributes: true });
+    
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -35,28 +53,23 @@ const Home = () => {
       </section>
 
       {/* 📌 Features Section */}
-      <section className="features-section">
-        <h2 data-aos="fade-up">Why Join Our Alumni Network?</h2>
+      <section className="features-section bg-gray-50 dark:bg-gray-900">
+        <h2 data-aos="fade-up" className="text-gray-900 dark:text-white text-3xl font-bold mb-6">Why Join Our Alumni Network?</h2>
         <div className="features-container">
-          <div className="feature-card" data-aos="fade-right">
-            <h4>🔍 Find Alumni</h4>
-            <p>Reconnect with old friends and make new professional connections.</p>
+          <div className="feature-card" style={{ backgroundColor: isDarkMode ? '#111827' : 'white' }} data-aos="fade-right">
+            <h4 className="text-gray-900 dark:text-white text-xl font-semibold">🔍 Find Alumni</h4>
+            <p className="text-gray-700 dark:text-white">Reconnect with old friends and make new professional connections.</p>
           </div>
-          <div className="feature-card" data-aos="fade-up">
-            <h4>💼 Job Board</h4>
-            <p>Discover job opportunities shared by alumni and recruiters.</p>
+          <div className="feature-card" style={{ backgroundColor: isDarkMode ? '#111827' : 'white' }} data-aos="fade-up">
+            <h4 className="text-gray-900 dark:text-white text-xl font-semibold">💼 Job Board</h4>
+            <p className="text-gray-700 dark:text-white">Discover job opportunities shared by alumni and recruiters.</p>
           </div>
-          <div className="feature-card" data-aos="fade-left">
-            <h4>📅 Alumni Events</h4>
-            <p>Stay updated on reunions, networking events, and mentorship programs.</p>
+          <div className="feature-card" style={{ backgroundColor: isDarkMode ? '#111827' : 'white' }} data-aos="fade-left">
+            <h4 className="text-gray-900 dark:text-white text-xl font-semibold">📅 Alumni Events</h4>
+            <p className="text-gray-700 dark:text-white">Stay updated on reunions, networking events, and mentorship programs.</p>
           </div>
         </div>
       </section>
-
-      {/* 🌍 Footer */}
-      <footer className="footer">
-        <p>&copy; 2025 Alumni Network. All Rights Reserved.</p>
-      </footer>
     </div>
   );
 };

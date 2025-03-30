@@ -64,6 +64,11 @@ app.get("/", (req, res) => {
     res.send("🎉 Welcome to the Alumni Networking API!");
 });
 
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+    res.status(200).json({ status: "ok", message: "Backend is running" });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('❌ Error:', err);
