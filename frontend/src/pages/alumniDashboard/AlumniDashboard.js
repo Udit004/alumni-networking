@@ -194,7 +194,7 @@ const AlumniDashboard = () => {
                   <div className="flex items-center">
                     <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-4">🎓</div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Mentorship</h3>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Number of Student Mentors</h3>
                       <p className="text-3xl font-bold text-gray-900 dark:text-white">3</p>
                     </div>
                   </div>
@@ -255,86 +255,560 @@ const AlumniDashboard = () => {
             </div>
           )}
 
-          {activeSection === 'profile' && (
-            <div className="profile-section">
-              <div className="profile-header">
-                <div className="profile-avatar">
-                  <span className="avatar-icon">👤</span>
-                </div>
-                <div className="profile-info">
-                  <h2>{user?.displayName || 'Alumni Name'}</h2>
-                  <p>Software Engineer at Google</p>
+{activeSection === 'profile' && (
+            <div className="profile-container">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                  <div className="w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-500 dark:text-blue-300 text-4xl overflow-hidden">
+                    {user?.photoURL ? (
+                      <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      user?.displayName ? user.displayName[0].toUpperCase() : '👤'
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{user?.displayName || 'Alumni User'}</h2>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">Software Engineer with over 5 years of experience</p>
+                    <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm">
+                      Edit Profile
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="profile-details">
-                <div className="detail-group">
-                  <label>Email</label>
-                  <p>{user?.email}</p>
+
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Personal Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
+                    <p className="text-gray-800 dark:text-white">{user?.email || 'email@example.com'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">LinkedIn</p>
+                    <p className="text-gray-800 dark:text-white">linkedin.com/in/username</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Phone</p>
+                    <p className="text-gray-800 dark:text-white">+1 234 567 890</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Location</p>
+                    <p className="text-gray-800 dark:text-white">San Francisco, CA</p>
+                  </div>
                 </div>
-                <div className="detail-group">
-                  <label>Phone</label>
-                  <p>+1 234 567 8900</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Work Experience</h3>
+                
+                <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Senior Software Engineer</h4>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">2019 - Present</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-2">TechCorp</p>
+                  <p className="text-gray-700 dark:text-gray-300">Leading a team of developers to build innovative web solutions.</p>
                 </div>
-                <div className="detail-group">
-                  <label>Graduation Year</label>
-                  <p>2020</p>
+                
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Software Developer</h4>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">2016 - 2019</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-2">WebWorks</p>
+                  <p className="text-gray-700 dark:text-gray-300">Designed and maintained various client-side applications.</p>
                 </div>
-                <div className="detail-group">
-                  <label>Specialization</label>
-                  <p>Computer Science</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Education</h3>
+                
+                <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Master of Science in Computer Science</h4>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">2008 - 2010</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400">University of California, Berkeley</p>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Bachelor of Science in Information Technology</h4>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">2004 - 2008</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400">Stanford University</p>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Skills</h3>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">JavaScript</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">React</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">Node.js</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">Python</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">AWS</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">Docker</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">Git</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">TypeScript</span>
                 </div>
               </div>
             </div>
           )}
           
 
-          {activeSection === 'connections' && (
+{activeSection === 'connections' && (
             <div className="connections-section">
-              <div className="section-header">
-                <h2>My Connections</h2>
-                <div className="search-box">
-                  <input type="text" placeholder="Search connections..." />
-                  <span className="search-icon">🔍</span>
+              <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Connections</h2>
+                <div className="relative w-full md:w-64">
+                  <input 
+                    type="text" 
+                    placeholder="Search connections..." 
+                    className="w-full py-2 px-10 bg-white dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ backgroundColor: isDarkMode ? '#374151' : 'white' }}
+                  />
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-300">
+                    🔍
+                  </span>
                 </div>
               </div>
-              <div className="connections-grid">
-                <div className="connection-card">
-                  <div className="connection-avatar">
-                    <span className="avatar-icon">👤</span>
-                  </div>
-                  <div className="connection-info">
-                    <h3>John Doe</h3>
-                    <p>Software Engineer at Microsoft</p>
-                    <div className="connection-actions">
-                      <button className="action-btn">Message</button>
-                      <button className="action-btn">View Profile</button>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Connection Card 1 */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="p-5">
+                    <div className="flex items-center mb-4">
+                      <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-500 dark:text-blue-300 text-2xl mr-4 overflow-hidden">
+                        <span>JD</span>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">John Doe</h3>
+                        <p className="text-gray-600 dark:text-gray-400">Software Engineer at Microsoft</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📧</span>
+                        <span className="text-sm">john.doe@example.com</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">🌐</span>
+                        <span className="text-sm">linkedin.com/in/johndoe</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📍</span>
+                        <span className="text-sm">Seattle, WA</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
+                        Message
+                      </button>
+                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
+                        View Profile
+                      </button>
                     </div>
                   </div>
                 </div>
-                {/* Add more connection cards */}
+
+                {/* Connection Card 2 */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="p-5">
+                    <div className="flex items-center mb-4">
+                      <div className="w-16 h-16 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-500 dark:text-purple-300 text-2xl mr-4 overflow-hidden">
+                        <span>JS</span>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Jane Smith</h3>
+                        <p className="text-gray-600 dark:text-gray-400">Product Manager at Amazon</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📧</span>
+                        <span className="text-sm">jane.smith@example.com</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">🌐</span>
+                        <span className="text-sm">linkedin.com/in/janesmith</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📍</span>
+                        <span className="text-sm">San Francisco, CA</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
+                        Message
+                      </button>
+                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
+                        View Profile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Connection Card 3 */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="p-5">
+                    <div className="flex items-center mb-4">
+                      <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-500 dark:text-green-300 text-2xl mr-4 overflow-hidden">
+                        <span>RJ</span>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Robert Johnson</h3>
+                        <p className="text-gray-600 dark:text-gray-400">Data Scientist at Google</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📧</span>
+                        <span className="text-sm">robert.j@example.com</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">🌐</span>
+                        <span className="text-sm">linkedin.com/in/robertj</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📍</span>
+                        <span className="text-sm">New York, NY</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
+                        Message
+                      </button>
+                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
+                        View Profile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Connection Card 4 */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="p-5">
+                    <div className="flex items-center mb-4">
+                      <div className="w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center text-yellow-500 dark:text-yellow-300 text-2xl mr-4 overflow-hidden">
+                        <span>EW</span>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Emily Wilson</h3>
+                        <p className="text-gray-600 dark:text-gray-400">UX Designer at Apple</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📧</span>
+                        <span className="text-sm">emily.w@example.com</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">🌐</span>
+                        <span className="text-sm">linkedin.com/in/emilyw</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📍</span>
+                        <span className="text-sm">Cupertino, CA</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
+                        Message
+                      </button>
+                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
+                        View Profile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Connection Card 5 */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="p-5">
+                    <div className="flex items-center mb-4">
+                      <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center text-red-500 dark:text-red-300 text-2xl mr-4 overflow-hidden">
+                        <span>MB</span>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Michael Brown</h3>
+                        <p className="text-gray-600 dark:text-gray-400">DevOps Engineer at Netflix</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📧</span>
+                        <span className="text-sm">michael.b@example.com</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">🌐</span>
+                        <span className="text-sm">linkedin.com/in/michaelb</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📍</span>
+                        <span className="text-sm">Los Angeles, CA</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
+                        Message
+                      </button>
+                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
+                        View Profile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Connection Card 6 */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="p-5">
+                    <div className="flex items-center mb-4">
+                      <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-500 dark:text-indigo-300 text-2xl mr-4 overflow-hidden">
+                        <span>SL</span>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sarah Lee</h3>
+                        <p className="text-gray-600 dark:text-gray-400">Marketing Director at Spotify</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📧</span>
+                        <span className="text-sm">sarah.l@example.com</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">🌐</span>
+                        <span className="text-sm">linkedin.com/in/sarahlee</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📍</span>
+                        <span className="text-sm">Chicago, IL</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
+                        Message
+                      </button>
+                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
+                        View Profile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 flex justify-center">
+                <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+                  Load More Connections
+                </button>
               </div>
             </div>
           )}
 
-          {activeSection === 'mentorship' && (
+
+{activeSection === 'mentorship' && (
             <div className="mentorship-section">
-              <div className="section-header">
-                <h2>Mentorship Programs</h2>
-                <button className="create-mentorship-btn">Create Program</button>
+              <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Mentorship Programs</h2>
+                <button className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center">
+                  <span className="mr-2">+</span> Create Program
+                </button>
               </div>
-              <div className="mentorship-grid">
-                <div className="mentorship-card">
-                  <div className="mentorship-header">
-                    <h3>Web Development Mentorship</h3>
-                    <span className="mentorship-status">Active</span>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Mentorship Card 1 */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
+                     style={{ backgroundColor: isDarkMode ? '#080725' : 'white' }}>
+                  <div className="relative">
+                    <div className="h-24 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+                    <div className="absolute top-12 left-6 w-20 h-20 rounded-full bg-white dark:bg-gray-700 border-4 border-white dark:border-gray-700 flex items-center justify-center text-3xl">
+                      💻
+                    </div>
                   </div>
-                  <p className="mentorship-description">Help students learn modern web development</p>
-                  <div className="mentorship-stats">
-                    <span>👥 5 Mentees</span>
-                    <span>⭐ 4.8 Rating</span>
+                  
+                  <div className="p-5 pt-14">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Web Development Mentorship</h3>
+                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">Active</span>
+                    </div>
+                    
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">Help students learn modern web development technologies and best practices.</p>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">👥</span>
+                        <span className="text-sm">5 Mentees</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">⭐</span>
+                        <span className="text-sm">4.8 Rating (12 reviews)</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">⏱️</span>
+                        <span className="text-sm">Started 3 months ago</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
+                        View Details
+                      </button>
+                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
+                        Manage Mentees
+                      </button>
+                    </div>
                   </div>
                 </div>
-                {/* Add more mentorship cards */}
+                
+                {/* Mentorship Card 2 */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
+                     style={{ backgroundColor: isDarkMode ? '#080725' : 'white' }}>
+                  <div className="relative">
+                    <div className="h-24 bg-gradient-to-r from-green-500 to-teal-600"></div>
+                    <div className="absolute top-12 left-6 w-20 h-20 rounded-full bg-white dark:bg-gray-700 border-4 border-white dark:border-gray-700 flex items-center justify-center text-3xl">
+                      📊
+                    </div>
+                  </div>
+                  
+                  <div className="p-5 pt-14">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Data Science Fundamentals</h3>
+                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">Active</span>
+                    </div>
+                    
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">Guide students through data analysis, visualization, and machine learning basics.</p>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">👥</span>
+                        <span className="text-sm">3 Mentees</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">⭐</span>
+                        <span className="text-sm">4.9 Rating (8 reviews)</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">⏱️</span>
+                        <span className="text-sm">Started 2 months ago</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
+                        View Details
+                      </button>
+                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
+                        Manage Mentees
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Mentorship Card 3 */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
+                     style={{ backgroundColor: isDarkMode ? '#080725' : 'white' }}>
+                  <div className="relative">
+                    <div className="h-24 bg-gradient-to-r from-yellow-500 to-orange-600"></div>
+                    <div className="absolute top-12 left-6 w-20 h-20 rounded-full bg-white dark:bg-gray-700 border-4 border-white dark:border-gray-700 flex items-center justify-center text-3xl">
+                      🎨
+                    </div>
+                  </div>
+                  
+                  <div className="p-5 pt-14">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">UI/UX Design Workshop</h3>
+                      <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs rounded-full">Starting Soon</span>
+                    </div>
+                    
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">Teach design principles, user research, and prototyping techniques.</p>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">👥</span>
+                        <span className="text-sm">0 Mentees (4 spots available)</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">📅</span>
+                        <span className="text-sm">Starts on June 15, 2023</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">⏱️</span>
+                        <span className="text-sm">8-week program</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
+                        View Details
+                      </button>
+                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
+                        Edit Program
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Mentorship Card 4 */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
+                     style={{ backgroundColor: isDarkMode ? '#080725' : 'white' }}>
+                  <div className="relative">
+                    <div className="h-24 bg-gradient-to-r from-red-500 to-pink-600"></div>
+                    <div className="absolute top-12 left-6 w-20 h-20 rounded-full bg-white dark:bg-gray-700 border-4 border-white dark:border-gray-700 flex items-center justify-center text-3xl">
+                      🚀
+                    </div>
+                  </div>
+                  
+                  <div className="p-5 pt-14">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Career Development</h3>
+                      <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs rounded-full">Completed</span>
+                    </div>
+                    
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">Guide students through resume building, interview prep, and job search strategies.</p>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">👥</span>
+                        <span className="text-sm">7 Mentees</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">⭐</span>
+                        <span className="text-sm">4.7 Rating (15 reviews)</span>
+                      </div>
+                      <div className="flex items-center text-gray-700 dark:text-gray-300">
+                        <span className="text-sm mr-2">🏆</span>
+                        <span className="text-sm">5 mentees found jobs</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
+                        View Details
+                      </button>
+                      <button className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-sm">
+                        Restart Program
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8 flex justify-center">
+                <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+                  View All Mentorship Programs
+                </button>
               </div>
             </div>
           )}
