@@ -6,7 +6,7 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const { currentUser, userRole, userData, logout } = useAuth();
+  const { currentUser, role, userData, logout } = useAuth();
   const navigate = useNavigate();
 
   // Initialize dark mode state based on class or system preference
@@ -121,20 +121,20 @@ const Navbar = () => {
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-md shadow-lg py-1 z-50">
+                    {role && (
+                      <Link
+                        to={`/${role.toLowerCase()}-dashboard`}
+                        className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
+                      >
+                        Dashboard
+                      </Link>
+                    )}
                     <Link
                       to="/profile"
                       className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
                     >
                       Profile
                     </Link>
-                    {userRole && (
-                      <Link
-                        to={`/${userRole.toLowerCase()}-dashboard`}
-                        className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
-                      >
-                        Dashboard
-                      </Link>
-                    )}
                     <button
                       onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
@@ -232,6 +232,47 @@ const Navbar = () => {
               Contact
             </Link>
             
+            {/* User Menu Items - Mobile */}
+            {currentUser ? (
+              <>
+                {role && (
+                  <Link
+                    to={`/${role.toLowerCase()}-dashboard`}
+                    className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
+                  >
+                    Dashboard
+                  </Link>
+                )}
+                <Link
+                  to="/profile"
+                  className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="block w-full text-left px-3 py-2 rounded-md text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/signup"
+                  className="block px-3 py-2 rounded-md bg-primary text-white hover:bg-opacity-90 hover:text-white no-underline"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
+            
             {/* Dark Mode Toggle for Mobile */}
             <button
               onClick={toggleDarkMode}
@@ -248,46 +289,6 @@ const Navbar = () => {
                 </svg>
               )}
             </button>
-            
-            {currentUser ? (
-              <>
-                <Link
-                  to="/profile"
-                  className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
-                >
-                  Profile
-                </Link>
-                {userRole && (
-                  <Link
-                    to={`/${userRole.toLowerCase()}-dashboard`}
-                    className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
-                  >
-                    Dashboard
-                  </Link>
-                )}
-                <button
-                  onClick={handleLogout}
-                  className="block w-full text-left px-3 py-2 rounded-md text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/signup"
-                  className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
-                >
-                  Sign Up
-                </Link>
-              </>
-            )}
           </div>
         </div>
       )}
