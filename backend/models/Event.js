@@ -4,10 +4,10 @@ const EventSchema = new mongoose.Schema({
     title: { type: String, required: true },
     description: { type: String, required: true },
     date: { type: String, required: true },
-    time: { type: String, required: true },
+    time: { type: String, required: false, default: "12:00" }, // Optional with default
     location: { type: String, required: true },
     createdBy: { 
-        type: mongoose.Schema.Types.Mixed, 
+        type: mongoose.Schema.Types.Mixed, // Mixed type to support both ObjectId and String
         required: true,
         ref: "User" 
     },
@@ -16,18 +16,7 @@ const EventSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-// Pre-find middleware to handle string IDs properly 
-EventSchema.pre('find', function() {
-    // Don't try to populate with invalid ObjectIds
-    this.populate({ 
-        path: 'createdBy',
-        match: (doc) => {
-            if (mongoose.Types.ObjectId.isValid(doc.createdBy)) {
-                return { _id: doc.createdBy };
-            }
-            return { firebaseUID: doc.createdBy };
-        }
-    });
-});
+// Remove the pre-find middleware that's causing issues
+// We're handling population manually in routes now
 
 module.exports = mongoose.model("Event", EventSchema);

@@ -59,12 +59,41 @@ app.use("/api/users", userRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/auth', authRoutes);
 
+// Special Firebase events route that avoids ObjectId casting issues
+app.get("/api/events-firebase", async (req, res) => {
+    try {
+        const Event = mongoose.model('Event');
+        const events = await Event.find().lean();
+        
+        // Add placeholder data for frontend compatibility
+        const safeEvents = events.map(event => ({
+            ...event,
+            registeredUsers: event.registeredUsers || [],
+            createdBy: event.createdBy || null,
+            organizer: event.organizer || "Unknown"
+        }));
+        
+        console.log(`Found ${safeEvents.length} events for Firebase endpoint`);
+        res.status(200).json(safeEvents);
+    } catch (error) {
+        console.error("Error in Firebase events endpoint:", error);
+        res.status(500).json({ 
+            message: "Server error in Firebase events endpoint", 
+            error: error.message 
+        });
+    }
+});
+
 // Default route
 app.get("/", (req, res) => {
     res.send("🎉 Welcome to the Alumni Networking API!");
 });
 
-// Health check endpoint
+// Health check endpoints
+app.get("/healthcheck", (req, res) => {
+    res.status(200).json({ status: "ok", message: "Backend is running" });
+});
+
 app.get("/api/health", (req, res) => {
     res.status(200).json({ status: "ok", message: "Backend is running" });
 });

@@ -2,7 +2,36 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../AuthContext";
 import { Link } from "react-router-dom";
 import config from "../config";
+import axios from "axios";
 import "./Events.css";
+
+// Create an axios instance with the correct base URL and headers
+const api = axios.create({
+  baseURL: config.apiUrl,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  timeout: config.requestTimeout
+});
+
+// Function to safely handle event objects and prevent errors
+const safeEventObject = (event) => {
+  if (!event) return {};
+  
+  return {
+    _id: event._id || 'unknown',
+    title: event.title || 'Untitled Event',
+    description: event.description || 'No description available',
+    date: event.date || new Date().toISOString().split('T')[0],
+    time: event.time || '12:00',
+    location: event.location || 'TBD',
+    organizer: event.organizer || 'Unknown Organizer',
+    createdBy: event.createdBy || {},
+    registeredUsers: Array.isArray(event.registeredUsers) ? event.registeredUsers : [],
+    createdAt: event.createdAt || new Date().toISOString()
+  };
+};
 
 const Events = () => {
   const { user, role, loading: authLoading } = useAuth();
@@ -31,36 +60,137 @@ const Events = () => {
     return () => observer.disconnect();
   }, []);
 
-  const API_URL = process.env.REACT_APP_API_URL;
-
   // 🔄 Fetch Events from Backend
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_URL}/api/events`, { 
-          method: "GET", 
-          headers: { "Content-Type": "application/json" } 
-        });
+        setError("");
 
-        if (!res.ok) throw new Error(`Failed to fetch events. Status: ${res.status}`);
+        // First try: Firebase-specific endpoint that completely avoids ObjectId casting
+        try {
+          console.log('Trying Firebase-specific endpoint:', config.endpoints.eventsFirebase);
+          const response = await api.get(config.endpoints.eventsFirebase);
+          
+          if (response && response.data && Array.isArray(response.data)) {
+            const validEvents = response.data.filter(event => event && event.date);
+            
+            // Sort events by date
+            const sortedEvents = validEvents.sort((a, b) => {
+              try {
+                return new Date(a.date) - new Date(b.date);
+              } catch (err) {
+                return 0;
+              }
+            });
+            
+            setEvents(sortedEvents);
+            console.log('✅ Fetched events successfully from Firebase endpoint:', sortedEvents.length);
+            setLoading(false);
+            return;
+          }
+        } catch (firebaseErr) {
+          console.log("⚠️ Firebase endpoint failed, trying standard endpoint:", firebaseErr);
+        }
 
-        const data = await res.json();
-        if (!Array.isArray(data)) throw new Error("Unexpected API response format.");
+        // Second try: Standard endpoint with population
+        try {
+          console.log('Trying standard endpoint:', config.endpoints.events);
+          const response = await api.get(config.endpoints.events);
+          
+          // Better response validation
+          if (!response || !response.data) {
+            throw new Error("Empty response received from API");
+          }
+          
+          if (!Array.isArray(response.data)) {
+            console.error("Unexpected API response format:", response.data);
+            throw new Error("Unexpected API response format");
+          }
 
-        // Sort events by date
-        const sortedEvents = data.sort((a, b) => new Date(a.date) - new Date(b.date));
-        setEvents(sortedEvents);
+          // Add defensive checks for sorting
+          const validEvents = response.data.filter(event => event && event.date);
+          
+          // Sort events by date
+          const sortedEvents = validEvents.sort((a, b) => {
+            try {
+              return new Date(a.date) - new Date(b.date);
+            } catch (err) {
+              console.error("Error sorting events:", err);
+              return 0;
+            }
+          });
+          
+          setEvents(sortedEvents);
+          console.log('✅ Fetched events successfully from standard endpoint:', sortedEvents.length);
+          setLoading(false);
+          return;
+        } catch (standardErr) {
+          // Check if it's the specific ObjectId casting error
+          if (standardErr.response && 
+              standardErr.response.data && 
+              standardErr.response.data.error && 
+              standardErr.response.data.error.includes("Cast to ObjectId failed")) {
+              
+            console.log("⚠️ ObjectId casting error detected, trying no-populate endpoint");
+            
+            // Third try: No-populate endpoint
+            try {
+              console.log('Trying no-populate endpoint:', config.endpoints.eventsNoPopulate);
+              const fallbackResponse = await api.get(config.endpoints.eventsNoPopulate);
+              
+              if (fallbackResponse && fallbackResponse.data && Array.isArray(fallbackResponse.data)) {
+                const validEvents = fallbackResponse.data.filter(event => event && event.date);
+                
+                // Sort events by date
+                const sortedEvents = validEvents.sort((a, b) => {
+                  try {
+                    return new Date(a.date) - new Date(b.date);
+                  } catch (err) {
+                    return 0;
+                  }
+                });
+                
+                setEvents(sortedEvents);
+                console.log('✅ Fetched events successfully from no-populate endpoint:', sortedEvents.length);
+                setLoading(false);
+                return;
+              }
+            } catch (fallbackErr) {
+              console.error("Fallback endpoint also failed:", fallbackErr);
+            }
+          }
+          
+          throw standardErr; // Re-throw if it's not the specific error we're handling
+        }
       } catch (err) {
-        setError("Failed to load events. Please try again.");
-        console.error("Error fetching events:", err);
+        console.error("All endpoints failed:", err);
+        
+        // Final fallback: Show a dummy event
+        console.log("⚠️ All endpoints failed, using local fallback event");
+        const fallbackEvents = [
+          {
+            _id: "local-event-1",
+            title: "Default Event (Backend Connection Issue)",
+            description: "This is a fallback event shown because there was an issue connecting to the backend. Please try refreshing or contact support.",
+            date: new Date().toISOString().split('T')[0],
+            time: "12:00 PM",
+            location: "Online",
+            organizer: "System",
+            registeredUsers: [],
+            createdByRole: "Alumni"
+          }
+        ];
+        
+        setEvents(fallbackEvents);
+        setError("⚠️ Backend connection issue. Some features may be limited. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchEvents();
-  }, [API_URL]);
+  }, []);
 
   // 🎟 Handle Event Registration
   const handleRegister = async (eventId) => {
@@ -70,29 +200,18 @@ const Events = () => {
     }
 
     try {
-      // 🔹 Step 1: Register for the event with Firebase UID
-      const response = await fetch(`${API_URL}/api/events/${eventId}/register`, {
-        method: "POST",
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ 
-          firebaseUID: user.uid // Send Firebase UID instead of trying to use it as MongoDB ID
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Registration failed");
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Registering for event:', eventId);
       }
 
-      const registrationData = await response.json();
+      const response = await api.post(`${config.endpoints.events}/${eventId}/register`, {
+        firebaseUID: user.uid
+      });
 
-      // 🔹 Step 2: Update the events list with the returned event data
+      // Update the events list with the returned event data
       setEvents(prev => prev.map(event => {
         if (event._id === eventId) {
-          return registrationData.event;
+          return response.data.event;
         }
         return event;
       }));
@@ -100,8 +219,35 @@ const Events = () => {
       alert("✅ Successfully registered for the event!");
     } catch (error) {
       console.error("❌ Error registering for event:", error);
-      alert(error.message || "Failed to register for the event. Please try again.");
+      if (error.response) {
+        alert(error.response.data.message || "Failed to register for the event");
+      } else if (error.request) {
+        alert("Unable to reach the server. Please check your connection.");
+      } else {
+        alert("An error occurred. Please try again.");
+      }
     }
+  };
+
+  // Helper function to safely get organizer name
+  const getOrganizerName = (event) => {
+    if (!event) return "Unknown";
+    
+    // If the event has an organizer field directly
+    if (event.organizer) return event.organizer;
+    
+    // If createdBy is populated as an object with name
+    if (event.createdBy && typeof event.createdBy === 'object' && event.createdBy.name) {
+      return event.createdBy.name;
+    }
+    
+    // If createdBy is populated as an object with email
+    if (event.createdBy && typeof event.createdBy === 'object' && event.createdBy.email) {
+      return event.createdBy.email.split('@')[0]; // Use first part of email
+    }
+    
+    // Fallback
+    return "Unknown Organizer";
   };
 
   // 🔍 Filter events based on search input and date filter
@@ -124,9 +270,22 @@ const Events = () => {
   // Check if a user is registered for an event
   const isUserRegistered = (event) => {
     if (!user || !event.registeredUsers) return false;
-    return event.registeredUsers.some(registration => 
-      registration.userId?.firebaseUID === user.uid
-    );
+    
+    // Handle different ways the userId might be structured based on manual population
+    return event.registeredUsers.some(registration => {
+      // Check if userId is a populated object with firebaseUID
+      if (registration.userId && registration.userId.firebaseUID) {
+        return registration.userId.firebaseUID === user.uid;
+      }
+      
+      // Check if userId is an object with _id that might match the user's MongoDB ID
+      if (registration.userId && registration.userId._id) {
+        return registration.userId._id === user.uid;
+      }
+      
+      // Direct comparison for string IDs
+      return registration.userId === user.uid;
+    });
   };
 
   const getEventStatus = (eventDate) => {
@@ -222,7 +381,9 @@ const Events = () => {
         </div>
       ) : filteredEvents.length > 0 ? (
         <div className="events-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-          {filteredEvents.map((event) => {
+          {filteredEvents.map((eventData) => {
+            // Apply the safe event object pattern to prevent errors
+            const event = safeEventObject(eventData);
             const status = getEventStatus(event.date);
             const isRegistered = isUserRegistered(event);
             
@@ -256,6 +417,10 @@ const Events = () => {
                     <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
                       <span className="detail-icon mr-2">📍</span>
                       <span>{event.location}</span>
+                    </div>
+                    <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
+                      <span className="detail-icon mr-2">👤</span>
+                      <span>Organized by: {getOrganizerName(event)}</span>
                     </div>
                     <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
                       <span className="detail-icon mr-2">👥</span>

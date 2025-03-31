@@ -5,6 +5,16 @@ import { useNavigate } from "react-router-dom";
 import config from "../config.js";
 import './CreateEvent.css';
 
+// Create an axios instance with the correct base URL and headers
+const api = axios.create({
+  baseURL: config.apiUrl,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  timeout: config.requestTimeout
+});
+
 const EventCreate = () => {
   const navigate = useNavigate();
   const { currentUser, role } = useAuth();
@@ -40,7 +50,8 @@ const EventCreate = () => {
       console.log('Auth state in CreateEvent:', { 
         user: currentUser ? 'Logged in' : 'Not logged in',
         userId: currentUser?.uid,
-        role: role || 'No role assigned'
+        role: role || 'No role assigned',
+        apiUrl: config.apiUrl
       });
     }
     
@@ -58,32 +69,19 @@ const EventCreate = () => {
     return () => observer.disconnect();
   }, [currentUser, role]);
 
+  // Check if user is allowed to create events (teacher or admin or alumni)
+  const allowedRoles = ['teacher', 'admin', 'alumni'];
+  const canCreateEvents = currentUser && role && allowedRoles.includes(role.toLowerCase());
+
   const handleChange = (e) => {
     setEventData({ ...eventData, [e.target.name]: e.target.value });
   };
 
-  // Check if user is allowed to create events (teacher or admin or alumni)
-  const allowedRoles = ['teacher', 'admin', 'alumni'];
-  
-  // Check permissions and handle null role
-  const canCreateEvents = currentUser && role && allowedRoles.includes(role.toLowerCase());
-
-  // Format date as YYYY-MM-DD to ensure consistent format for MongoDB
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return dateString; // Return original if invalid
-      
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    } catch (err) {
-      console.error('Date formatting error:', err);
-      return dateString; // Return original if error
-    }
+  // Format date to YYYY-MM-DD
+  const formatDate = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toISOString().split('T')[0];
   };
 
   const handleSubmit = async (e) => {
@@ -119,108 +117,61 @@ const EventCreate = () => {
     setSuccess('');
 
     try {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Creating event with data: ', eventData);
-        console.log('User: ', currentUser);
-        console.log('Role: ', role);
-      }
-      
-      // First, try to get the MongoDB user ID using Firebase UID
-      let mongoUserId;
-      try {
-        const userResponse = await axios.get(`${config.endpoints.users}/firebase/${currentUser.uid}`);
-        mongoUserId = userResponse.data._id;
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Found MongoDB user ID:', mongoUserId);
-        }
-      } catch (userErr) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('⚠️ Could not find MongoDB user. Creating a new user:', userErr);
-        }
-        
-        // User doesn't exist in MongoDB, create them
-        const createUserResponse = await axios.post(config.endpoints.users, {
-          firebaseUID: currentUser.uid,
-          name: currentUser.displayName || "User",
-          email: currentUser.email || "user@example.com", 
-          role: role
-        });
-        mongoUserId = createUserResponse.data._id;
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Created new MongoDB user:', mongoUserId);
-        }
-      }
-
-      // Format date and validate
-      const formattedDate = formatDate(eventData.date);
-      
       // Format role to match the enum in Event schema (capitalize first letter)
       const formattedRole = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
       
-      // Prepare event payload with properly formatted data
+      // Prepare event payload
       const eventPayload = {
         title: eventData.title.trim(),
         description: eventData.description.trim(),
-        date: formattedDate,
+        date: formatDate(eventData.date),
         time: eventData.time,
         location: eventData.location.trim(),
-        organizer: currentUser.displayName || "Unknown Organizer",
-        userId: mongoUserId,
-        firebaseUID: currentUser.uid
+        createdByRole: formattedRole,
+        firebaseUID: currentUser.uid,
+        organizer: currentUser.displayName || "Unknown Organizer"
       };
-      
+
       if (process.env.NODE_ENV === 'development') {
-        console.log('Event payload being sent:', eventPayload);
+        console.log('Creating event with payload:', {
+          ...eventPayload,
+          currentUser: {
+            uid: currentUser.uid,
+            displayName: currentUser.displayName,
+            email: currentUser.email
+          },
+          role: role
+        });
       }
 
-      try {
-        // Create the event with Firebase UID
-        const response = await axios.post(config.endpoints.events, eventPayload);
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Event created successfully: ', response.data);
-        }
-        setSuccess('Event created successfully!');
-        
-        // Redirect to events page after success
-        setTimeout(() => {
-          navigate('/events');
-        }, 1500);
-      } catch (err) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('❌ Error creating event:', err);
-          console.error('Error response data:', err.response?.data);
-          console.error('Error response status:', err.response?.status);
-          console.error('Error message:', err.message);
-        }
-        
-        // Handle specific error cases
-        if (err.response?.status === 404) {
-          setError("Backend service is currently unavailable. Please try again later.");
-        } else if (err.response?.status === 500) {
-          setError("Internal server error. Please try again later or contact support.");
-        } else if (err.response?.data?.message) {
-          setError(err.response.data.message);
-        } else {
-          setError('Failed to create event. Please try again.');
-        }
-      }
-    } catch (outerErr) {
+      // Create the event
+      const response = await api.post(config.endpoints.events, eventPayload);
+      
       if (process.env.NODE_ENV === 'development') {
-        console.error('❌ Error in overall event creation process:', outerErr);
-        console.error('Error details:', outerErr.response?.data);
-        console.error('Error status:', outerErr.response?.status);
+        console.log('✅ Event created successfully:', response.data);
       }
       
-      // Restore specific error handling
-      if (outerErr.response?.status === 404) {
-        setError("Backend service is currently unavailable. Please try again later.");
-      } else if (outerErr.response?.status === 500) {
-        setError("Internal server error. Please try again later or contact support.");
-      } else if (outerErr.response?.data?.message) {
-        setError(outerErr.response.data.message);
+      setSuccess('Event created successfully!');
+      
+      // Redirect to events page after success
+      setTimeout(() => {
+        navigate('/events');
+      }, 1500);
+    } catch (error) {
+      console.error('Error creating event:', error);
+      if (error.response) {
+        console.error('Error response:', {
+          data: error.response.data,
+          status: error.response.status,
+          headers: error.response.headers
+        });
+        setError(error.response.data.message || error.response.data.error || 'Failed to create event');
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        setError('No response received from the server. Please try again.');
       } else {
-        setError('An unexpected error occurred. Please try again later.');
+        console.error('Error setting up request:', error.message);
+        setError('Error setting up the request. Please try again.');
       }
     } finally {
       setLoading(false);
