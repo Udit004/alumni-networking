@@ -459,6 +459,34 @@ const AlumniDashboard = () => {
                                 🎟 View Details
                               </button>
                             )}
+                            {/* Always show delete button for alumni users */}
+                            <button 
+                              className="action-btn delete mt-2 bg-red-500 hover:bg-red-600 text-white"
+                              onClick={() => {
+                                if(window.confirm(`Are you sure you want to delete "${event.title}"?`)) {
+                                  // Call API to delete event
+                                  fetch(`${API_URL}/api/events/${event._id}?firebaseUID=${user.uid}&role=alumni`, {
+                                    method: 'DELETE',
+                                    headers: { 'Content-Type': 'application/json' }
+                                  })
+                                  .then(response => {
+                                    if(!response.ok) throw new Error('Failed to delete event');
+                                    return response.json();
+                                  })
+                                  .then(() => {
+                                    // Remove event from the list
+                                    setEvents(events.filter(e => e._id !== event._id));
+                                    alert('Event deleted successfully');
+                                  })
+                                  .catch(err => {
+                                    console.error('Error deleting event:', err);
+                                    alert('Failed to delete event');
+                                  });
+                                }
+                              }}
+                            >
+                              🗑️ Delete Event
+                            </button>
                           </div>
                         </div>
                       </div>

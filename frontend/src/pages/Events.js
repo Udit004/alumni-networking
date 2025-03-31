@@ -288,6 +288,62 @@ const Events = () => {
     });
   };
 
+  // Check if the current user created this event
+  const isEventCreator = (event) => {
+    if (!user || !event) return false;
+    
+    // Check different ways the createdBy field might be structured
+    if (event.createdBy && typeof event.createdBy === 'object' && event.createdBy.firebaseUID) {
+      return event.createdBy.firebaseUID === user.uid;
+    }
+    
+    // Direct comparison if createdBy is the Firebase UID
+    if (typeof event.createdBy === 'string') {
+      return event.createdBy === user.uid;
+    }
+    
+    return false;
+  };
+  
+  // Handle event deletion with confirmation
+  const handleDeleteEvent = async (eventId, eventTitle) => {
+    if (!user || !role || !['teacher', 'alumni', 'admin'].includes(role.toLowerCase())) {
+      alert("You don't have permission to delete events");
+      return;
+    }
+    
+    // Confirm before deleting
+    if (!window.confirm(`Are you sure you want to delete the event "${eventTitle}"? This cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Deleting event:', eventId);
+      }
+      
+      await api.delete(`${config.endpoints.events}/${eventId}?firebaseUID=${user.uid}&role=${role}`);
+      
+      // Remove the event from state
+      setEvents(prevEvents => prevEvents.filter(e => e._id !== eventId));
+      
+      alert("Event deleted successfully");
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      let errorMessage = "Failed to delete event";
+      
+      if (error.response) {
+        errorMessage = error.response.data.message || errorMessage;
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getEventStatus = (eventDate) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -441,6 +497,18 @@ const Events = () => {
                           <span className="mr-2">🎟</span> Register Now
                         </button>
                       )}
+                    </div>
+                  )}
+                  
+                  {/* Delete button for event creators (teachers/alumni) */}
+                  {user && (role === "teacher" || role === "alumni" || role === "admin") && isEventCreator(event) && (
+                    <div className="event-actions mt-4">
+                      <button 
+                        className="action-btn delete w-full py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center"
+                        onClick={() => handleDeleteEvent(event._id, event.title)}
+                      >
+                        <span className="mr-2">🗑️</span> Delete Event
+                      </button>
                     </div>
                   )}
                 </div>
