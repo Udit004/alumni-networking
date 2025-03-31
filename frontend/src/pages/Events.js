@@ -78,34 +78,21 @@ const Events = () => {
           'Accept': 'application/json'
         },
         body: JSON.stringify({ 
-          firebaseUID: user.uid
+          firebaseUID: user.uid // Send Firebase UID instead of trying to use it as MongoDB ID
         })
       });
 
-      const responseText = await response.text();
-      let registrationData;
-
       if (!response.ok) {
-        let errorMessage;
-        try {
-          const errorData = JSON.parse(responseText);
-          errorMessage = errorData.message;
-        } catch (e) {
-          errorMessage = responseText;
-        }
-        throw new Error(errorMessage || "Registration failed");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Registration failed");
       }
 
-      try {
-        registrationData = JSON.parse(responseText);
-      } catch (e) {
-        throw new Error("Invalid response from server");
-      }
+      const registrationData = await response.json();
 
-      // 🔹 Step 2: Update the events list
+      // 🔹 Step 2: Update the events list with the returned event data
       setEvents(prev => prev.map(event => {
         if (event._id === eventId) {
-          return registrationData.event || event;
+          return registrationData.event;
         }
         return event;
       }));
@@ -133,6 +120,14 @@ const Events = () => {
 
     return matchesSearch && matchesDateFilter;
   });
+
+  // Check if a user is registered for an event
+  const isUserRegistered = (event) => {
+    if (!user || !event.registeredUsers) return false;
+    return event.registeredUsers.some(registration => 
+      registration.userId?.firebaseUID === user.uid
+    );
+  };
 
   const getEventStatus = (eventDate) => {
     const today = new Date();
@@ -229,7 +224,7 @@ const Events = () => {
         <div className="events-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
           {filteredEvents.map((event) => {
             const status = getEventStatus(event.date);
-            const isRegistered = user && event.registeredUsers.some(r => r.userId === user.uid);
+            const isRegistered = isUserRegistered(event);
             
             return (
               <div 

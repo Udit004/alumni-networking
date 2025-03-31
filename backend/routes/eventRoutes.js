@@ -8,8 +8,16 @@ const mongoose = require("mongoose");
 router.get("/", async (req, res) => {
     try {
         const events = await Event.find()
-            .populate("registeredUsers.userId", "name email")
-            .populate("createdBy", "name email");
+            .populate({
+                path: "registeredUsers.userId",
+                select: "name email",
+                model: "User"
+            })
+            .populate({
+                path: "createdBy",
+                select: "name email",
+                model: "User"
+            });
 
         console.log(`📋 Found ${events.length} events`);
         res.status(200).json(events);
@@ -202,7 +210,7 @@ router.get("/enrolled/:userId", async (req, res) => {
     }
 });
 
-// �� Get events created by or registered by a specific user
+// 📌 Get events created by or registered by a specific user
 router.get("/user/:userId", async (req, res) => {
     try {
         const { userId } = req.params;
@@ -210,15 +218,12 @@ router.get("/user/:userId", async (req, res) => {
 
         console.log("🔍 Looking for events by user:", { userId, firebaseUID });
 
-        // 🔍 Find the user
+        // 🔍 Find the user by firebaseUID first, then fallback to MongoDB _id
         let user;
-        
-        if (mongoose.Types.ObjectId.isValid(userId)) {
-            user = await User.findById(userId);
-        }
-        
-        if (!user && firebaseUID) {
+        if (firebaseUID) {
             user = await User.findOne({ firebaseUID });
+        } else if (mongoose.Types.ObjectId.isValid(userId)) {
+            user = await User.findById(userId);
         }
 
         if (!user) {
@@ -230,13 +235,29 @@ router.get("/user/:userId", async (req, res) => {
 
         // 🔍 Find events created by the user
         const createdEvents = await Event.find({ createdBy: user._id })
-            .populate("registeredUsers.userId", "name email")
-            .populate("createdBy", "name email");
+            .populate({
+                path: "registeredUsers.userId",
+                select: "name email",
+                model: "User"
+            })
+            .populate({
+                path: "createdBy",
+                select: "name email",
+                model: "User"
+            });
 
         // 🔍 Find events the user has registered for
         const registeredEvents = await Event.find({ "registeredUsers.userId": user._id })
-            .populate("registeredUsers.userId", "name email")
-            .populate("createdBy", "name email");
+            .populate({
+                path: "registeredUsers.userId",
+                select: "name email",
+                model: "User"
+            })
+            .populate({
+                path: "createdBy",
+                select: "name email",
+                model: "User"
+            });
 
         console.log(`📋 Found ${createdEvents.length} created events and ${registeredEvents.length} registered events`);
         
