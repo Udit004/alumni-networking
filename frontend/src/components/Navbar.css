@@ -33,3 +33,39 @@
 .nav-link.active::after {
   animation: line-grow 0.3s ease forwards;
 }
+
+/* Active Navigation Indicator Styles */
+.nav-link {
+  position: relative;
+  padding-bottom: 5px;
+  transition: color 0.3s ease;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: #3b82f6; /* Adjust this to match your primary color */
+  transition: width 0.3s ease;
+}
+
+.dark .nav-link::after {
+  background-color: #60a5fa;
+}
+
+.nav-link.active::after {
+  width: 100%;
+}
+
+/* Animated active indicator */
+@keyframes line-grow {
+  0% { width: 0; }
+  100% { width: 100%; }
+}
+
+.nav-link.active::after {
+  animation: line-grow 0.3s ease forwards;
+}
