@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { NavLink } from 'react-router-dom';
+import './Navbar.css';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,7 +14,7 @@ const Navbar = () => {
   // Initialize dark mode state based on class or system preference
   useEffect(() => {
     // Check if dark mode is already enabled
-    const darkModeEnabled = document.documentElement.classList.contains('dark');
+    const darkModeEnabled = document.documentElement.classList.contains("dark");
     setIsDarkMode(darkModeEnabled);
   }, []);
 
@@ -28,13 +30,13 @@ const Navbar = () => {
   const toggleDarkMode = () => {
     const newDarkMode = !isDarkMode;
     setIsDarkMode(newDarkMode);
-    
+
     if (newDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('darkMode', 'enabled');
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("darkMode", "enabled");
     } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('darkMode', 'disabled');
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("darkMode", "disabled");
     }
   };
 
@@ -43,7 +45,7 @@ const Navbar = () => {
     if (userData?.name) {
       return userData.name;
     }
-    return 'User';
+    return "User";
   };
 
   return (
@@ -64,20 +66,48 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline">
+                    {/* Desktop Navigation */}
+                    <div className="hidden md:flex items-center space-x-8">
+            <NavLink
+              to="/"
+              className={({ isActive }) => 
+                isActive 
+                  ? "text-primary dark:text-primary nav-link active" 
+                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
+              }
+            >
               Home
-            </Link>
-            <Link to="/events" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline">
+            </NavLink>
+            <NavLink
+              to="/events"
+              className={({ isActive }) => 
+                isActive 
+                  ? "text-primary dark:text-primary nav-link active" 
+                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
+              }
+            >
               Events
-            </Link>
-            <Link to="/about" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline">
+            </NavLink>
+            <NavLink
+              to="/about"
+              className={({ isActive }) => 
+                isActive 
+                  ? "text-primary dark:text-primary nav-link active" 
+                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
+              }
+            >
               About
-            </Link>
-            <Link to="/contact" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline">
+            </NavLink>
+            <NavLink
+              to="/contact"
+              className={({ isActive }) => 
+                isActive 
+                  ? "text-primary dark:text-primary nav-link active" 
+                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
+              }
+            >
               Contact
-            </Link>
+            </NavLink>
 
             {/* Dark Mode Toggle */}
             <button
@@ -85,11 +115,19 @@ const Navbar = () => {
               className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white"
             >
               {isDarkMode ? (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
                 </svg>
               ) : (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
                 </svg>
               )}
@@ -104,7 +142,9 @@ const Navbar = () => {
                 >
                   <span className="mr-2 truncate">{getUserDisplayName()}</span>
                   <svg
-                    className={`h-5 w-5 transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                    className={`h-5 w-5 transform ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -203,88 +243,73 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile menu */}
-      {isOpen && (
+            {/* Mobile menu */}
+            {isOpen && (
         <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 bg-white dark:bg-gray-900">
-            <Link
+            <NavLink
               to="/"
-              className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
+              className={({ isActive }) =>
+                isActive 
+                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
+                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
+              }
             >
               Home
-            </Link>
-            <Link
+            </NavLink>
+            <NavLink
               to="/events"
-              className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
+              className={({ isActive }) =>
+                isActive 
+                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
+                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
+              }
             >
               Events
-            </Link>
-            <Link
+            </NavLink>
+            <NavLink
               to="/about"
-              className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
+              className={({ isActive }) =>
+                isActive 
+                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
+                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
+              }
             >
               About
-            </Link>
-            <Link
+            </NavLink>
+            <NavLink
               to="/contact"
-              className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
+              className={({ isActive }) =>
+                isActive 
+                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
+                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
+              }
             >
               Contact
-            </Link>
-            
-            {/* User Menu Items - Mobile */}
-            {currentUser ? (
-              <>
-                {role && (
-                  <Link
-                    to={`/${role.toLowerCase()}-dashboard`}
-                    className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
-                  >
-                    Dashboard
-                  </Link>
-                )}
-                <Link
-                  to="/profile"
-                  className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
-                >
-                  Profile
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="block w-full text-left px-3 py-2 rounded-md text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/signup"
-                  className="block px-3 py-2 rounded-md bg-primary text-white hover:bg-opacity-90 hover:text-white no-underline"
-                >
-                  Sign Up
-                </Link>
-              </>
-            )}
-            
+            </NavLink>
+
             {/* Dark Mode Toggle for Mobile */}
             <button
               onClick={toggleDarkMode}
               className="flex items-center w-full px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
-              <span className="mr-2">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+              <span className="mr-2">
+                {isDarkMode ? "Light Mode" : "Dark Mode"}
+              </span>
               {isDarkMode ? (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
                 </svg>
               ) : (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
                 </svg>
               )}
