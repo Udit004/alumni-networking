@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { NavLink } from 'react-router-dom';
-import './Navbar.css'; // Add this import
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -66,48 +64,20 @@ const Navbar = () => {
             </Link>
           </div>
 
-                    {/* Desktop Navigation */}
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <NavLink
-              to="/"
-              className={({ isActive }) => 
-                isActive 
-                  ? "text-primary dark:text-primary nav-link active" 
-                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
-              }
-            >
+            <Link to="/" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline">
               Home
-            </NavLink>
-            <NavLink
-              to="/events"
-              className={({ isActive }) => 
-                isActive 
-                  ? "text-primary dark:text-primary nav-link active" 
-                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
-              }
-            >
+            </Link>
+            <Link to="/events" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline">
               Events
-            </NavLink>
-            <NavLink
-              to="/about"
-              className={({ isActive }) => 
-                isActive 
-                  ? "text-primary dark:text-primary nav-link active" 
-                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
-              }
-            >
+            </Link>
+            <Link to="/about" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline">
               About
-            </NavLink>
-            <NavLink
-              to="/contact"
-              className={({ isActive }) => 
-                isActive 
-                  ? "text-primary dark:text-primary nav-link active" 
-                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
-              }
-            >
+            </Link>
+            <Link to="/contact" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline">
               Contact
-            </NavLink>
+            </Link>
 
             {/* Dark Mode Toggle */}
             <button
@@ -233,50 +203,34 @@ const Navbar = () => {
         </div>
       </div>
 
-            {/* Mobile menu */}
-            {isOpen && (
+      {/* Mobile menu */}
+      {isOpen && (
         <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 bg-white dark:bg-gray-900">
-            <NavLink
+            <Link
               to="/"
-              className={({ isActive }) =>
-                isActive 
-                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
-                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
-              }
+              className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
             >
               Home
-            </NavLink>
-            <NavLink
+            </Link>
+            <Link
               to="/events"
-              className={({ isActive }) =>
-                isActive 
-                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
-                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
-              }
+              className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
             >
               Events
-            </NavLink>
-            <NavLink
+            </Link>
+            <Link
               to="/about"
-              className={({ isActive }) =>
-                isActive 
-                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
-                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
-              }
+              className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
             >
               About
-            </NavLink>
-            <NavLink
+            </Link>
+            <Link
               to="/contact"
-              className={({ isActive }) =>
-                isActive 
-                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
-                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
-              }
+              className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
             >
               Contact
-            </NavLink>
+            </Link>
             
             {/* User Menu Items - Mobile */}
             {currentUser ? (
