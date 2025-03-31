@@ -178,22 +178,31 @@ const TeacherDashboard = () => {
 
   const handleDeleteMaterial = async (materialId) => {
     try {
+      setLoading(true);
       // Call API to delete material
       const response = await fetch(`${API_URL}/api/materials/${materialId}?firebaseUID=${user.uid}&role=teacher`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
+        }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete material');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete material');
       }
 
       // Remove material from local state
-      setMaterials(materials.filter(material => material.id !== materialId));
+      setMaterials(prevMaterials => prevMaterials.filter(material => material.id !== materialId));
+      
+      // Show success message
       alert('Material deleted successfully');
     } catch (err) {
       console.error('Error deleting material:', err);
-      alert('Failed to delete material');
+      alert(`Failed to delete material: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -611,6 +620,228 @@ const TeacherDashboard = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'analytics' && (
+            <div className="analytics-section">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Analytics Dashboard</h2>
+              
+              {/* Overview Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 transition-all hover:shadow-lg"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="flex items-center">
+                    <div className="p-2.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-3">📊</div>
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Total Students</h3>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">150</p>
+                      <p className="text-xs text-green-500">+12% from last month</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 transition-all hover:shadow-lg"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="flex items-center">
+                    <div className="p-2.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-3">📈</div>
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Average Attendance</h3>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">85%</p>
+                      <p className="text-xs text-green-500">+5% from last month</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 transition-all hover:shadow-lg"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="flex items-center">
+                    <div className="p-2.5 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-3">📝</div>
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Assignments</h3>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">92%</p>
+                      <p className="text-xs text-red-500">-2% from last month</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 transition-all hover:shadow-lg"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="flex items-center">
+                    <div className="p-2.5 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-500 dark:text-yellow-300 text-xl mr-3">🎯</div>
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Average Score</h3>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">78%</p>
+                      <p className="text-xs text-green-500">+3% from last month</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Charts Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {/* Attendance Trend */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Attendance Trend</h3>
+                  <div className="h-64 flex items-center justify-center">
+                    <div className="w-full">
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Jan</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Feb</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Mar</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Apr</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">May</span>
+                      </div>
+                      <div className="flex items-end h-48">
+                        <div className="flex-1 flex flex-col items-center">
+                          <div className="h-24 bg-gradient-to-t from-blue-500 to-blue-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">75%</span>
+                        </div>
+                        <div className="flex-1 flex flex-col items-center">
+                          <div className="h-24 bg-gradient-to-t from-purple-500 to-purple-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">80%</span>
+                        </div>
+                        <div className="flex-1 flex flex-col items-center">
+                          <div className="h-24 bg-gradient-to-t from-green-500 to-green-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">85%</span>
+                        </div>
+                        <div className="flex-1 flex flex-col items-center">
+                          <div className="h-24 bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">82%</span>
+                        </div>
+                        <div className="flex-1 flex flex-col items-center">
+                          <div className="h-24 bg-gradient-to-t from-red-500 to-red-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">88%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+                        <p className="text-sm text-blue-600 dark:text-blue-300">Highest Attendance</p>
+                        <p className="text-lg font-semibold text-blue-700 dark:text-blue-200">88%</p>
+                        <p className="text-xs text-blue-500">May 2024</p>
+                      </div>
+                      <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
+                        <p className="text-sm text-green-600 dark:text-green-300">Average Growth</p>
+                        <p className="text-lg font-semibold text-green-700 dark:text-green-200">+2.6%</p>
+                        <p className="text-xs text-green-500">Monthly</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Performance Distribution */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Performance Distribution</h3>
+                  <div className="h-64 flex items-center justify-center">
+                    <div className="w-full">
+                      <div className="flex items-center mb-4">
+                        <div className="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Excellent (90-100%)</span>
+                      </div>
+                      <div className="flex items-center mb-4">
+                        <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Good (80-89%)</span>
+                      </div>
+                      <div className="flex items-center mb-4">
+                        <div className="w-4 h-4 bg-yellow-500 rounded-full mr-2"></div>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Average (70-79%)</span>
+                      </div>
+                      <div className="flex items-center mb-4">
+                        <div className="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Below Average (&lt;70%)</span>
+                      </div>
+                      <div className="flex justify-between mt-4">
+                        <div className="flex-1 text-center">
+                          <div className="h-24 bg-gradient-to-t from-green-500 to-green-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">15%</span>
+                        </div>
+                        <div className="flex-1 text-center">
+                          <div className="h-24 bg-gradient-to-t from-blue-500 to-blue-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">35%</span>
+                        </div>
+                        <div className="flex-1 text-center">
+                          <div className="h-24 bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">40%</span>
+                        </div>
+                        <div className="flex-1 text-center">
+                          <div className="h-24 bg-gradient-to-t from-red-500 to-red-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">10%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Course Performance */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Course Performance</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Course</th>
+                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Students</th>
+                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Average Score</th>
+                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Attendance</th>
+                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <td className="py-3 px-4">Data Structures</td>
+                        <td className="py-3 px-4">45</td>
+                        <td className="py-3 px-4">85%</td>
+                        <td className="py-3 px-4">92%</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full text-sm">
+                            Excellent
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <td className="py-3 px-4">Algorithms</td>
+                        <td className="py-3 px-4">38</td>
+                        <td className="py-3 px-4">78%</td>
+                        <td className="py-3 px-4">85%</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full text-sm">
+                            Good
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <td className="py-3 px-4">Database Systems</td>
+                        <td className="py-3 px-4">42</td>
+                        <td className="py-3 px-4">72%</td>
+                        <td className="py-3 px-4">78%</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300 rounded-full text-sm">
+                            Average
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-3 px-4">Machine Learning</td>
+                        <td className="py-3 px-4">35</td>
+                        <td className="py-3 px-4">68%</td>
+                        <td className="py-3 px-4">75%</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-full text-sm">
+                            Needs Improvement
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
