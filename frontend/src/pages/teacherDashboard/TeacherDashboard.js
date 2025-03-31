@@ -590,6 +590,291 @@ const TeacherDashboard = () => {
             </div>
           )}
 
+          {activeSection === 'students' && (
+            <div className="students-section">
+              <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Students</h2>
+                <div className="flex gap-2">
+                  <div className="relative w-64">
+                    <input 
+                      type="text" 
+                      placeholder="Search students..." 
+                      className="w-full py-2 px-10 bg-white dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ backgroundColor: isDarkMode ? '#374151' : 'white' }}
+                    />
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-300">
+                      🔍
+                    </span>
+                  </div>
+                  <button className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center">
+                    <span className="mr-2">+</span> Add Student
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-4 flex flex-wrap gap-2">
+                <button className="px-3 py-1 bg-blue-500 text-white rounded-lg transition-colors">
+                  All Students
+                </button>
+                <button className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                  CS101
+                </button>
+                <button className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                  CS201
+                </button>
+                <button className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                  CS301
+                </button>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-900">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Student
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          ID
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Courses
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Grade Avg.
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-500 dark:text-blue-300 overflow-hidden">
+                              JS
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                John Smith
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                john.smith@example.com
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          CS-2023-001
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-wrap gap-1">
+                            <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">CS101</span>
+                            <span className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full">CS201</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">Active</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <div className="flex items-center">
+                            <span className="font-medium text-green-600 dark:text-green-400">92%</span>
+                            <span className="ml-2 text-green-600 dark:text-green-400">↑</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <button className="p-1 text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300">
+                              📊
+                            </button>
+                            <button className="p-1 text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300">
+                              📝
+                            </button>
+                            <button className="p-1 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300">
+                              ✉️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-500 dark:text-purple-300 overflow-hidden">
+                              MJ
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                Maria Johnson
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                maria.j@example.com
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          CS-2023-042
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-wrap gap-1">
+                            <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">CS101</span>
+                            <span className="px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full">CS301</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">Active</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <div className="flex items-center">
+                            <span className="font-medium text-green-600 dark:text-green-400">88%</span>
+                            <span className="ml-2 text-green-600 dark:text-green-400">↑</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <button className="p-1 text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300">
+                              📊
+                            </button>
+                            <button className="p-1 text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300">
+                              📝
+                            </button>
+                            <button className="p-1 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300">
+                              ✉️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-500 dark:text-green-300 overflow-hidden">
+                              DP
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                David Patel
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                david.p@example.com
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          CS-2023-078
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-wrap gap-1">
+                            <span className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full">CS201</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-full">Leave</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <div className="flex items-center">
+                            <span className="font-medium text-yellow-600 dark:text-yellow-400">75%</span>
+                            <span className="ml-2 text-red-600 dark:text-red-400">↓</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <button className="p-1 text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300">
+                              📊
+                            </button>
+                            <button className="p-1 text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300">
+                              📝
+                            </button>
+                            <button className="p-1 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300">
+                              ✉️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center text-red-500 dark:text-red-300 overflow-hidden">
+                              SK
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                Sarah Kim
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                sarah.k@example.com
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          CS-2023-105
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-wrap gap-1">
+                            <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">CS101</span>
+                            <span className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full">CS201</span>
+                            <span className="px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full">CS301</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">Active</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <div className="flex items-center">
+                            <span className="font-medium text-green-600 dark:text-green-400">95%</span>
+                            <span className="ml-2 text-green-600 dark:text-green-400">↑</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <button className="p-1 text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300">
+                              📊
+                            </button>
+                            <button className="p-1 text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300">
+                              📝
+                            </button>
+                            <button className="p-1 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300">
+                              ✉️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex items-center justify-between">
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    Showing <span className="font-medium">4</span> of <span className="font-medium">120</span> students
+                  </div>
+                  <div className="flex space-x-2">
+                    <button className="px-3 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md">
+                      Previous
+                    </button>
+                    <button className="px-3 py-1 bg-blue-500 text-white rounded-md">
+                      1
+                    </button>
+                    <button className="px-3 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md">
+                      2
+                    </button>
+                    <button className="px-3 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md">
+                      3
+                    </button>
+                    <button className="px-3 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md">
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeSection === 'materials' && (
             <div className="materials-section">
               <div className="flex justify-between items-center mb-6">
