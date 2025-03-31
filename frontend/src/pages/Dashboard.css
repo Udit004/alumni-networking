@@ -20,7 +20,7 @@
 }
 
 /* Responsive sidebar for mobile */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   .sidebar {
       transform: translateX(-100%);
       position: absolute;
@@ -34,11 +34,11 @@
 .hamburger {
   display: none;
   cursor: pointer;
-  font-size: 23px;
+  font-size: 24px;
   padding: 10px;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   .hamburger {
       display: block;
   }
