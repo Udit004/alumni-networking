@@ -255,33 +255,107 @@ const AlumniDashboard = () => {
             </div>
           )}
 
-          {activeSection === 'profile' && (
-            <div className="profile-section">
-              <div className="profile-header">
-                <div className="profile-avatar">
-                  <span className="avatar-icon">👤</span>
-                </div>
-                <div className="profile-info">
-                  <h2>{user?.displayName || 'Alumni Name'}</h2>
-                  <p>Software Engineer at Google</p>
+{activeSection === 'profile' && (
+            <div className="profile-container">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                  <div className="w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-500 dark:text-blue-300 text-4xl overflow-hidden">
+                    {user?.photoURL ? (
+                      <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      user?.displayName ? user.displayName[0].toUpperCase() : '👤'
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{user?.displayName || 'Alumni User'}</h2>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">Software Engineer with over 5 years of experience</p>
+                    <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm">
+                      Edit Profile
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="profile-details">
-                <div className="detail-group">
-                  <label>Email</label>
-                  <p>{user?.email}</p>
+
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Personal Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
+                    <p className="text-gray-800 dark:text-white">{user?.email || 'email@example.com'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">LinkedIn</p>
+                    <p className="text-gray-800 dark:text-white">linkedin.com/in/username</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Phone</p>
+                    <p className="text-gray-800 dark:text-white">+1 234 567 890</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Location</p>
+                    <p className="text-gray-800 dark:text-white">San Francisco, CA</p>
+                  </div>
                 </div>
-                <div className="detail-group">
-                  <label>Phone</label>
-                  <p>+1 234 567 8900</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Work Experience</h3>
+                
+                <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Senior Software Engineer</h4>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">2019 - Present</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-2">TechCorp</p>
+                  <p className="text-gray-700 dark:text-gray-300">Leading a team of developers to build innovative web solutions.</p>
                 </div>
-                <div className="detail-group">
-                  <label>Graduation Year</label>
-                  <p>2020</p>
+                
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Software Developer</h4>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">2016 - 2019</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-2">WebWorks</p>
+                  <p className="text-gray-700 dark:text-gray-300">Designed and maintained various client-side applications.</p>
                 </div>
-                <div className="detail-group">
-                  <label>Specialization</label>
-                  <p>Computer Science</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Education</h3>
+                
+                <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Master of Science in Computer Science</h4>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">2008 - 2010</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400">University of California, Berkeley</p>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Bachelor of Science in Information Technology</h4>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">2004 - 2008</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400">Stanford University</p>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Skills</h3>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">JavaScript</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">React</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">Node.js</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">Python</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">AWS</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">Docker</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">Git</span>
+                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">TypeScript</span>
                 </div>
               </div>
             </div>
