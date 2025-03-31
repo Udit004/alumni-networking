@@ -1,82 +1,81 @@
 /* Login.css */
 .login-container {
-    width: 100%;
-    max-width: 400px;
-    margin: 50px auto;
-    padding: 20px;
-    background: #f9f9f9;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    transition: background-color 0.3s ease, color 0.3s ease;
-  }
-  
-  .dark .login-container {
-    background: #1e293b;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-  }
-  
-  .login-container h2 {
-    text-align: center;
-    margin-bottom: 20px;
-    color: #333;
-  }
-  
-  .dark .login-container h2 {
-    color: #f3f4f6;
-  }
-  
-  .login-container form {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .login-container form input {
-    margin-bottom: 15px;
-    padding: 10px;
-    font-size: 16px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
-    background-color: #fff;
-    color: #333;
-  }
-  
-  .dark .login-container form input {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #f3f4f6;
-  }
-  
-  .login-container form input:focus {
-    border-color: #007bff;
-    outline: none;
-  }
-  
-  .dark .login-container form input:focus {
-    border-color: #3b82f6;
-  }
-  
-  .login-container form button {
-    padding: 10px;
-    font-size: 18px;
-    background: #007bff;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
-  
-  .dark .login-container form button {
-    background: #3b82f6;
-  }
-  
-  .login-container form button:hover {
-    background: #0056b3;
-  }
-  
-  .dark .login-container form button:hover {
-    background: #2563eb;
-  }
-  
+  width: 100%;
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark .login-container {
+  background: #1e293b;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.login-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.dark .login-container h2 {
+  color: #f3f4f6;
+}
+
+.login-container form {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-container form input {
+  margin-bottom: 15px;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+  background-color: #fff;
+  color: #333;
+}
+
+.dark .login-container form input {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+.login-container form input:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+.dark .login-container form input:focus {
+  border-color: #3b82f6;
+}
+
+.login-container form button {
+  padding: 10px;
+  font-size: 18px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.dark .login-container form button {
+  background: #3b82f6;
+}
+
+.login-container form button:hover {
+  background: #0056b3;
+}
+
+.dark .login-container form button:hover {
+  background: #2563eb;
+}

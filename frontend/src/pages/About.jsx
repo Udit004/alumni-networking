@@ -23,7 +23,7 @@ const About = () => {
         }
       });
     });
-    
+    //This will observe the class attribute of the documentElement (html tag)
     observer.observe(document.documentElement, { attributes: true });
     
     return () => observer.disconnect();
