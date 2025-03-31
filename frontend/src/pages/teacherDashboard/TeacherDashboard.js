@@ -633,11 +633,11 @@ const TeacherDashboard = () => {
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 transition-all hover:shadow-lg"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex items-center">
-                    <div className="p-2.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-3">📊</div>
+                    <div className="p-2.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-3">👥</div>
                     <div>
-                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Total Students</h3>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">150</p>
-                      <p className="text-xs text-green-500">+12% from last month</p>
+                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Total Alumni</h3>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">1,250</p>
+                      <p className="text-xs text-green-500">+8% from last year</p>
                     </div>
                   </div>
                 </div>
@@ -645,11 +645,11 @@ const TeacherDashboard = () => {
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 transition-all hover:shadow-lg"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex items-center">
-                    <div className="p-2.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-3">📈</div>
+                    <div className="p-2.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-3">👨‍🏫</div>
                     <div>
-                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Average Attendance</h3>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">85%</p>
-                      <p className="text-xs text-green-500">+5% from last month</p>
+                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Active Teachers</h3>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">85</p>
+                      <p className="text-xs text-green-500">+5% from last year</p>
                     </div>
                   </div>
                 </div>
@@ -657,11 +657,11 @@ const TeacherDashboard = () => {
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 transition-all hover:shadow-lg"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex items-center">
-                    <div className="p-2.5 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-3">📝</div>
+                    <div className="p-2.5 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-3">🎓</div>
                     <div>
-                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Assignments</h3>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">92%</p>
-                      <p className="text-xs text-red-500">-2% from last month</p>
+                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Current Students</h3>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">450</p>
+                      <p className="text-xs text-green-500">+12% from last year</p>
                     </div>
                   </div>
                 </div>
@@ -669,11 +669,11 @@ const TeacherDashboard = () => {
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 transition-all hover:shadow-lg"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex items-center">
-                    <div className="p-2.5 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-500 dark:text-yellow-300 text-xl mr-3">🎯</div>
+                    <div className="p-2.5 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-500 dark:text-yellow-300 text-xl mr-3">🤝</div>
                     <div>
-                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Average Score</h3>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">78%</p>
-                      <p className="text-xs text-green-500">+3% from last month</p>
+                      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Mentorship Rate</h3>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">68%</p>
+                      <p className="text-xs text-green-500">+15% from last year</p>
                     </div>
                   </div>
                 </div>
@@ -681,10 +681,10 @@ const TeacherDashboard = () => {
 
               {/* Charts Section */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                {/* Attendance Trend */}
+                {/* Alumni Engagement Trend */}
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Attendance Trend</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Alumni Engagement Trend</h3>
                   <div className="h-64 flex items-center justify-center">
                     <div className="w-full">
                       <div className="flex justify-between mb-2">
@@ -697,15 +697,15 @@ const TeacherDashboard = () => {
                       <div className="flex items-end h-48">
                         <div className="flex-1 flex flex-col items-center">
                           <div className="h-24 bg-gradient-to-t from-blue-500 to-blue-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
-                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">75%</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">65%</span>
                         </div>
                         <div className="flex-1 flex flex-col items-center">
                           <div className="h-24 bg-gradient-to-t from-purple-500 to-purple-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
-                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">80%</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">72%</span>
                         </div>
                         <div className="flex-1 flex flex-col items-center">
                           <div className="h-24 bg-gradient-to-t from-green-500 to-green-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
-                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">85%</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">78%</span>
                         </div>
                         <div className="flex-1 flex flex-col items-center">
                           <div className="h-24 bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
@@ -713,7 +713,7 @@ const TeacherDashboard = () => {
                         </div>
                         <div className="flex-1 flex flex-col items-center">
                           <div className="h-24 bg-gradient-to-t from-red-500 to-red-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
-                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">88%</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 mt-2">85%</span>
                         </div>
                       </div>
                     </div>
@@ -721,57 +721,57 @@ const TeacherDashboard = () => {
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-                        <p className="text-sm text-blue-600 dark:text-blue-300">Highest Attendance</p>
-                        <p className="text-lg font-semibold text-blue-700 dark:text-blue-200">88%</p>
+                        <p className="text-sm text-blue-600 dark:text-blue-300">Highest Engagement</p>
+                        <p className="text-lg font-semibold text-blue-700 dark:text-blue-200">85%</p>
                         <p className="text-xs text-blue-500">May 2024</p>
                       </div>
                       <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
                         <p className="text-sm text-green-600 dark:text-green-300">Average Growth</p>
-                        <p className="text-lg font-semibold text-green-700 dark:text-green-200">+2.6%</p>
+                        <p className="text-lg font-semibold text-green-700 dark:text-green-200">+5%</p>
                         <p className="text-xs text-green-500">Monthly</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Performance Distribution */}
+                {/* Career Distribution */}
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Performance Distribution</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Alumni Career Distribution</h3>
                   <div className="h-64 flex items-center justify-center">
                     <div className="w-full">
                       <div className="flex items-center mb-4">
                         <div className="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Excellent (90-100%)</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Tech Industry (35%)</span>
                       </div>
                       <div className="flex items-center mb-4">
                         <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Good (80-89%)</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Research (25%)</span>
                       </div>
                       <div className="flex items-center mb-4">
                         <div className="w-4 h-4 bg-yellow-500 rounded-full mr-2"></div>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Average (70-79%)</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Education (20%)</span>
                       </div>
                       <div className="flex items-center mb-4">
                         <div className="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Below Average (&lt;70%)</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Other Sectors (20%)</span>
                       </div>
                       <div className="flex justify-between mt-4">
                         <div className="flex-1 text-center">
                           <div className="h-24 bg-gradient-to-t from-green-500 to-green-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">15%</span>
-                        </div>
-                        <div className="flex-1 text-center">
-                          <div className="h-24 bg-gradient-to-t from-blue-500 to-blue-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
                           <span className="text-sm text-gray-500 dark:text-gray-400">35%</span>
                         </div>
                         <div className="flex-1 text-center">
+                          <div className="h-24 bg-gradient-to-t from-blue-500 to-blue-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">25%</span>
+                        </div>
+                        <div className="flex-1 text-center">
                           <div className="h-24 bg-gradient-to-t from-yellow-500 to-yellow-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">40%</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">20%</span>
                         </div>
                         <div className="flex-1 text-center">
                           <div className="h-24 bg-gradient-to-t from-red-500 to-red-300 rounded-t" style={{ width: '20%', margin: '0 auto' }}></div>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">10%</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">20%</span>
                         </div>
                       </div>
                     </div>
@@ -779,63 +779,63 @@ const TeacherDashboard = () => {
                 </div>
               </div>
 
-              {/* Course Performance */}
+              {/* Detailed Analytics */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
                    style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Course Performance</h3>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Community Analytics</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Course</th>
-                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Students</th>
-                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Average Score</th>
-                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Attendance</th>
-                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Status</th>
+                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Category</th>
+                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Total Members</th>
+                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Active Members</th>
+                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Engagement Rate</th>
+                        <th className="text-left py-3 px-4 text-gray-500 dark:text-gray-400">Growth</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <td className="py-3 px-4">Data Structures</td>
-                        <td className="py-3 px-4">45</td>
-                        <td className="py-3 px-4">85%</td>
-                        <td className="py-3 px-4">92%</td>
+                        <td className="py-3 px-4">Alumni</td>
+                        <td className="py-3 px-4">1,250</td>
+                        <td className="py-3 px-4">850</td>
+                        <td className="py-3 px-4">68%</td>
                         <td className="py-3 px-4">
                           <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full text-sm">
-                            Excellent
+                            +8%
                           </span>
                         </td>
                       </tr>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <td className="py-3 px-4">Algorithms</td>
-                        <td className="py-3 px-4">38</td>
-                        <td className="py-3 px-4">78%</td>
-                        <td className="py-3 px-4">85%</td>
+                        <td className="py-3 px-4">Teachers</td>
+                        <td className="py-3 px-4">85</td>
+                        <td className="py-3 px-4">75</td>
+                        <td className="py-3 px-4">88%</td>
                         <td className="py-3 px-4">
-                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full text-sm">
-                            Good
+                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full text-sm">
+                            +5%
                           </span>
                         </td>
                       </tr>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <td className="py-3 px-4">Database Systems</td>
-                        <td className="py-3 px-4">42</td>
-                        <td className="py-3 px-4">72%</td>
-                        <td className="py-3 px-4">78%</td>
+                        <td className="py-3 px-4">Students</td>
+                        <td className="py-3 px-4">450</td>
+                        <td className="py-3 px-4">420</td>
+                        <td className="py-3 px-4">93%</td>
                         <td className="py-3 px-4">
-                          <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300 rounded-full text-sm">
-                            Average
+                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full text-sm">
+                            +12%
                           </span>
                         </td>
                       </tr>
                       <tr>
-                        <td className="py-3 px-4">Machine Learning</td>
-                        <td className="py-3 px-4">35</td>
-                        <td className="py-3 px-4">68%</td>
-                        <td className="py-3 px-4">75%</td>
+                        <td className="py-3 px-4">Mentors</td>
+                        <td className="py-3 px-4">150</td>
+                        <td className="py-3 px-4">120</td>
+                        <td className="py-3 px-4">80%</td>
                         <td className="py-3 px-4">
-                          <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-full text-sm">
-                            Needs Improvement
+                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 rounded-full text-sm">
+                            +15%
                           </span>
                         </td>
                       </tr>
@@ -846,7 +846,352 @@ const TeacherDashboard = () => {
             </div>
           )}
 
-          {/* Add other sections here */}
+          {activeSection === 'courses' && (
+            <div className="courses-section">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Engineering Courses</h2>
+                <button 
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg flex items-center transition-all duration-200 hover:shadow-lg"
+                  onClick={() => navigate('/create-course')}
+                >
+                  <span className="mr-2">+</span> Add New Course
+                </button>
+              </div>
+
+              {/* Course Categories */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Computer Science Courses */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 hover:shadow-lg transition-all"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="flex items-center mb-4">
+                    <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-4">💻</div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Computer Science</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Data Structures</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">CS101</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">45 students</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Algorithms</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">CS201</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">38 students</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Machine Learning</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">CS301</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">35 students</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Electronics Courses */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 hover:shadow-lg transition-all"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="flex items-center mb-4">
+                    <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-4">⚡</div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Electronics</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Digital Electronics</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">EE101</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">42 students</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Circuit Analysis</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">EE201</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">40 students</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Power Systems</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">EE301</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">36 students</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mechanical Courses */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 hover:shadow-lg transition-all"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="flex items-center mb-4">
+                    <div className="p-3 rounded-full bg-red-100 dark:bg-red-900 text-red-500 dark:text-red-300 text-xl mr-4">⚙️</div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Mechanical</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Thermodynamics</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">ME101</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">48 students</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Fluid Mechanics</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">ME201</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">45 students</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Machine Design</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">ME301</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">42 students</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Civil Courses */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 hover:shadow-lg transition-all"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="flex items-center mb-4">
+                    <div className="p-3 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-4">🏗️</div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Civil</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Structural Analysis</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">CE101</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">50 students</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Geotechnical Engineering</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">CE201</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">45 students</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Transportation Engineering</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">CE301</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">40 students</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Chemical Courses */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 hover:shadow-lg transition-all"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="flex items-center mb-4">
+                    <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-500 dark:text-yellow-300 text-xl mr-4">🧪</div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Chemical</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Process Control</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">CHE101</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">38 students</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Chemical Kinetics</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">CHE201</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">35 students</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Unit Operations</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">CHE301</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">32 students</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Aerospace Courses */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 hover:shadow-lg transition-all"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="flex items-center mb-4">
+                    <div className="p-3 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-500 dark:text-indigo-300 text-xl mr-4">✈️</div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Aerospace</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Aerodynamics</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">AE101</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">30 students</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Propulsion Systems</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">AE201</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">28 students</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div>
+                        <p className="text-gray-800 dark:text-white">Space Systems</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">AE301</p>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">25 students</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'settings' && (
+            <div className="settings-section">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Settings</h2>
+              
+              {/* Profile Settings */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Profile Settings</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-700 dark:text-gray-300">Display Name</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Your name as shown to students</p>
+                    </div>
+                    <input 
+                      type="text" 
+                      className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="Enter your name"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-700 dark:text-gray-300">Email Notifications</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Receive updates about your courses</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Course Settings */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Course Settings</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-700 dark:text-gray-300">Default Course Duration</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Set default duration for new courses</p>
+                    </div>
+                    <select className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                      <option>3 months</option>
+                      <option>6 months</option>
+                      <option>12 months</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-700 dark:text-gray-300">Auto-enrollment</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Allow students to enroll automatically</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notification Settings */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Notification Settings</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-700 dark:text-gray-300">Assignment Submissions</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Get notified when students submit assignments</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-700 dark:text-gray-300">Student Messages</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Receive notifications for student messages</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-700 dark:text-gray-300">Course Updates</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Get notified about course changes</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Privacy Settings */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Privacy Settings</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-700 dark:text-gray-300">Profile Visibility</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Control who can see your profile</p>
+                    </div>
+                    <select className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                      <option>Everyone</option>
+                      <option>Students Only</option>
+                      <option>Private</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-700 dark:text-gray-300">Contact Information</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Show contact details to students</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex justify-end">
+                <button className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
