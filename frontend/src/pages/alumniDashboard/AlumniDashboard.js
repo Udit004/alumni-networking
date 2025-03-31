@@ -286,6 +286,7 @@ const AlumniDashboard = () => {
               </div>
             </div>
           )}
+          
 
           {activeSection === 'connections' && (
             <div className="connections-section">
