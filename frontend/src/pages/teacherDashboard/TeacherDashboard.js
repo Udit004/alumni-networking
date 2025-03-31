@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './TeacherDashboard.css';
 
@@ -12,7 +12,7 @@ const TeacherDashboard = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
-  const { currentUser: user, role } = useAuth();
+  const { user, role } = useAuth();
   const navigate = useNavigate();
   const API_URL = process.env.REACT_APP_API_URL;
 
@@ -54,8 +54,15 @@ const TeacherDashboard = () => {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      // In production, filter events by teacher ID
-      const response = await fetch(`${API_URL}/api/events`, {
+      
+      console.log('Fetching events for teacher:', {
+        userUid: user?.uid,
+        role: role,
+        endpoint: `${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`
+      });
+      
+      // Use the user-specific endpoint to get events created by this user, including role
+      const response = await fetch(`${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -65,9 +72,16 @@ const TeacherDashboard = () => {
       }
 
       const data = await response.json();
-      // Filter events created by this teacher
-      const teacherEvents = data.filter(event => event.createdBy?.userId === user?.uid);
-      const sortedEvents = teacherEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      // Use the createdEvents array directly from the API response
+      console.log('Teacher events received from API:', {
+        createdEvents: data.createdEvents?.length || 0,
+        createdEventsData: data.createdEvents,
+        registeredEvents: data.registeredEvents?.length || 0
+      });
+      
+      // Sort events by date
+      const sortedEvents = data.createdEvents?.sort((a, b) => new Date(a.date) - new Date(b.date)) || [];
       setEvents(sortedEvents);
     } catch (err) {
       setError('Failed to load events. Please try again.');
@@ -381,13 +395,25 @@ const TeacherDashboard = () => {
                            className="event-card bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
                            style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
                       >
-                        <div className={`event-status text-xs font-semibold px-3 py-1 inline-block absolute right-0 top-0 rounded-bl-lg ${
+                        <div className={`event-status text-xs font-semibold px-3 py-2.5 inline-block absolute left-0 top-0 rounded-br-lg w-auto whitespace-nowrap ${
                           status === "upcoming" 
                             ? "bg-green-500 text-white" 
                             : "bg-gray-500 text-white"
                         }`}>
                           {status === 'upcoming' ? 'Upcoming' : 'Past'}
                         </div>
+                        
+                        <button 
+                          className="absolute top-0 right-0 mt-1 mr-1 p-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors z-10"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/edit-event/${event._id}`);
+                          }}
+                          style={{ fontSize: '8px' }}
+                        >
+                          ✏️
+                        </button>
                         
                         <div className="event-content p-5">
                           <h3 className="event-title text-xl font-bold text-gray-900 dark:text-white mb-2">{event.title}</h3>
@@ -420,17 +446,11 @@ const TeacherDashboard = () => {
                               View Details
                             </button>
                             <button
-                              className="py-2 px-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white rounded-lg transition-colors"
-                              onClick={() => navigate(`/edit-event/${event._id}`)}
-                            >
-                              ✏️
-                            </button>
-                            <button
                               className="py-2 px-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
                               onClick={() => {
                                 if(window.confirm(`Are you sure you want to delete "${event.title}"?`)) {
                                   // Call API to delete event
-                                  fetch(`${API_URL}/api/events/${event._id}?firebaseUID=${user.uid}&role=teacher`, {
+                                  fetch(`${API_URL}/api/events/${event._id}?firebaseUID=${user?.uid}&role=teacher`, {
                                     method: 'DELETE',
                                     headers: { 'Content-Type': 'application/json' }
                                   })

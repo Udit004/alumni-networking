@@ -659,4 +659,83 @@ router.delete("/:eventId", async (req, res) => {
     }
 });
 
+// 📌 Update an event (for teachers and alumni only)
+router.put("/:eventId", async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const { firebaseUID, role } = req.query;
+        const updateData = req.body;
+
+        console.log("✏️ Update event request:", { eventId, firebaseUID, role });
+
+        // Validate event ID format
+        if (!mongoose.Types.ObjectId.isValid(eventId)) {
+            console.error("❌ Invalid event ID format:", eventId);
+            return res.status(400).json({ message: "Invalid event ID format" });
+        }
+
+        // Find the event
+        const event = await Event.findById(eventId);
+        if (!event) {
+            console.error("❌ Event not found:", eventId);
+            return res.status(404).json({ message: "Event not found" });
+        }
+
+        // Find the user
+        let user = null;
+        if (firebaseUID) {
+            user = await User.findOne({ firebaseUID });
+        }
+
+        if (!user) {
+            console.error("❌ User not found for update request");
+            return res.status(403).json({ message: "Unauthorized: User not found" });
+        }
+
+        // Check if user role is allowed to update events
+        const allowedRoles = ["teacher", "alumni", "admin"];
+        if (!allowedRoles.includes(role?.toLowerCase())) {
+            console.error("❌ Unauthorized role for update:", role);
+            return res.status(403).json({ message: "Unauthorized: Only teachers and alumni can update events" });
+        }
+
+        // Check if user created this event or is an admin
+        const isAdmin = role?.toLowerCase() === "admin";
+        const isCreator = event.createdBy && 
+                         ((user._id.toString() === event.createdBy.toString()) || 
+                          (user.firebaseUID === event.createdBy));
+                          
+        if (!isCreator && !isAdmin) {
+            console.error("❌ User did not create this event:", { userId: user._id, eventCreator: event.createdBy });
+            return res.status(403).json({ message: "Unauthorized: You can only update events you created" });
+        }
+
+        // Prepare update object with allowed fields
+        const updateObject = {
+            title: updateData.title,
+            description: updateData.description,
+            date: updateData.date,
+            time: updateData.time,
+            location: updateData.location
+        };
+
+        // Update the event
+        const updatedEvent = await Event.findByIdAndUpdate(
+            eventId, 
+            updateObject, 
+            { new: true }
+        );
+
+        console.log("✅ Event updated successfully:", updatedEvent.title);
+        
+        res.status(200).json({ 
+            message: "Event updated successfully",
+            event: updatedEvent
+        });
+    } catch (error) {
+        console.error("❌ Error updating event:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
 module.exports = router;

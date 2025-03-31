@@ -55,6 +55,14 @@ function App() {
                 }
               />
               <Route
+                path="/edit-event/:eventId"
+                element={
+                  <PrivateRoute>
+                    <CreateEvent isEditing={true} />
+                  </PrivateRoute>
+                }
+              />
+              <Route
                 path="/profile"
                 element={
                   <PrivateRoute>
