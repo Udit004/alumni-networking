@@ -2,6 +2,8 @@
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
+  width: 100%;
+  margin-bottom: 2rem;
 }
 
 .enrolled-events-header {
@@ -17,6 +19,10 @@
   margin: 0;
 }
 
+.dark .enrolled-events-header h2 {
+  color: #f3f4f6;
+}
+
 .enrolled-count {
   background-color: #e3f2fd;
   color: #1976d2;
@@ -26,142 +32,215 @@
   margin: 0;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+  font-size: 1.5rem;
+  color: #2d3436;
+  margin: 0;
+}
+
+.dark .section-header h2 {
+  color: #f3f4f6;
+}
+
+.filter-btn {
+  padding: 0.5rem 1rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dark .filter-btn {
+  background: #374151;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+.filter-btn:hover {
+  background: #e9ecef;
+}
+
+.dark .filter-btn:hover {
+  background: #4b5563;
+}
+
+.filter-btn.active {
+  background: #3b82f6;
+  color: white !important;
+  border-color: #2563eb;
+}
+
+.dark .filter-btn.active {
+  background: #2563eb;
+  border-color: #3b82f6;
+}
+
 .events-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
 }
 
 .event-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  border-radius: 0.5rem;
   overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.dark .event-card {
+  background: #1e293b;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border: 1px solid #374151;
 }
 
 .event-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
-.event-card-header {
-  padding: 1.5rem;
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.dark .event-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
 }
 
-.event-card-header h3 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.event-badge {
-  background-color: rgba(255, 255, 255, 0.2);
+.event-status {
+  position: absolute;
+  top: 0;
+  right: 0;
   padding: 0.25rem 0.75rem;
-  border-radius: 15px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-bottom-left-radius: 0.5rem;
+  z-index: 1;
 }
 
-.event-card-body {
+.event-content {
   padding: 1.5rem;
+}
+
+.event-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2d3436;
+  margin-bottom: 0.5rem;
+}
+
+.dark .event-title {
+  color: #f3f4f6;
 }
 
 .event-description {
-  color: #4b5563;
-  margin-bottom: 1.5rem;
-  line-height: 1.6;
+  color: #636e72;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.dark .event-description {
+  color: #d1d5db;
 }
 
 .event-details {
-  display: grid;
-  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .detail-item {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  margin-bottom: 0.5rem;
+  color: #636e72;
+}
+
+.dark .detail-item {
+  color: #9ca3af;
 }
 
 .detail-icon {
-  font-size: 1.25rem;
-  color: #6366f1;
-  width: 24px;
-  text-align: center;
+  margin-right: 0.5rem;
+  font-size: 1rem;
 }
 
-.detail-text {
-  display: flex;
-  flex-direction: column;
+.event-actions {
+  margin-top: 1.5rem;
 }
 
-.detail-label {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin-bottom: 0.25rem;
-}
-
-.detail-value {
-  color: #111827;
-  font-weight: 500;
-}
-
-.event-card-footer {
-  padding: 1.5rem;
-  background-color: #f9fafb;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.view-details-btn,
+.view-certificate-btn,
+.calendar-btn {
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.3s ease;
 }
 
 .view-details-btn {
-  background-color: #4f46e5;
+  background: #3b82f6;
   color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
 }
 
 .view-details-btn:hover {
-  background-color: #4338ca;
+  background: #2563eb;
 }
 
-.event-type-badge {
-  background-color: #e0e7ff;
-  color: #4f46e5;
-  padding: 0.25rem 0.75rem;
-  border-radius: 15px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-transform: capitalize;
+.view-certificate-btn {
+  background: #8b5cf6;
+  color: white;
 }
 
-.enrolled-events-loading {
+.view-certificate-btn:hover {
+  background: #7c3aed;
+}
+
+.calendar-btn {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.dark .calendar-btn {
+  background: #374151;
+  color: #d1d5db;
+}
+
+.calendar-btn:hover {
+  background: #e5e7eb;
+}
+
+.dark .calendar-btn:hover {
+  background: #4b5563;
+}
+
+.loading-state {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  min-height: 300px;
-  gap: 1rem;
+  align-items: center;
+  padding: 2rem;
 }
 
-.spinner {
+.loader {
   width: 40px;
   height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #4f46e5;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+
+.dark .loader {
+  border-color: #374151;
+  border-top-color: #3b82f6;
 }
 
 @keyframes spin {
@@ -169,36 +248,27 @@
   100% { transform: rotate(360deg); }
 }
 
-.enrolled-events-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 300px;
-  gap: 1rem;
-  color: #dc2626;
-}
-
-.error-icon {
-  font-size: 2rem;
-}
-
-.no-events-container {
+.no-events {
   text-align: center;
-  padding: 4rem 2rem;
-  background-color: #f9fafb;
-  border-radius: 12px;
+  padding: 2rem;
   color: #6b7280;
 }
 
-.no-events-icon {
-  font-size: 3rem;
+.dark .no-events {
+  color: #9ca3af;
+}
+
+.error-message {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 1rem;
+  border-radius: 0.5rem;
   margin-bottom: 1rem;
 }
 
-.no-events-container h3 {
-  color: #374151;
-  margin-bottom: 0.5rem;
+.dark .error-message {
+  background: rgba(185, 28, 28, 0.2);
+  color: #ef4444;
 }
 
 @media (max-width: 768px) {

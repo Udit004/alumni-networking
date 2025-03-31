@@ -10,6 +10,26 @@ const EnrolledEvents = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const { user } = useAuth();
+  const [filter, setFilter] = useState("all");
+  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
+
+  useEffect(() => {
+    // Check initial dark mode state
+    setIsDarkMode(document.documentElement.classList.contains('dark'));
+    
+    // Monitor for dark mode changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          setIsDarkMode(document.documentElement.classList.contains('dark'));
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, { attributes: true });
+    
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const fetchEnrolledEvents = async () => {
@@ -66,6 +86,11 @@ const EnrolledEvents = () => {
     setSelectedEvent(null);
   };
 
+  const filteredEvents = enrolledEvents.filter(event => {
+    if (filter === "all") return true;
+    return event.status === filter;
+  });
+
   if (loading) {
     return (
       <div className="enrolled-events-loading">
@@ -93,7 +118,49 @@ const EnrolledEvents = () => {
         </p>
       </div>
 
-      {enrolledEvents.length === 0 ? (
+      <div className="filter-buttons mb-6 flex space-x-2">
+        <button 
+          className={`filter-btn px-4 py-2 rounded-lg transition-all ${
+            filter === "all" 
+              ? "bg-blue-500 text-white active" 
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+          }`}
+          onClick={() => setFilter("all")}
+          style={{ 
+            color: filter === "all" ? "white" : (isDarkMode ? "white" : "#374151") 
+          }}
+        >
+          All Events
+        </button>
+        <button 
+          className={`filter-btn px-4 py-2 rounded-lg transition-all ${
+            filter === "upcoming" 
+              ? "bg-blue-500 text-white active" 
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+          }`}
+          onClick={() => setFilter("upcoming")}
+          style={{ 
+            color: filter === "upcoming" ? "white" : (isDarkMode ? "white" : "#374151") 
+          }}
+        >
+          Upcoming
+        </button>
+        <button 
+          className={`filter-btn px-4 py-2 rounded-lg transition-all ${
+            filter === "past" 
+              ? "bg-blue-500 text-white active" 
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+          }`}
+          onClick={() => setFilter("past")}
+          style={{ 
+            color: filter === "past" ? "white" : (isDarkMode ? "white" : "#374151") 
+          }}
+        >
+          Past Events
+        </button>
+      </div>
+
+      {filteredEvents.length === 0 ? (
         <div className="no-events-container">
           <div className="no-events-icon">🎯</div>
           <h3>No Events Yet</h3>
@@ -101,69 +168,66 @@ const EnrolledEvents = () => {
         </div>
       ) : (
         <div className="events-grid">
-          {enrolledEvents.map((event) => (
-            <div key={event._id} className="event-card">
-              <div className="event-card-header">
-                <h3>{event.title}</h3>
-                <span className="event-badge">Enrolled</span>
+          {filteredEvents.map((event) => (
+            <div 
+              key={event._id} 
+              className={`event-card bg-white dark:bg-gray-800 rounded-xl shadow-md transition-all overflow-hidden border border-gray-200 dark:border-gray-700`}
+              style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
+            >
+              <div 
+                className={`event-status text-xs font-semibold px-3 py-1 inline-block absolute right-0 top-0 rounded-bl-lg ${
+                  event.status === "upcoming" 
+                    ? "bg-green-500 text-white" 
+                    : "bg-gray-500 text-white"
+                }`}
+              >
+                {event.status === "upcoming" ? "Upcoming" : "Past"}
               </div>
               
-              <div className="event-card-body">
-                <p className="event-description">{event.description}</p>
-                
-                <div className="event-details">
-                  <div className="detail-item">
-                    <span className="detail-icon">📅</span>
-                    <div className="detail-text">
-                      <span className="detail-label">Date</span>
-                      <span className="detail-value">
-                        {new Date(event.date).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </span>
-                    </div>
+              <div className="event-content p-5">
+                <h3 className="event-title text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  {event.title}
+                </h3>
+                <p className="event-description text-gray-600 dark:text-gray-300 mb-4">
+                  {event.description}
+                </p>
+                <div className="event-details space-y-2">
+                  <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
+                    <span className="detail-icon mr-2">📅</span>
+                    <span>{new Date(event.date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}</span>
                   </div>
-
-                  <div className="detail-item">
-                    <span className="detail-icon">⏰</span>
-                    <div className="detail-text">
-                      <span className="detail-label">Time</span>
-                      <span className="detail-value">{event.time}</span>
-                    </div>
+                  <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
+                    <span className="detail-icon mr-2">⏰</span>
+                    <span>{event.time}</span>
                   </div>
-
-                  <div className="detail-item">
-                    <span className="detail-icon">📍</span>
-                    <div className="detail-text">
-                      <span className="detail-label">Location</span>
-                      <span className="detail-value">{event.location}</span>
-                    </div>
-                  </div>
-
-                  <div className="detail-item">
-                    <span className="detail-icon">👤</span>
-                    <div className="detail-text">
-                      <span className="detail-label">Organizer</span>
-                      <span className="detail-value">
-                        {event.createdBy?.name || 'Unknown'}
-                      </span>
-                    </div>
+                  <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
+                    <span className="detail-icon mr-2">📍</span>
+                    <span>{event.location}</span>
                   </div>
                 </div>
-              </div>
-
-              <div className="event-card-footer">
-                <button 
-                  className="view-details-btn"
-                  onClick={() => handleViewDetails(event)}
-                >
-                  View Details
-                </button>
-                <div className="event-type-badge">
-                  {event.createdByRole}
+                <div className="event-actions mt-4">
+                  {event.status === "upcoming" ? (
+                    <div className="flex space-x-2">
+                      <button 
+                        className="view-details-btn flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                        onClick={() => handleViewDetails(event)}
+                      >
+                        View Details
+                      </button>
+                      <button className="calendar-btn p-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white rounded-lg transition-colors">
+                        🗓️
+                      </button>
+                    </div>
+                  ) : (
+                    <button className="view-certificate-btn w-full py-2 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-lg transition-colors">
+                      View Certificate
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

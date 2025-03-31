@@ -584,18 +584,34 @@
 }
 
 .filter-btn {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
+  padding: 8px 15px;
   border-radius: 5px;
   background: white;
+  border: 1px solid #e2e8f0;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
 }
 
 .filter-btn.active {
-  background-color: #007bff;
-  color: white;
-  border-color: #007bff;
+  background-color: #3b82f6;
+  color: white !important;
+  border-color: #3b82f6;
+}
+
+.dark .filter-btn {
+  border-color: #4b5563;
+  background-color: #1f2937;
+}
+
+.dark .filter-btn:hover:not(.active) {
+  border-color: #3b82f6;
+  color: #f3f4f6 !important;
+}
+
+.dark .filter-btn.active {
+  background-color: #3b82f6;
+  color: white !important;
+  border-color: #3b82f6;
 }
 
 .events-grid {

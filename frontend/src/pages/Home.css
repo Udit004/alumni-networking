@@ -94,18 +94,20 @@
     border-radius: 8px;
     text-align: center;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease-in-out;
+    transition: transform 0.2s ease-in-out, background-color 0.3s ease;
 }
 
 .feature-card:hover {
     transform: translateY(-5px);
 }
 
-/* 🌍 Footer */
-.footer {
-    background: #343a40;
-    color: white;
-    text-align: center;
-    padding: 15px;
-    margin-top: 40px;
+html.dark .feature-card {
+    background-color: #111827 !important; /* dark:bg-gray-900 equivalent */
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .feature-card h4,
+html.dark .feature-card p {
+    color: white !important;
 }
