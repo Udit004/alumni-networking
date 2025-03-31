@@ -194,7 +194,7 @@ const AlumniDashboard = () => {
                   <div className="flex items-center">
                     <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-4">🎓</div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Mentorship</h3>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Number of Student Mentors</h3>
                       <p className="text-3xl font-bold text-gray-900 dark:text-white">3</p>
                     </div>
                   </div>
