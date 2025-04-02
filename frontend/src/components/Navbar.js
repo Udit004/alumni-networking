@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { NavLink } from 'react-router-dom';
 import './Navbar.css'; // Add this import
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
   const { currentUser, role, userData, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -88,26 +87,18 @@ const Navbar = () => {
             >
               Events
             </NavLink>
-            <NavLink
-              to="/about"
-              className={({ isActive }) => 
-                isActive 
-                  ? "text-primary dark:text-primary nav-link active" 
-                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
-              }
-            >
-              About
-            </NavLink>
-            <NavLink
-              to="/contact"
-              className={({ isActive }) => 
-                isActive 
-                  ? "text-primary dark:text-primary nav-link active" 
-                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
-              }
-            >
-              Contact
-            </NavLink>
+            {currentUser && role && (
+              <NavLink
+                to={`/${role.toLowerCase()}-dashboard`}
+                className={({ isActive }) => 
+                  isActive 
+                    ? "text-primary dark:text-primary nav-link active" 
+                    : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
+                }
+              >
+                Dashboard
+              </NavLink>
+            )}
 
             {/* Dark Mode Toggle */}
             <button
@@ -151,19 +142,27 @@ const Navbar = () => {
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-md shadow-lg py-1 z-50">
-                    {role && (
-                      <Link
-                        to={`/${role.toLowerCase()}-dashboard`}
-                        className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
-                      >
-                        Dashboard
-                      </Link>
-                    )}
-                    <Link
-                      to="/profile"
+                    <a
+                      href="#"
                       className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.location.href = '/profile';
+                      }}
                     >
                       Profile
+                    </a>
+                    <Link
+                      to="/about"
+                      className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
+                    >
+                      About
+                    </Link>
+                    <Link
+                      to="/contact"
+                      className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
+                    >
+                      Contact
                     </Link>
                     <button
                       onClick={handleLogout}
@@ -257,6 +256,18 @@ const Navbar = () => {
             >
               Events
             </NavLink>
+            {currentUser && role && (
+              <NavLink
+                to={`/${role.toLowerCase()}-dashboard`}
+                className={({ isActive }) =>
+                  isActive 
+                    ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
+                    : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
+                }
+              >
+                Dashboard
+              </NavLink>
+            )}
             <NavLink
               to="/about"
               className={({ isActive }) =>
@@ -281,20 +292,16 @@ const Navbar = () => {
             {/* User Menu Items - Mobile */}
             {currentUser ? (
               <>
-                {role && (
-                  <Link
-                    to={`/${role.toLowerCase()}-dashboard`}
-                    className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
-                  >
-                    Dashboard
-                  </Link>
-                )}
-                <Link
-                  to="/profile"
+                <a
+                  href="#"
                   className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.location.href = '/profile';
+                  }}
                 >
                   Profile
-                </Link>
+                </a>
                 <button
                   onClick={handleLogout}
                   className="block w-full text-left px-3 py-2 rounded-md text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-700"

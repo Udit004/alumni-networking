@@ -54,6 +54,17 @@ const Signup = () => {
         email,
         role,
         createdAt: new Date(),
+        // Additional profile fields
+        bio: '',
+        skills: '',
+        jobTitle: role === 'alumni' ? 'Graduate' : role === 'teacher' ? 'Teacher' : 'Student',
+        location: '',
+        phone: '',
+        linkedIn: '',
+        github: '',
+        graduationYear: '',
+        workExperience: [],
+        education: []
       });
 
       // Create user in MongoDB
