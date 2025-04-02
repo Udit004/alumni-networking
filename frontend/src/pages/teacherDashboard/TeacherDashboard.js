@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './TeacherDashboard.css';
+import { db } from "../../firebaseConfig";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 const TeacherDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -83,6 +85,23 @@ const TeacherDashboard = () => {
   const { currentUser: user, role } = useAuth();
   const navigate = useNavigate();
   const API_URL = process.env.REACT_APP_API_URL;
+  const [connections, setConnections] = useState([]);
+  const [connectionLoading, setConnectionLoading] = useState(true);
+  const [profileData, setProfileData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    address: "",
+    department: "",
+    institution: "",
+    designation: "",
+    expertise: [],
+    achievements: [],
+    publications: [],
+    bio: "",
+    connections: []
+  });
 
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: '📊' },
@@ -118,6 +137,106 @@ const TeacherDashboard = () => {
       fetchEvents();
     }
   }, [activeSection]);
+
+  useEffect(() => {
+    const fetchTeacherProfile = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setProfileData({
+            name: userData.name || user.displayName || "",
+            email: userData.email || user.email || "",
+            phone: userData.phone || "",
+            dateOfBirth: userData.dateOfBirth || "",
+            address: userData.address || "",
+            department: userData.department || "",
+            institution: userData.institution || "",
+            designation: userData.designation || "",
+            expertise: userData.expertise || [],
+            achievements: userData.achievements || [],
+            publications: userData.publications || [],
+            bio: userData.bio || "",
+            connections: userData.connections || []
+          });
+          
+          // After setting profile data, fetch connected profiles
+          if (userData.connections && userData.connections.length > 0) {
+            fetchConnections(userData.connections);
+          } else {
+            setConnectionLoading(false);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching teacher profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTeacherProfile();
+  }, [user]);
+  
+  // Function to fetch connection profile details
+  const fetchConnections = async (connectionIds) => {
+    try {
+      setConnectionLoading(true);
+      const connectionProfiles = [];
+      
+      // Process each connection in batches
+      for (const connectionId of connectionIds) {
+        const userDocRef = doc(db, "users", connectionId);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          connectionProfiles.push({
+            id: userDoc.id,
+            name: userData.name || "",
+            role: userData.role || "",
+            jobTitle: userData.jobTitle || "",
+            company: userData.company || "",
+            institution: userData.institution || "",
+            department: userData.department || "",
+            photoURL: userData.photoURL || "",
+            skills: userData.skills || []
+          });
+        }
+      }
+      
+      setConnections(connectionProfiles);
+    } catch (error) {
+      console.error("Error fetching connections:", error);
+    } finally {
+      setConnectionLoading(false);
+    }
+  };
+  
+  // Function to handle requesting a connection
+  const handleRequestConnection = async (userId) => {
+    if (!user) return;
+    
+    try {
+      // In a real app, this would send a connection request to the backend
+      // For now, we'll just show an alert
+      alert(`Connection request sent to ${userId}`);
+      
+      // Here we would typically update a "connectionRequests" collection in Firestore
+      // And add a notification for the other user
+    } catch (error) {
+      console.error("Error sending connection request:", error);
+    }
+  };
+  
+  // Filter connections by role
+  const studentConnections = connections.filter(conn => conn.role === "student");
+  const alumniConnections = connections.filter(conn => conn.role === "alumni");
+  const teacherConnections = connections.filter(conn => conn.role === "teacher");
 
   const fetchEvents = async () => {
     try {
@@ -284,13 +403,25 @@ const TeacherDashboard = () => {
           {activeSection === 'overview' && (
             <div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                {/* Stats cards */}
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-4">👥</div>
+                    <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-4">🔗</div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Connections</h3>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">{connections.length}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <div className="flex items-center">
+                    <div className="p-3 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-4">👥</div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Students</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">150</p>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">{studentConnections.length}</p>
                     </div>
                   </div>
                 </div>
@@ -301,18 +432,7 @@ const TeacherDashboard = () => {
                     <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-4">📚</div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Courses</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">5</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-4">📈</div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Attendance</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">85%</p>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">4</p>
                     </div>
                   </div>
                 </div>
@@ -322,38 +442,272 @@ const TeacherDashboard = () => {
                   <div className="flex items-center">
                     <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-500 dark:text-yellow-300 text-xl mr-4">📅</div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Events Created</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">8</p>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Events</h3>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">3</p>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Connections Section */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
                    style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Recent Activity</h2>
-                <div className="space-y-4">
-                  <div className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-4">👥</div>
-                    <div>
-                      <p className="text-gray-800 dark:text-white">5 new students enrolled in Data Structures course</p>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">2 hours ago</span>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 md:mb-0">My Connections</h2>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => navigate('/directory')}
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <span>Find Connections</span> 🔍
+                    </button>
+                  </div>
+                </div>
+                
+                {connectionLoading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : connections.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">You haven't connected with any students or alumni yet.</p>
+                    <button 
+                      onClick={() => navigate('/directory')}
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                    >
+                      Browse Directory
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    {/* Student Connections */}
+                    {studentConnections.length > 0 && (
+                      <div className="mb-8">
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                          Student Connections
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {studentConnections.map((student) => (
+                            <div 
+                              key={student.id}
+                              className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                              onClick={() => navigate(`/directory/student/${student.id}`)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="h-12 w-12 rounded-full bg-green-500 flex items-center justify-center text-white overflow-hidden">
+                                  {student.photoURL ? (
+                                    <img src={student.photoURL} alt={student.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    student.name?.charAt(0).toUpperCase() || "S"
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-800 dark:text-white">{student.name}</h4>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {student.program} {student.batch && `Batch ${student.batch}`}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {Array.isArray(student.skills) && student.skills.slice(0, 2).map((skill, index) => (
+                                      <span 
+                                        key={index}
+                                        className="px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                    {Array.isArray(student.skills) && student.skills.length > 2 && (
+                                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs">
+                                        +{student.skills.length - 2}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Alumni Connections */}
+                    {alumniConnections.length > 0 && (
+                      <div className="mb-8">
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                          Alumni Connections
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {alumniConnections.map((alumni) => (
+                            <div 
+                              key={alumni.id}
+                              className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                              onClick={() => navigate(`/directory/alumni/${alumni.id}`)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-white overflow-hidden">
+                                  {alumni.photoURL ? (
+                                    <img src={alumni.photoURL} alt={alumni.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    alumni.name?.charAt(0).toUpperCase() || "A"
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-800 dark:text-white">{alumni.name}</h4>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {alumni.jobTitle} {alumni.company && `at ${alumni.company}`}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {Array.isArray(alumni.skills) && alumni.skills.slice(0, 2).map((skill, index) => (
+                                      <span 
+                                        key={index}
+                                        className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                    {Array.isArray(alumni.skills) && alumni.skills.length > 2 && (
+                                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs">
+                                        +{alumni.skills.length - 2}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Teacher Connections */}
+                    {teacherConnections.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                          Teacher Connections
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {teacherConnections.map((teacher) => (
+                            <div 
+                              key={teacher.id}
+                              className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                              onClick={() => navigate(`/directory/teacher/${teacher.id}`)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="h-12 w-12 rounded-full bg-purple-500 flex items-center justify-center text-white overflow-hidden">
+                                  {teacher.photoURL ? (
+                                    <img src={teacher.photoURL} alt={teacher.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    teacher.name?.charAt(0).toUpperCase() || "T"
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-800 dark:text-white">{teacher.name}</h4>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {teacher.department} {teacher.institution && `at ${teacher.institution}`}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {Array.isArray(teacher.skills) && teacher.skills.slice(0, 2).map((skill, index) => (
+                                      <span 
+                                        key={index}
+                                        className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                    {Array.isArray(teacher.skills) && teacher.skills.length > 2 && (
+                                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs">
+                                        +{teacher.skills.length - 2}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Suggested Connections */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Suggested Connections</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Student Suggestion */}
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="h-20 w-20 rounded-full bg-green-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
+                        <img src="https://randomuser.me/api/portraits/men/45.jpg" alt="Suggested Student" className="h-full w-full object-cover" />
+                      </div>
+                      <h4 className="font-semibold text-gray-800 dark:text-white">Michael Chen</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Computer Science, Batch 2024</p>
+                      <div className="flex flex-wrap justify-center gap-1 mb-4">
+                        <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs">
+                          Python
+                        </span>
+                        <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs">
+                          Machine Learning
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => handleRequestConnection('michael-chen-id')}
+                        className="w-full py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        Connect
+                      </button>
                     </div>
                   </div>
                   
-                  <div className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="p-2 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-4">📊</div>
-                    <div>
-                      <p className="text-gray-800 dark:text-white">Assignment submissions received for Algorithms</p>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">5 hours ago</span>
+                  {/* Alumni Suggestion */}
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="h-20 w-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
+                        <img src="https://randomuser.me/api/portraits/men/78.jpg" alt="Suggested Alumni" className="h-full w-full object-cover" />
+                      </div>
+                      <h4 className="font-semibold text-gray-800 dark:text-white">David Kim</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Senior Data Scientist at Microsoft</p>
+                      <div className="flex flex-wrap justify-center gap-1 mb-4">
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                          Data Science
+                        </span>
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                          AI
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => handleRequestConnection('david-kim-id')}
+                        className="w-full py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        Connect
+                      </button>
                     </div>
                   </div>
                   
-                  <div className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="p-2 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-500 dark:text-yellow-300 text-xl mr-4">📅</div>
-                    <div>
-                      <p className="text-gray-800 dark:text-white">Created new Tech Talk event</p>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">1 day ago</span>
+                  {/* Teacher Suggestion */}
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="h-20 w-20 rounded-full bg-purple-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
+                        <img src="https://randomuser.me/api/portraits/women/55.jpg" alt="Suggested Teacher" className="h-full w-full object-cover" />
+                      </div>
+                      <h4 className="font-semibold text-gray-800 dark:text-white">Dr. Sarah Wilson</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Data Science Department</p>
+                      <div className="flex flex-wrap justify-center gap-1 mb-4">
+                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs">
+                          Data Science
+                        </span>
+                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs">
+                          Big Data
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => handleRequestConnection('sarah-wilson-id')}
+                        className="w-full py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        Connect
+                      </button>
                     </div>
                   </div>
                 </div>

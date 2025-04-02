@@ -14,6 +14,10 @@ import Contact from './pages/Contact';
 import StudentDashboard from './pages/studentDashboard/StudentDashboard';
 import TeacherDashboard from './pages/teacherDashboard/TeacherDashboard';
 import AlumniDashboard from './pages/alumniDashboard/AlumniDashboard';
+import Directory from './pages/directory/Directory';
+import AlumniProfile from './pages/directory/alumniDirectory/AlumniProfile';
+import TeacherProfile from './pages/directory/teacherDirectory/TeacherProfile';
+import StudentProfile from './pages/directory/studentDirectory/StudentProfile';
 import PrivateRoute from './components/PrivateRoute';
 import './App.css';
 
@@ -46,6 +50,15 @@ function App() {
               <Route path="/events" element={<Events />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/directory" element={<Directory />} />
+              <Route path="/directory/alumni" element={<Directory />} />
+              <Route path="/directory/teacher" element={<Directory />} />
+              <Route path="/directory/student" element={<Directory />} />
+              <Route path="/alumni-directory" element={<Directory />} />
+              <Route path="/alumni-profile/:id" element={<AlumniProfile />} />
+              <Route path="/directory/alumni/:id" element={<AlumniProfile />} />
+              <Route path="/directory/teacher/:id" element={<TeacherProfile />} />
+              <Route path="/directory/student/:id" element={<StudentProfile />} />
               <Route
                 path="/create-event"
                 element={

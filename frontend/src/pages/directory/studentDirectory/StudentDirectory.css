@@ -1,0 +1,98 @@
+/* StudentDirectory.css */
+
+:root {
+  --tertiary-color: #8b5cf6;
+  --tertiary-dark: #7c3aed;
+  --tertiary-light: #a5b4fc;
+}
+
+/* Dark mode variables with better contrast */
+:root.dark {
+  --tertiary-light: #d1dafe; /* Increased brightness for better visibility */
+  --text-color-light: #f3f4f6; /* Bright text for dark backgrounds */
+}
+
+/* Custom scrollbar for filter dropdowns */
+select::-webkit-scrollbar {
+  width: 8px;
+}
+
+select::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+select::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+select::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Directory card hover effects */
+.directory-card {
+  transition: all 0.2s ease;
+}
+
+.directory-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Dark mode specific adjustments */
+.dark .bg-gray-750 {
+  background-color: #252f3f;
+}
+
+.dark .text-tertiary-light {
+  color: var(--tertiary-light);
+}
+
+/* Improve dark mode text visibility */
+.dark .text-gray-200 {
+  color: var(--text-color-light);
+}
+
+/* Card skill tags hover effect */
+.skill-tag {
+  transition: all 0.2s ease;
+}
+
+.skill-tag:hover {
+  background-color: var(--tertiary-color);
+  color: white;
+}
+
+/* Enhanced skill tag contrast for dark mode */
+.dark .skill-tag:hover {
+  background-color: var(--tertiary-light);
+  color: #1f2937; /* Dark text on light background for better readability */
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .student-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+}
+
+/* Half-height screens for content areas */
+.min-h-screen-half {
+  min-height: 50vh;
+}
+
+/* Profile image gradient background for cards without photos */
+.bg-gradient-to-br.from-tertiary.to-tertiary-dark {
+  background-image: linear-gradient(to bottom right, var(--tertiary-color), var(--tertiary-dark));
+}
+
+/* Decorative header gradient */
+.bg-gradient-to-r.from-tertiary.to-tertiary-dark {
+  background-image: linear-gradient(to right, var(--tertiary-color), var(--tertiary-dark));
+}
+
+/* View Profile button with enhanced visibility in dark mode */
+.dark .text-tertiary-light {
+  color: var(--tertiary-light);
+  font-weight: 500;
+} 

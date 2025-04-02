@@ -87,6 +87,16 @@ const Navbar = () => {
             >
               Events
             </NavLink>
+            <NavLink
+              to="/directory"
+              className={({ isActive }) => 
+                isActive 
+                  ? "text-primary dark:text-primary nav-link active" 
+                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
+              }
+            >
+              Directory
+            </NavLink>
             {currentUser && role && (
               <NavLink
                 to={`/${role.toLowerCase()}-dashboard`}
@@ -255,6 +265,16 @@ const Navbar = () => {
               }
             >
               Events
+            </NavLink>
+            <NavLink
+              to="/directory"
+              className={({ isActive }) =>
+                isActive 
+                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
+                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
+              }
+            >
+              Directory
             </NavLink>
             {currentUser && role && (
               <NavLink

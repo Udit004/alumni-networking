@@ -1,14 +1,38 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../../AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import EnrolledEvents from "./EnrolledEvents";
 import "./StudentDashboard.css";
+import { db } from "../../firebaseConfig";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 const StudentDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
   const [activeSection, setActiveSection] = useState("overview");
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
-  const { user } = useAuth();
+  const [profileData, setProfileData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    address: "",
+    enrollmentNumber: "",
+    program: "",
+    admissionYear: "",
+    batch: "",
+    currentSemester: "",
+    cgpa: "",
+    skills: [],
+    achievements: [],
+    projects: [],
+    courses: [],
+    bio: "",
+    connections: [] // Add connections array to track connected profiles
+  });
+  const [connections, setConnections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [connectionLoading, setConnectionLoading] = useState(true);
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,8 +53,123 @@ const StudentDashboard = () => {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const fetchStudentProfile = async () => {
+      if (!currentUser) return;
+      
+      try {
+        setLoading(true);
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          
+          // Fetch academic records if they exist in a separate collection
+          let academicData = {};
+          if (userData.academicRecordId) {
+            const academicRef = doc(db, "academicRecords", userData.academicRecordId);
+            const academicDoc = await getDoc(academicRef);
+            if (academicDoc.exists()) {
+              academicData = academicDoc.data();
+            }
+          }
+          
+          setProfileData({
+            name: userData.name || currentUser.displayName || "",
+            email: userData.email || currentUser.email || "",
+            phone: userData.phone || "",
+            dateOfBirth: userData.dateOfBirth || "",
+            address: userData.address || "",
+            enrollmentNumber: userData.enrollmentNumber || academicData.enrollmentNumber || "",
+            program: userData.program || academicData.program || "",
+            admissionYear: userData.admissionYear || academicData.admissionYear || "",
+            batch: userData.batch || academicData.batch || "",
+            currentSemester: userData.currentSemester || academicData.currentSemester || "",
+            cgpa: userData.cgpa || academicData.cgpa || "",
+            skills: userData.skills || [],
+            achievements: userData.achievements || [],
+            projects: userData.projects || [],
+            courses: userData.courses || academicData.courses || [],
+            bio: userData.bio || "",
+            connections: userData.connections || []
+          });
+          
+          // After setting profile data, fetch connected profiles
+          if (userData.connections && userData.connections.length > 0) {
+            fetchConnections(userData.connections);
+          } else {
+            setConnectionLoading(false);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching student profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchStudentProfile();
+  }, [currentUser]);
+  
+  // Function to fetch connection profile details
+  const fetchConnections = async (connectionIds) => {
+    try {
+      setConnectionLoading(true);
+      const connectionProfiles = [];
+      
+      // Process each connection in batches
+      for (const connectionId of connectionIds) {
+        const userDocRef = doc(db, "users", connectionId);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          connectionProfiles.push({
+            id: userDoc.id,
+            name: userData.name || "",
+            role: userData.role || "",
+            jobTitle: userData.jobTitle || "",
+            company: userData.company || "",
+            institution: userData.institution || "",
+            department: userData.department || "",
+            photoURL: userData.photoURL || "",
+            skills: userData.skills || []
+          });
+        }
+      }
+      
+      setConnections(connectionProfiles);
+    } catch (error) {
+      console.error("Error fetching connections:", error);
+    } finally {
+      setConnectionLoading(false);
+    }
+  };
+  
+  // Function to handle requesting a connection
+  const handleRequestConnection = async (userId) => {
+    if (!currentUser) return;
+    
+    try {
+      // In a real app, this would send a connection request to the backend
+      // For now, we'll just show an alert
+      alert(`Connection request sent to ${userId}`);
+      
+      // Here we would typically update a "connectionRequests" collection in Firestore
+      // And add a notification for the other user
+    } catch (error) {
+      console.error("Error sending connection request:", error);
+    }
+  };
+  
+  // Filter connections by role
+  const alumniConnections = connections.filter(conn => conn.role === "alumni");
+  const teacherConnections = connections.filter(conn => conn.role === "teacher");
+
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'profile', label: 'Profile', icon: '👤' },
     { id: 'events', label: 'Enrolled Events', icon: '📅' },
     { id: 'courses', label: 'Course Materials', icon: '📚' },
     { id: 'mentorship', label: 'Mentorship', icon: '🎓' },
@@ -96,16 +235,240 @@ const StudentDashboard = () => {
                 <span className="absolute top-0 right-0 h-5 w-5 flex items-center justify-center bg-red-500 text-white text-xs rounded-full">3</span>
               </button>
               <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                {user?.displayName ? user.displayName[0].toUpperCase() : '👤'}
+                {profileData.name ? (
+                  profileData.name.charAt(0).toUpperCase()
+                ) : (
+                  '👤'
+                )}
               </div>
             </div>
           </div>
         </header>
 
         <main className="p-6">
+          {activeSection === 'profile' && (
+            <div className="space-y-8">
+              {/* Profile Header */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+                  <div className="w-32 h-32 rounded-full bg-blue-500 flex items-center justify-center text-white text-4xl overflow-hidden">
+                    {profileData.name ? (
+                      profileData.name.charAt(0).toUpperCase()
+                    ) : (
+                      '👤'
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 text-center md:text-left">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                      {profileData.name || "Student Name"}
+                    </h1>
+                    <p className="text-gray-600 dark:text-gray-400 mb-3">
+                      Student • {profileData.program || "Program"} • {profileData.batch || "Batch"}
+                    </p>
+                    
+                    <p className="text-gray-700 dark:text-gray-300 max-w-2xl mb-4">
+                      {profileData.bio || "No bio available"}
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      {Array.isArray(profileData.skills) && profileData.skills.length > 0 ? (
+                        profileData.skills.map((skill, index) => (
+                          <span 
+                            key={index} 
+                            className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
+                          >
+                            {skill}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">No skills listed</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="md:self-start">
+                    <button
+                      onClick={() => navigate('/profile')}
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                    >
+                      Edit Profile
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Information */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Personal Information</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Full Name</h3>
+                    <p className="text-gray-800 dark:text-white">{profileData.name || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Email Address</h3>
+                    <p className="text-gray-800 dark:text-white">{profileData.email || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Phone Number</h3>
+                    <p className="text-gray-800 dark:text-white">{profileData.phone || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Date of Birth</h3>
+                    <p className="text-gray-800 dark:text-white">{profileData.dateOfBirth || "Not provided"}</p>
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Address</h3>
+                    <p className="text-gray-800 dark:text-white">{profileData.address || "Not provided"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Academic Information */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Academic Information</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-y-6 gap-x-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Enrollment Number</h3>
+                    <p className="text-gray-800 dark:text-white">{profileData.enrollmentNumber || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Program</h3>
+                    <p className="text-gray-800 dark:text-white">{profileData.program || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Admission Year</h3>
+                    <p className="text-gray-800 dark:text-white">{profileData.admissionYear || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Batch</h3>
+                    <p className="text-gray-800 dark:text-white">{profileData.batch || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Current Semester</h3>
+                    <p className="text-gray-800 dark:text-white">{profileData.currentSemester || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">CGPA</h3>
+                    <p className="text-gray-800 dark:text-white">{profileData.cgpa || "Not provided"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Enrolled Courses */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Enrolled Courses</h2>
+                
+                {Array.isArray(profileData.courses) && profileData.courses.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {profileData.courses.map((course, index) => (
+                      <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <h3 className="font-semibold text-gray-800 dark:text-white">{course.name}</h3>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm">{course.code}</p>
+                        <div className="mt-2 flex justify-between">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">Credits: {course.credits}</span>
+                          {course.grade && <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Grade: {course.grade}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-600 dark:text-gray-400">No courses enrolled</p>
+                )}
+              </div>
+              
+              {/* Projects */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Projects</h2>
+                
+                {Array.isArray(profileData.projects) && profileData.projects.length > 0 ? (
+                  <div className="space-y-6">
+                    {profileData.projects.map((project, index) => (
+                      <div key={index} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-0">
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{project.title}</h3>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{project.date}</p>
+                        <p className="text-gray-700 dark:text-gray-300 mb-3">{project.description}</p>
+                        
+                        {Array.isArray(project.technologies) && project.technologies.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {project.technologies.map((tech, techIndex) => (
+                              <span 
+                                key={techIndex}
+                                className="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs"
+                              >
+                                {tech}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {project.link && (
+                          <a 
+                            href={project.link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="mt-3 inline-block text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                          >
+                            View Project →
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-600 dark:text-gray-400">No projects added</p>
+                )}
+              </div>
+              
+              {/* Achievements */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Achievements</h2>
+                
+                {Array.isArray(profileData.achievements) && profileData.achievements.length > 0 ? (
+                  <div className="space-y-4">
+                    {profileData.achievements.map((achievement, index) => (
+                      <div 
+                        key={index} 
+                        className="flex gap-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        <div className="text-2xl text-yellow-500">🏆</div>
+                        <div>
+                          <h3 className="font-semibold text-gray-800 dark:text-white">{achievement.title}</h3>
+                          <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">{achievement.date}</p>
+                          <p className="text-gray-700 dark:text-gray-300">{achievement.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-600 dark:text-gray-400">No achievements added</p>
+                )}
+              </div>
+            </div>
+          )}
+
           {activeSection === 'overview' && (
             <div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                {/* Stats cards - keep this part */}
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex items-center">
@@ -117,65 +480,231 @@ const StudentDashboard = () => {
                   </div>
                 </div>
                 
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-4">📚</div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Course Progress</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">75%</p>
-                    </div>
-                  </div>
-                </div>
+                {/* Keep other stat cards... */}
                 
+                {/* Add a Connections stat card */}
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-4">🎓</div>
+                    <div className="p-3 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-500 dark:text-indigo-300 text-xl mr-4">🔗</div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Mentorship</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">2</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-500 dark:text-yellow-300 text-xl mr-4">💬</div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Forum Activity</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">12</p>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Connections</h3>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">{connections.length}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Replace Recent Activity with Connections */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
                    style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Recent Activity</h2>
-                <div className="space-y-4">
-                  <div className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-4">📅</div>
-                    <div>
-                      <p className="text-gray-800 dark:text-white">Enrolled in "Career Development Workshop"</p>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">2 hours ago</span>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 md:mb-0">My Connections</h2>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => navigate('/directory')}
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <span>Find Connections</span> 🔍
+                    </button>
+                  </div>
+                </div>
+                
+                {connectionLoading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : connections.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">You haven't connected with any alumni or teachers yet.</p>
+                    <button 
+                      onClick={() => navigate('/directory')}
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                    >
+                      Browse Directory
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    {/* Alumni Connections */}
+                    {alumniConnections.length > 0 && (
+                      <div className="mb-8">
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                          Alumni Connections
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {alumniConnections.map((alumni) => (
+                            <div 
+                              key={alumni.id}
+                              className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                              onClick={() => navigate(`/directory/alumni/${alumni.id}`)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-white overflow-hidden">
+                                  {alumni.photoURL ? (
+                                    <img src={alumni.photoURL} alt={alumni.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    alumni.name?.charAt(0).toUpperCase() || "A"
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-800 dark:text-white">{alumni.name}</h4>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {alumni.jobTitle} {alumni.company && `at ${alumni.company}`}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {Array.isArray(alumni.skills) && alumni.skills.slice(0, 2).map((skill, index) => (
+                                      <span 
+                                        key={index}
+                                        className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                    {Array.isArray(alumni.skills) && alumni.skills.length > 2 && (
+                                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs">
+                                        +{alumni.skills.length - 2}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Teacher Connections */}
+                    {teacherConnections.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                          Teacher Connections
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {teacherConnections.map((teacher) => (
+                            <div 
+                              key={teacher.id}
+                              className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                              onClick={() => navigate(`/directory/teacher/${teacher.id}`)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="h-12 w-12 rounded-full bg-purple-500 flex items-center justify-center text-white overflow-hidden">
+                                  {teacher.photoURL ? (
+                                    <img src={teacher.photoURL} alt={teacher.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    teacher.name?.charAt(0).toUpperCase() || "T"
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-800 dark:text-white">{teacher.name}</h4>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {teacher.department} {teacher.institution && `at ${teacher.institution}`}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {Array.isArray(teacher.skills) && teacher.skills.slice(0, 2).map((skill, index) => (
+                                      <span 
+                                        key={index}
+                                        className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                    {Array.isArray(teacher.skills) && teacher.skills.length > 2 && (
+                                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs">
+                                        +{teacher.skills.length - 2}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Suggested Connections */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Suggested Connections</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Alumni Suggestion */}
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="h-20 w-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
+                        <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Suggested Alumni" className="h-full w-full object-cover" />
+                      </div>
+                      <h4 className="font-semibold text-gray-800 dark:text-white">Robert Johnson</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Software Engineer at Google</p>
+                      <div className="flex flex-wrap justify-center gap-1 mb-4">
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                          React
+                        </span>
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                          Node.js
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => handleRequestConnection('robert-johnson-id')}
+                        className="w-full py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        Connect
+                      </button>
                     </div>
                   </div>
                   
-                  <div className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-4">📚</div>
-                    <div>
-                      <p className="text-gray-800 dark:text-white">Completed Module 3 in "Web Development"</p>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">Yesterday</span>
+                  {/* Teacher Suggestion */}
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="h-20 w-20 rounded-full bg-purple-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
+                        <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Suggested Teacher" className="h-full w-full object-cover" />
+                      </div>
+                      <h4 className="font-semibold text-gray-800 dark:text-white">Dr. Emily Williams</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Computer Science Department</p>
+                      <div className="flex flex-wrap justify-center gap-1 mb-4">
+                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs">
+                          Machine Learning
+                        </span>
+                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs">
+                          AI
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => handleRequestConnection('emily-williams-id')}
+                        className="w-full py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        Connect
+                      </button>
                     </div>
                   </div>
                   
-                  <div className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="p-2 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-500 dark:text-yellow-300 text-xl mr-4">💬</div>
-                    <div>
-                      <p className="text-gray-800 dark:text-white">Posted in "Technology Trends" forum</p>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">2 days ago</span>
+                  {/* Alumni Suggestion */}
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="h-20 w-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
+                        <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Suggested Alumni" className="h-full w-full object-cover" />
+                      </div>
+                      <h4 className="font-semibold text-gray-800 dark:text-white">Sarah Miller</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Product Manager at Amazon</p>
+                      <div className="flex flex-wrap justify-center gap-1 mb-4">
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                          Product Management
+                        </span>
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                          UX
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => handleRequestConnection('sarah-miller-id')}
+                        className="w-full py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        Connect
+                      </button>
                     </div>
                   </div>
                 </div>

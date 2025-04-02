@@ -1,0 +1,75 @@
+/* TeacherDirectory.css */
+
+:root {
+  --secondary-color: #f59e0b;
+  --secondary-dark: #d97706;
+  --secondary-light: #fcd34d;
+}
+
+/* Custom scrollbar for filter dropdowns */
+select::-webkit-scrollbar {
+  width: 8px;
+}
+
+select::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+select::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+select::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Directory card hover effects */
+.directory-card {
+  transition: all 0.2s ease;
+}
+
+.directory-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Dark mode specific adjustments */
+.dark .bg-gray-750 {
+  background-color: #252f3f;
+}
+
+.dark .text-secondary-light {
+  color: var(--secondary-light);
+}
+
+/* Card skill tags hover effect */
+.skill-tag {
+  transition: all 0.2s ease;
+}
+
+.skill-tag:hover {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .teacher-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+}
+
+/* Half-height screens for content areas */
+.min-h-screen-half {
+  min-height: 50vh;
+}
+
+/* Profile image gradient background for cards without photos */
+.bg-gradient-to-br.from-secondary.to-secondary-dark {
+  background-image: linear-gradient(to bottom right, var(--secondary-color), var(--secondary-dark));
+}
+
+/* Decorative header gradient */
+.bg-gradient-to-r.from-secondary.to-secondary-dark {
+  background-image: linear-gradient(to right, var(--secondary-color), var(--secondary-dark));
+} 

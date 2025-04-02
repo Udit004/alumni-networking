@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './AlumniDashboard.css';
+import { db } from "../../firebaseConfig";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 const AlumniDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -15,6 +17,25 @@ const AlumniDashboard = () => {
   const { user, role } = useAuth();
   const navigate = useNavigate();
   const API_URL = process.env.REACT_APP_API_URL;
+  const [connections, setConnections] = useState([]);
+  const [connectionLoading, setConnectionLoading] = useState(true);
+  const { currentUser } = useAuth();
+  const [profileData, setProfileData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    address: "",
+    graduationYear: "",
+    program: "",
+    currentPosition: "",
+    company: "",
+    skills: [],
+    achievements: [],
+    projects: [],
+    bio: "",
+    connections: []
+  });
 
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: '📊' },
@@ -114,6 +135,126 @@ const AlumniDashboard = () => {
     setActiveSection(section);
   };
 
+  useEffect(() => {
+    const fetchAlumniProfile = async () => {
+      if (!currentUser) return;
+      
+      try {
+        setLoading(true);
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log('Alumni profile data loaded:', userData);
+          setProfileData({
+            name: userData.name || currentUser.displayName || "",
+            email: userData.email || currentUser.email || "",
+            phone: userData.phone || "",
+            dateOfBirth: userData.dateOfBirth || "",
+            address: userData.address || "",
+            graduationYear: userData.graduationYear || "",
+            program: userData.program || "",
+            currentPosition: userData.currentPosition || "",
+            company: userData.company || "",
+            skills: userData.skills || [],
+            achievements: userData.achievements || [],
+            projects: userData.projects || [],
+            bio: userData.bio || "",
+            connections: userData.connections || []
+          });
+          
+          // After setting profile data, fetch connected profiles
+          if (userData.connections && userData.connections.length > 0) {
+            console.log('Found connections in user data, fetching details...');
+            fetchConnections(userData.connections);
+          } else {
+            console.log('No connections found in user data');
+            setConnectionLoading(false);
+          }
+        } else {
+          console.log('User document does not exist for current user');
+          setConnectionLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching alumni profile:", error);
+        setConnectionLoading(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAlumniProfile();
+  }, [currentUser]);
+  
+  // Function to fetch connection profile details
+  const fetchConnections = async (connectionIds) => {
+    try {
+      setConnectionLoading(true);
+      console.log('Fetching connections for IDs:', connectionIds);
+      const connectionProfiles = [];
+      
+      // Process each connection in batches
+      for (const connectionId of connectionIds) {
+        const userDocRef = doc(db, "users", connectionId);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log('Found connection:', userData);
+          connectionProfiles.push({
+            id: userDoc.id,
+            name: userData.name || "",
+            role: userData.role || "",
+            jobTitle: userData.jobTitle || "",
+            company: userData.company || "",
+            institution: userData.institution || "",
+            department: userData.department || "",
+            photoURL: userData.photoURL || "",
+            skills: userData.skills || []
+          });
+        } else {
+          console.log('Connection not found for ID:', connectionId);
+        }
+      }
+      
+      console.log('Final connection profiles:', connectionProfiles);
+      setConnections(connectionProfiles);
+    } catch (error) {
+      console.error("Error fetching connections:", error);
+    } finally {
+      setConnectionLoading(false);
+    }
+  };
+  
+  // Function to handle requesting a connection
+  const handleRequestConnection = async (userId) => {
+    if (!currentUser) return;
+    
+    try {
+      // In a real app, this would send a connection request to the backend
+      // For now, we'll just show an alert
+      alert(`Connection request sent to ${userId}`);
+      
+      // Here we would typically update a "connectionRequests" collection in Firestore
+      // And add a notification for the other user
+    } catch (error) {
+      console.error("Error sending connection request:", error);
+    }
+  };
+  
+  // Filter connections by role
+  const studentConnections = connections.filter(conn => conn.role === "student");
+  const teacherConnections = connections.filter(conn => conn.role === "teacher");
+  const alumniConnections = connections.filter(conn => conn.role === "alumni");
+  
+  console.log('Filtered connections:', {
+    all: connections.length,
+    students: studentConnections.length,
+    teachers: teacherConnections.length,
+    alumni: alumniConnections.length
+  });
+
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
       {/* Sidebar */}
@@ -176,15 +317,16 @@ const AlumniDashboard = () => {
 
         <main className="p-6">
           {activeSection === 'overview' && (
-            <div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="overview-section space-y-8">
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-4">🤝</div>
+                    <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-4">🔗</div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Connections</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">45</p>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">{connections.length}</p>
                     </div>
                   </div>
                 </div>
@@ -192,21 +334,21 @@ const AlumniDashboard = () => {
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-4">🎓</div>
+                    <div className="p-3 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-4">👥</div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Number of Student Mentors</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">3</p>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Mentorship</h3>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">2</p>
                     </div>
                   </div>
                 </div>
-
+                
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-4">💼</div>
+                    <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-4">💼</div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Job Applications</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">12</p>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Job Posts</h3>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">5</p>
                     </div>
                   </div>
                 </div>
@@ -216,38 +358,285 @@ const AlumniDashboard = () => {
                   <div className="flex items-center">
                     <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-500 dark:text-yellow-300 text-xl mr-4">📅</div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Upcoming Events</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">5</p>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Events</h3>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-white">3</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Recent Activity</h2>
-                <div className="space-y-4">
-                  <div className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-4">🤝</div>
-                    <div>
-                      <p className="text-gray-800 dark:text-white">New connection request from John Doe</p>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">2 hours ago</span>
+              {/* My Connections */}
+              <div id="my-connections" className="connections-section bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 md:mb-0">My Connections</h2>
+                  <button 
+                    id="find-connections-btn"
+                    onClick={() => navigate('/directory')}
+                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <span>Find Connections</span> 🔍
+                  </button>
+                </div>
+                
+                {connectionLoading ? (
+                  <div className="connections-loading flex justify-center items-center py-8">
+                    <p className="text-gray-600 dark:text-gray-300">Loading connections...</p>
+                  </div>
+                ) : connections.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="mb-4">
+                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Connections Yet</h3>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6">Start building your network by connecting with other alumni, students and teachers.</p>
+                    <button
+                      id="browse-directory-btn"
+                      onClick={() => navigate('/directory')} 
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Browse Directory
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    {/* Student Connections */}
+                    {studentConnections.length > 0 && (
+                      <div className="mb-8">
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                          Student Connections
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {studentConnections.map((student) => (
+                            <div 
+                              key={student.id}
+                              className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                              onClick={() => navigate(`/directory/student/${student.id}`)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="h-12 w-12 rounded-full bg-green-500 flex items-center justify-center text-white overflow-hidden">
+                                  {student.photoURL ? (
+                                    <img src={student.photoURL} alt={student.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    student.name?.charAt(0).toUpperCase() || "S"
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-800 dark:text-white">{student.name}</h4>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {student.program} {student.batch && `Batch ${student.batch}`}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {Array.isArray(student.skills) && student.skills.slice(0, 2).map((skill, index) => (
+                                      <span 
+                                        key={index}
+                                        className="px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                    {Array.isArray(student.skills) && student.skills.length > 2 && (
+                                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs">
+                                        +{student.skills.length - 2}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Teacher Connections */}
+                    {teacherConnections.length > 0 && (
+                      <div className="mb-8">
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                          Teacher Connections
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {teacherConnections.map((teacher) => (
+                            <div 
+                              key={teacher.id}
+                              className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                              onClick={() => navigate(`/directory/teacher/${teacher.id}`)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="h-12 w-12 rounded-full bg-purple-500 flex items-center justify-center text-white overflow-hidden">
+                                  {teacher.photoURL ? (
+                                    <img src={teacher.photoURL} alt={teacher.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    teacher.name?.charAt(0).toUpperCase() || "T"
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-800 dark:text-white">{teacher.name}</h4>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {teacher.department} {teacher.institution && `at ${teacher.institution}`}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {Array.isArray(teacher.skills) && teacher.skills.slice(0, 2).map((skill, index) => (
+                                      <span 
+                                        key={index}
+                                        className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                    {Array.isArray(teacher.skills) && teacher.skills.length > 2 && (
+                                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs">
+                                        +{teacher.skills.length - 2}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Alumni Connections */}
+                    {alumniConnections.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                          Alumni Connections
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {alumniConnections.map((alumni) => (
+                            <div 
+                              key={alumni.id}
+                              className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                              onClick={() => navigate(`/directory/alumni/${alumni.id}`)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-white overflow-hidden">
+                                  {alumni.photoURL ? (
+                                    <img src={alumni.photoURL} alt={alumni.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    alumni.name?.charAt(0).toUpperCase() || "A"
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-800 dark:text-white">{alumni.name}</h4>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {alumni.jobTitle} {alumni.company && `at ${alumni.company}`}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {Array.isArray(alumni.skills) && alumni.skills.slice(0, 2).map((skill, index) => (
+                                      <span 
+                                        key={index}
+                                        className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                    {Array.isArray(alumni.skills) && alumni.skills.length > 2 && (
+                                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs">
+                                        +{alumni.skills.length - 2}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Suggested Connections */}
+              <div className="suggested-connections bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 md:mb-0">Suggested Connections</h2>
+                  <button 
+                    onClick={() => navigate('/directory')}
+                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <span>Browse Directory</span> 🔍
+                  </button>
+                </div>
+                
+                {/* Suggested connection cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Student Suggestion */}
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="h-20 w-20 rounded-full bg-green-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
+                        <img src="https://randomuser.me/api/portraits/men/45.jpg" alt="Suggested Student" className="h-full w-full object-cover" />
+                      </div>
+                      <h4 className="font-semibold text-gray-800 dark:text-white">Michael Chen</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Computer Science, Batch 2024</p>
+                      <div className="flex flex-wrap justify-center gap-1 mb-4">
+                        <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs">
+                          Python
+                        </span>
+                        <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs">
+                          Machine Learning
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => navigate('/directory/student/michael-chen-id')}
+                        className="w-full py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        View Profile
+                      </button>
                     </div>
                   </div>
                   
-                  <div className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="p-2 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-4">💼</div>
-                    <div>
-                      <p className="text-gray-800 dark:text-white">New job opportunity at Google</p>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">5 hours ago</span>
+                  {/* Teacher Suggestion */}
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="h-20 w-20 rounded-full bg-purple-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
+                        <img src="https://randomuser.me/api/portraits/women/55.jpg" alt="Suggested Teacher" className="h-full w-full object-cover" />
+                      </div>
+                      <h4 className="font-semibold text-gray-800 dark:text-white">Dr. Sarah Wilson</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Data Science Department</p>
+                      <div className="flex flex-wrap justify-center gap-1 mb-4">
+                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs">
+                          Data Science
+                        </span>
+                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs">
+                          Big Data
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => navigate('/directory/teacher/sarah-wilson-id')}
+                        className="w-full py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        View Profile
+                      </button>
                     </div>
                   </div>
                   
-                  <div className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="p-2 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-500 dark:text-yellow-300 text-xl mr-4">📅</div>
-                    <div>
-                      <p className="text-gray-800 dark:text-white">Upcoming Alumni Meet</p>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">1 day ago</span>
+                  {/* Alumni Suggestion */}
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="h-20 w-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
+                        <img src="https://randomuser.me/api/portraits/men/78.jpg" alt="Suggested Alumni" className="h-full w-full object-cover" />
+                      </div>
+                      <h4 className="font-semibold text-gray-800 dark:text-white">David Kim</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Senior Data Scientist at Microsoft</p>
+                      <div className="flex flex-wrap justify-center gap-1 mb-4">
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                          Data Science
+                        </span>
+                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                          AI
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => navigate('/directory/alumni/david-kim-id')}
+                        className="w-full py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
+                      >
+                        View Profile
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -255,7 +644,7 @@ const AlumniDashboard = () => {
             </div>
           )}
 
-{activeSection === 'profile' && (
+          {activeSection === 'profile' && (
             <div className="profile-container">
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
                    style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
@@ -361,267 +750,10 @@ const AlumniDashboard = () => {
             </div>
           )}
           
-
-{activeSection === 'connections' && (
+          {activeSection === 'connections' && (
             <div className="connections-section">
               <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Connections</h2>
-                <div className="relative w-full md:w-64">
-                  <input 
-                    type="text" 
-                    placeholder="Search connections..." 
-                    className="w-full py-2 px-10 bg-white dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style={{ backgroundColor: isDarkMode ? '#374151' : 'white' }}
-                  />
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-300">
-                    🔍
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Connection Card 1 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-500 dark:text-blue-300 text-2xl mr-4 overflow-hidden">
-                        <span>JD</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">John Doe</h3>
-                        <p className="text-gray-600 dark:text-gray-400">Software Engineer at Microsoft</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📧</span>
-                        <span className="text-sm">john.doe@example.com</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🌐</span>
-                        <span className="text-sm">linkedin.com/in/johndoe</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📍</span>
-                        <span className="text-sm">Seattle, WA</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Message
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        View Profile
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Connection Card 2 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-16 h-16 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-500 dark:text-purple-300 text-2xl mr-4 overflow-hidden">
-                        <span>JS</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Jane Smith</h3>
-                        <p className="text-gray-600 dark:text-gray-400">Product Manager at Amazon</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📧</span>
-                        <span className="text-sm">jane.smith@example.com</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🌐</span>
-                        <span className="text-sm">linkedin.com/in/janesmith</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📍</span>
-                        <span className="text-sm">San Francisco, CA</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Message
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        View Profile
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Connection Card 3 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-500 dark:text-green-300 text-2xl mr-4 overflow-hidden">
-                        <span>RJ</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Robert Johnson</h3>
-                        <p className="text-gray-600 dark:text-gray-400">Data Scientist at Google</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📧</span>
-                        <span className="text-sm">robert.j@example.com</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🌐</span>
-                        <span className="text-sm">linkedin.com/in/robertj</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📍</span>
-                        <span className="text-sm">New York, NY</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Message
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        View Profile
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Connection Card 4 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center text-yellow-500 dark:text-yellow-300 text-2xl mr-4 overflow-hidden">
-                        <span>EW</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Emily Wilson</h3>
-                        <p className="text-gray-600 dark:text-gray-400">UX Designer at Apple</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📧</span>
-                        <span className="text-sm">emily.w@example.com</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🌐</span>
-                        <span className="text-sm">linkedin.com/in/emilyw</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📍</span>
-                        <span className="text-sm">Cupertino, CA</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Message
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        View Profile
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Connection Card 5 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center text-red-500 dark:text-red-300 text-2xl mr-4 overflow-hidden">
-                        <span>MB</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Michael Brown</h3>
-                        <p className="text-gray-600 dark:text-gray-400">DevOps Engineer at Netflix</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📧</span>
-                        <span className="text-sm">michael.b@example.com</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🌐</span>
-                        <span className="text-sm">linkedin.com/in/michaelb</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📍</span>
-                        <span className="text-sm">Los Angeles, CA</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Message
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        View Profile
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Connection Card 6 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-500 dark:text-indigo-300 text-2xl mr-4 overflow-hidden">
-                        <span>SL</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sarah Lee</h3>
-                        <p className="text-gray-600 dark:text-gray-400">Marketing Director at Spotify</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📧</span>
-                        <span className="text-sm">sarah.l@example.com</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🌐</span>
-                        <span className="text-sm">linkedin.com/in/sarahlee</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📍</span>
-                        <span className="text-sm">Chicago, IL</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Message
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        View Profile
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8 flex justify-center">
-                <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
-                  Load More Connections
-                </button>
-              </div>
-            </div>
-          )}
-
-
-{activeSection === 'mentorship' && (
-            <div className="mentorship-section">
-              <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Mentorship Programs</h2>
                 <button className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center">
                   <span className="mr-2">+</span> Create Program
                 </button>
