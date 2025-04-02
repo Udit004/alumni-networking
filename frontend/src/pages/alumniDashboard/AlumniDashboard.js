@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './AlumniDashboard.css';
@@ -20,6 +20,10 @@ const AlumniDashboard = () => {
   const [connections, setConnections] = useState([]);
   const [connectionLoading, setConnectionLoading] = useState(true);
   const { currentUser } = useAuth();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
@@ -41,6 +45,7 @@ const AlumniDashboard = () => {
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'profile', label: 'Profile', icon: '👤' },
     { id: 'connections', label: 'Connections', icon: '🤝' },
+    { id: 'notifications', label: 'Notifications', icon: '🔔' },
     { id: 'mentorship', label: 'Mentorship', icon: '🎓' },
     { id: 'jobs', label: 'Job Opportunities', icon: '💼' },
     { id: 'events', label: 'Events', icon: '📅' },
@@ -255,6 +260,144 @@ const AlumniDashboard = () => {
     alumni: alumniConnections.length
   });
 
+  // Close notifications when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [notificationRef]);
+
+  // Fetch notifications (mock data for now)
+  useEffect(() => {
+    // Simulate fetching notifications from a server
+    const mockNotifications = [
+      {
+        id: 1,
+        type: 'connection',
+        message: 'Michael Chen accepted your connection request',
+        timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+        read: false,
+        linkTo: '/directory/student/michael-chen-id'
+      },
+      {
+        id: 2, 
+        type: 'message',
+        message: 'You received a new message from Dr. Sarah Wilson',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+        read: false,
+        linkTo: '/messages/sarah-wilson-id'
+      },
+      {
+        id: 3,
+        type: 'job',
+        message: 'New job posting: Senior Data Scientist at Microsoft',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
+        read: true,
+        linkTo: '/jobs/123'
+      },
+      {
+        id: 4,
+        type: 'event',
+        message: 'Reminder: Tech Career Fair tomorrow at 10 AM',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+        read: true,
+        linkTo: '/events/456'
+      },
+      {
+        id: 5,
+        type: 'connection',
+        message: 'David Kim sent you a connection request',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 36), // 1.5 days ago
+        read: true,
+        linkTo: '/directory/alumni/david-kim-id'
+      }
+    ];
+    
+    setNotifications(mockNotifications);
+    setUnreadCount(mockNotifications.filter(notification => !notification.read).length);
+  }, []);
+
+  // Mark a notification as read
+  const markAsRead = (notificationId) => {
+    setNotifications(prevNotifications => 
+      prevNotifications.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, read: true } 
+          : notification
+      )
+    );
+    
+    setUnreadCount(prevUnreadCount => {
+      const notification = notifications.find(n => n.id === notificationId);
+      return notification && !notification.read ? prevUnreadCount - 1 : prevUnreadCount;
+    });
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = () => {
+    setNotifications(prevNotifications => 
+      prevNotifications.map(notification => ({ ...notification, read: true }))
+    );
+    setUnreadCount(0);
+  };
+
+  // Handle notification click
+  const handleNotificationClick = (notification) => {
+    markAsRead(notification.id);
+    navigate(notification.linkTo);
+    setShowNotifications(false);
+  };
+
+  // Get notification icon based on type
+  const getNotificationIcon = (type) => {
+    switch(type) {
+      case 'connection': return '🤝';
+      case 'message': return '✉️';
+      case 'job': return '💼';
+      case 'event': return '📅';
+      default: return '🔔';
+    }
+  };
+
+  // Format notification time
+  const formatNotificationTime = (timestamp) => {
+    const now = new Date();
+    const diff = now - timestamp;
+    
+    // Less than a minute
+    if (diff < 60 * 1000) {
+      return 'just now';
+    }
+    
+    // Less than an hour
+    if (diff < 60 * 60 * 1000) {
+      const minutes = Math.floor(diff / (60 * 1000));
+      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+    }
+    
+    // Less than a day
+    if (diff < 24 * 60 * 60 * 1000) {
+      const hours = Math.floor(diff / (60 * 60 * 1000));
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    }
+    
+    // Less than a week
+    if (diff < 7 * 24 * 60 * 60 * 1000) {
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+      return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+    }
+    
+    // Otherwise, return the date
+    return timestamp.toLocaleDateString();
+  };
+
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
       {/* Sidebar */}
@@ -304,10 +447,78 @@ const AlumniDashboard = () => {
               {menuItems.find(item => item.id === activeSection)?.label}
             </h1>
             <div className="flex items-center gap-4">
-              <button className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-                <span className="text-xl">🔔</span>
-                <span className="absolute top-0 right-0 h-5 w-5 flex items-center justify-center bg-red-500 text-white text-xs rounded-full">3</span>
-              </button>
+              <div className="relative" ref={notificationRef}>
+                <button 
+                  className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                >
+                  <span className="text-xl">🔔</span>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 h-5 w-5 flex items-center justify-center bg-red-500 text-white text-xs rounded-full">{unreadCount}</span>
+                  )}
+                </button>
+
+                {/* Notification Panel */}
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                    <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                      <h3 className="font-semibold text-gray-800 dark:text-white">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button 
+                          className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                          onClick={() => markAllAsRead()}
+                        >
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                          No notifications yet
+                        </div>
+                      ) : (
+                        notifications.map(notification => (
+                          <div 
+                            key={notification.id}
+                            className={`p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+                              !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                            }`}
+                            onClick={() => handleNotificationClick(notification)}
+                          >
+                            <div className="flex items-start">
+                              <div className="mr-3 mt-1">
+                                <span className="text-lg">{getNotificationIcon(notification.type)}</span>
+                              </div>
+                              <div className="flex-1">
+                                <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-800 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  {formatNotificationTime(notification.timestamp)}
+                                </p>
+                              </div>
+                              {!notification.read && (
+                                <div className="ml-2 h-2 w-2 bg-blue-500 rounded-full"></div>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    
+                    <div className="p-2 border-t border-gray-200 dark:border-gray-700 text-center">
+                      <button 
+                        className="text-sm text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                        onClick={() => setActiveSection('notifications')}
+                      >
+                        View all notifications
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
                 {user?.displayName ? user.displayName[0].toUpperCase() : '👤'}
               </div>
@@ -970,6 +1181,224 @@ const AlumniDashboard = () => {
                   <button className="apply-btn">Apply Now</button>
                 </div>
                 {/* Add more job cards */}
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'notifications' && (
+            <div className="notifications-section">
+              <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 md:mb-0">All Notifications</h2>
+                  <div className="flex gap-2">
+                    <select 
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => {
+                        // Here we would filter notifications by type
+                        console.log("Filter by type:", e.target.value);
+                      }}
+                    >
+                      <option value="all">All Types</option>
+                      <option value="connection">Connections</option>
+                      <option value="message">Messages</option>
+                      <option value="job">Job Postings</option>
+                      <option value="event">Events</option>
+                    </select>
+                    <select 
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => {
+                        // Here we would filter notifications by time
+                        console.log("Filter by time:", e.target.value);
+                      }}
+                    >
+                      <option value="all">All Time</option>
+                      <option value="today">Today</option>
+                      <option value="week">This Week</option>
+                      <option value="month">This Month</option>
+                    </select>
+                    <button 
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                      onClick={markAllAsRead}
+                    >
+                      Mark All as Read
+                    </button>
+                  </div>
+                </div>
+
+                {/* Notification grouping by day */}
+                <div className="space-y-6">
+                  {/* Today's notifications */}
+                  <div>
+                    <h3 className="font-medium text-gray-500 dark:text-gray-400 mb-2 text-sm">Today</h3>
+                    <div className="space-y-1">
+                      {notifications
+                        .filter(notification => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          return notification.timestamp >= today;
+                        })
+                        .map(notification => (
+                          <div 
+                            key={notification.id}
+                            className={`p-4 rounded-lg flex items-start hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors ${
+                              !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-gray-800'
+                            }`}
+                            onClick={() => handleNotificationClick(notification)}
+                          >
+                            <div className={`mr-4 p-3 rounded-full ${
+                              notification.type === 'connection' ? 'bg-green-100 dark:bg-green-900/30 text-green-500' :
+                              notification.type === 'message' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-500' :
+                              notification.type === 'job' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-500' :
+                              'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-500'
+                            }`}>
+                              <span className="text-xl">{getNotificationIcon(notification.type)}</span>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between">
+                                <p className={`font-medium ${!notification.read ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                                  {notification.message}
+                                </p>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-4">
+                                  {formatNotificationTime(notification.timestamp)}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                {notification.type === 'connection' ? 'Connection update' :
+                                 notification.type === 'message' ? 'New message' :
+                                 notification.type === 'job' ? 'Job opportunity' : 'Event update'}
+                              </p>
+                            </div>
+                            {!notification.read && (
+                              <div className="ml-2 h-3 w-3 bg-blue-500 rounded-full self-center"></div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Earlier notifications */}
+                  <div>
+                    <h3 className="font-medium text-gray-500 dark:text-gray-400 mb-2 text-sm">Earlier</h3>
+                    <div className="space-y-1">
+                      {notifications
+                        .filter(notification => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          return notification.timestamp < today;
+                        })
+                        .map(notification => (
+                          <div 
+                            key={notification.id}
+                            className={`p-4 rounded-lg flex items-start hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors ${
+                              !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-gray-800'
+                            }`}
+                            onClick={() => handleNotificationClick(notification)}
+                          >
+                            <div className={`mr-4 p-3 rounded-full ${
+                              notification.type === 'connection' ? 'bg-green-100 dark:bg-green-900/30 text-green-500' :
+                              notification.type === 'message' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-500' :
+                              notification.type === 'job' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-500' :
+                              'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-500'
+                            }`}>
+                              <span className="text-xl">{getNotificationIcon(notification.type)}</span>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between">
+                                <p className={`font-medium ${!notification.read ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                                  {notification.message}
+                                </p>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-4">
+                                  {formatNotificationTime(notification.timestamp)}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                {notification.type === 'connection' ? 'Connection update' :
+                                 notification.type === 'message' ? 'New message' :
+                                 notification.type === 'job' ? 'Job opportunity' : 'Event update'}
+                              </p>
+                            </div>
+                            {!notification.read && (
+                              <div className="ml-2 h-3 w-3 bg-blue-500 rounded-full self-center"></div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Empty state */}
+                {notifications.length === 0 && (
+                  <div className="text-center py-12">
+                    <div className="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                      <span className="text-2xl">🔔</span>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Notifications</h3>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      You don't have any notifications yet. Check back later for updates on connections, messages, jobs, and events.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Admin section - for future implementation */}
+              <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Notification Settings</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-800 dark:text-white font-medium">Connection Requests</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Get notified when someone sends you a connection request</p>
+                    </div>
+                    <div className="relative inline-block w-12 align-middle select-none">
+                      <input type="checkbox" id="connection-toggle" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in-out translate-x-0" defaultChecked />
+                      <label htmlFor="connection-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-800 dark:text-white font-medium">New Messages</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Get notified when you receive a new message</p>
+                    </div>
+                    <div className="relative inline-block w-12 align-middle select-none">
+                      <input type="checkbox" id="message-toggle" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in-out translate-x-0" defaultChecked />
+                      <label htmlFor="message-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-800 dark:text-white font-medium">Job Postings</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Get notified about new job opportunities</p>
+                    </div>
+                    <div className="relative inline-block w-12 align-middle select-none">
+                      <input type="checkbox" id="job-toggle" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in-out translate-x-0" defaultChecked />
+                      <label htmlFor="job-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-800 dark:text-white font-medium">Event Reminders</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Get notified about upcoming events</p>
+                    </div>
+                    <div className="relative inline-block w-12 align-middle select-none">
+                      <input type="checkbox" id="event-toggle" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in-out translate-x-0" defaultChecked />
+                      <label htmlFor="event-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-800 dark:text-white font-medium">Email Notifications</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Receive email notifications in addition to in-app notifications</p>
+                    </div>
+                    <div className="relative inline-block w-12 align-middle select-none">
+                      <input type="checkbox" id="email-toggle" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in-out translate-x-0" defaultChecked />
+                      <label htmlFor="email-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

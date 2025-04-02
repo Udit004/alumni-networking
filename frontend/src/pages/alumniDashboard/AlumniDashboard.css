@@ -1129,4 +1129,33 @@
 /* Fix for duplicate suggested connections section */
 .suggested-connections ~ .suggested-connections {
   display: none;
+}
+
+/* Toggle switch styles */
+.toggle-checkbox:checked {
+  transform: translateX(100%);
+  border-color: #3b82f6;
+}
+
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #3b82f6;
+}
+
+.toggle-label {
+  transition: background-color 0.2s ease-in-out;
+}
+
+.toggle-checkbox {
+  z-index: 1;
+  transition: transform 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+/* Notification item hover effect */
+.notifications-section .space-y-1 > div {
+  transition: all 0.2s ease-in-out;
+}
+
+.notifications-section .space-y-1 > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 } 
