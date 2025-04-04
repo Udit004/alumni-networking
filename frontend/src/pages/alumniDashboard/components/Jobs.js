@@ -436,27 +436,14 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
       {/* Main Jobs List */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
            style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Job Postings</h2>
-          
-          <div className="flex gap-2">
-            <button 
-              onClick={() => navigate('/jobs')}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2"
-            >
-              <span>Browse Jobs</span> <span>🔍</span>
-            </button>
-            
-            <button 
-              onClick={() => {
-                resetJobForm();
-                setShowJobForm(true);
-              }}
-              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-2"
-            >
-              <span>Post New Job</span> <span>➕</span>
-            </button>
-          </div>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Jobs Posted</h2>
+          <button 
+            onClick={() => navigate('/create-job')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <span>➕</span> Post New Job
+          </button>
         </div>
         
         <div className="flex flex-col md:flex-row gap-4 mb-6">

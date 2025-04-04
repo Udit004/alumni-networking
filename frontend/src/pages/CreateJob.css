@@ -1,0 +1,14 @@
+.create-job-page {
+  min-height: calc(100vh - 80px);
+  background-color: #f8f9fa;
+}
+
+.dark .create-job-page {
+  background-color: #1e293b;
+}
+
+@media (max-width: 640px) {
+  .create-job-page {
+    padding: 1rem;
+  }
+} 

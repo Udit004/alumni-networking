@@ -479,10 +479,7 @@ const Mentorship = ({ isDarkMode, API_URL, user, role }) => {
             </button>
             
             <button 
-              onClick={() => {
-                resetMentorshipForm();
-                setShowMentorshipForm(true);
-              }}
+              onClick={() => navigate('/create-mentorship')}
               className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-2"
             >
               <span>Create Program</span> <span>➕</span>

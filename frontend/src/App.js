@@ -21,6 +21,8 @@ import AlumniProfile from './pages/directory/alumniDirectory/AlumniProfile';
 import TeacherProfile from './pages/directory/teacherDirectory/TeacherProfile';
 import StudentProfile from './pages/directory/studentDirectory/StudentProfile';
 import PrivateRoute from './components/PrivateRoute';
+import CreateJob from './pages/CreateJob';
+import CreateMentorship from './pages/CreateMentorship';
 import './App.css';
 
 function App() {
@@ -111,6 +113,16 @@ function App() {
                   </PrivateRoute>
                 }
               />
+              <Route path="/create-job" element={
+                <PrivateRoute allowedRoles={['alumni']}>
+                  <CreateJob />
+                </PrivateRoute>
+              } />
+              <Route path="/create-mentorship" element={
+                <PrivateRoute allowedRoles={['alumni', 'teacher']}>
+                  <CreateMentorship />
+                </PrivateRoute>
+              } />
             </Routes>
           </main>
           <Footer />
