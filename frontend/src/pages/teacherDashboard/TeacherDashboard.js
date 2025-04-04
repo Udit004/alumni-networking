@@ -564,32 +564,42 @@ const TeacherDashboard = () => {
                           No notifications yet
                         </div>
                       ) : (
-                        notifications.map(notification => (
-                          <div 
-                            key={notification.id}
-                            className={`p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
-                              !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                            }`}
-                            onClick={() => handleNotificationClick(notification)}
-                          >
-                            <div className="flex items-start">
-                              <div className="mr-3 mt-1">
-                                <span className="text-lg">{getNotificationIcon(notification.type)}</span>
+                        <div>
+                          {notifications.map(notification => (
+                            <div 
+                              key={notification.id}
+                              className={`p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+                                !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                              }`}
+                              onClick={() => handleNotificationClick(notification)}
+                            >
+                              <div className="flex items-start">
+                                <div className="mr-3 mt-1">
+                                  <span className="text-lg">{getNotificationIcon(notification.type)}</span>
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex justify-between">
+                                    <p className={`font-medium ${!notification.read ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                                      {notification.message}
+                                    </p>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-4">
+                                      {formatNotificationTime(notification.timestamp)}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    {notification.type === 'student' ? 'Student Activity' :
+                                     notification.type === 'course' ? 'Course Update' :
+                                     notification.type === 'connection' ? 'Connection Request' :
+                                     notification.type === 'message' ? 'New Message' : 'Event Update'}
+                                  </p>
+                                </div>
+                                {!notification.read && (
+                                  <div className="ml-2 h-3 w-3 bg-blue-500 rounded-full self-center"></div>
+                                )}
                               </div>
-                              <div className="flex-1">
-                                <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-800 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
-                                  {notification.message}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  {formatNotificationTime(notification.timestamp)}
-                                </p>
-                              </div>
-                              {!notification.read && (
-                                <div className="ml-2 h-2 w-2 bg-blue-500 rounded-full"></div>
-                              )}
                             </div>
-                          </div>
-                        ))
+                          ))}
+                        </div>
                       )}
                     </div>
                     
@@ -935,12 +945,19 @@ const TeacherDashboard = () => {
                 <div className="flex flex-col md:flex-row gap-6">
                   <div className="md:w-1/3">
                     <div className="flex flex-col items-center text-center">
-                      <div className="h-32 w-32 rounded-full bg-blue-500 flex items-center justify-center text-white text-5xl mb-4">
-                        {user?.displayName ? user.displayName[0].toUpperCase() : '👤'}
+                      <div className="h-32 w-32 rounded-full bg-blue-500 flex items-center justify-center text-white text-5xl mb-4 overflow-hidden">
+                        {user?.photoURL ? (
+                          <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          user?.displayName ? user.displayName[0].toUpperCase() : '👤'
+                        )}
                       </div>
-                      <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{user?.displayName || 'Teacher Name'}</h2>
-                      <p className="text-gray-600 dark:text-gray-400">Professor, Computer Science</p>
-                      <button className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+                      <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{profileData.name || user?.displayName || 'Teacher Name'}</h2>
+                      <p className="text-gray-600 dark:text-gray-400">{profileData.designation || 'Professor'}, {profileData.department || 'Department'}</p>
+                      <button 
+                        className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                        onClick={() => navigate('/profile')}
+                      >
                         Edit Profile
                       </button>
                     </div>
@@ -950,37 +967,92 @@ const TeacherDashboard = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <h3 className="text-gray-700 dark:text-gray-300 font-semibold mb-2">Email</h3>
-                        <p className="text-gray-900 dark:text-white">{user?.email || 'teacher@example.com'}</p>
+                        <p className="text-gray-900 dark:text-white">{profileData.email || user?.email || 'teacher@example.com'}</p>
                       </div>
                       
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <h3 className="text-gray-700 dark:text-gray-300 font-semibold mb-2">Phone</h3>
-                        <p className="text-gray-900 dark:text-white">+1 (555) 123-4567</p>
+                        <p className="text-gray-900 dark:text-white">{profileData.phone || 'Not provided'}</p>
                       </div>
                       
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <h3 className="text-gray-700 dark:text-gray-300 font-semibold mb-2">Department</h3>
-                        <p className="text-gray-900 dark:text-white">Computer Science</p>
+                        <p className="text-gray-900 dark:text-white">{profileData.department || 'Not provided'}</p>
                       </div>
                       
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                        <h3 className="text-gray-700 dark:text-gray-300 font-semibold mb-2">Office</h3>
-                        <p className="text-gray-900 dark:text-white">Room 301, Building B</p>
+                        <h3 className="text-gray-700 dark:text-gray-300 font-semibold mb-2">Institution</h3>
+                        <p className="text-gray-900 dark:text-white">{profileData.institution || 'Not provided'}</p>
                       </div>
                       
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                        <h3 className="text-gray-700 dark:text-gray-300 font-semibold mb-2">Office Hours</h3>
-                        <p className="text-gray-900 dark:text-white">Mon, Wed: 10AM - 12PM</p>
+                        <h3 className="text-gray-700 dark:text-gray-300 font-semibold mb-2">Address</h3>
+                        <p className="text-gray-900 dark:text-white">{profileData.address || 'Not provided'}</p>
                       </div>
                       
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <h3 className="text-gray-700 dark:text-gray-300 font-semibold mb-2">Expertise</h3>
-                        <p className="text-gray-900 dark:text-white">Algorithms, Machine Learning, Data Structures</p>
+                        <div className="flex flex-wrap gap-1">
+                          {profileData.expertise && profileData.expertise.length > 0 ? (
+                            profileData.expertise.map((skill, index) => (
+                              <span 
+                                key={index}
+                                className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs"
+                              >
+                                {skill}
+                              </span>
+                            ))
+                          ) : (
+                            <p className="text-gray-900 dark:text-white">Not provided</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Bio Section */}
+              {profileData.bio && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">About Me</h3>
+                  <p className="text-gray-700 dark:text-gray-300">{profileData.bio}</p>
+                </div>
+              )}
+
+              {/* Publications Section */}
+              {profileData.publications && profileData.publications.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Publications</h3>
+                  <ul className="space-y-3">
+                    {profileData.publications.map((publication, index) => (
+                      <li key={index} className="pl-4 border-l-2 border-blue-500">
+                        <p className="text-gray-800 dark:text-white font-medium">{publication.title || publication}</p>
+                        {publication.journal && <p className="text-gray-600 dark:text-gray-400 text-sm">{publication.journal}</p>}
+                        {publication.year && <p className="text-gray-500 dark:text-gray-500 text-xs">{publication.year}</p>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Achievements Section */}
+              {profileData.achievements && profileData.achievements.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+                  <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Achievements</h3>
+                  <ul className="space-y-3">
+                    {profileData.achievements.map((achievement, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="mr-2 text-yellow-500">🏆</span>
+                        <p className="text-gray-800 dark:text-white">{achievement.title || achievement}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 
@@ -1220,7 +1292,492 @@ const TeacherDashboard = () => {
 
           {activeSection === 'courses' && (
             <div className="courses-section">
-              {/* Courses content */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Courses</h2>
+                  <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+                    Add New Course
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Course Cards */}
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center mb-3">
+                      <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-3">📚</div>
+                      <h3 className="font-semibold text-gray-800 dark:text-white">Data Structures & Algorithms</h3>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">CS101 • Fall 2023</p>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">45 Students</span>
+                      <a href="#" className="text-blue-500 hover:underline">View Course</a>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center mb-3">
+                      <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-3">🖥️</div>
+                      <h3 className="font-semibold text-gray-800 dark:text-white">Web Development</h3>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">CS301 • Fall 2023</p>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">32 Students</span>
+                      <a href="#" className="text-blue-500 hover:underline">View Course</a>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center mb-3">
+                      <div className="p-3 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-3">🤖</div>
+                      <h3 className="font-semibold text-gray-800 dark:text-white">Artificial Intelligence</h3>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">CS401 • Fall 2023</p>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">28 Students</span>
+                      <a href="#" className="text-blue-500 hover:underline">View Course</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'events' && (
+            <div className="events-section">
+              <div className="section-header mb-6 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Events</h2>
+                <button 
+                  className="create-event-btn px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center"
+                  onClick={() => navigate('/create-event')}
+                >
+                  <span className="mr-2">+</span> Create Event
+                </button>
+              </div>
+
+              <div className="events-filters mb-6">
+                <div className="search-box mb-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search events..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-full py-2 px-10 bg-white dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ backgroundColor: isDarkMode ? '#374151' : 'white' }}
+                    />
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-300">
+                      🔍
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="filter-buttons flex flex-wrap gap-2">
+                  <button 
+                    className={`filter-btn px-4 py-2 rounded-md transition-colors ${
+                      filter === "all" 
+                        ? "bg-blue-500 text-white dark:text-white font-medium active" 
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+                    }`}
+                    onClick={() => setFilter("all")}
+                    style={{ 
+                      color: filter === "all" ? "white" : (isDarkMode ? "white" : "#374151") 
+                    }}
+                  >
+                    All Events
+                  </button>
+                  <button 
+                    className={`filter-btn px-4 py-2 rounded-md transition-colors ${
+                      filter === "upcoming" 
+                        ? "bg-blue-500 text-white dark:text-white font-medium active" 
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+                    }`}
+                    onClick={() => setFilter("upcoming")}
+                    style={{ 
+                      color: filter === "upcoming" ? "white" : (isDarkMode ? "white" : "#374151") 
+                    }}
+                  >
+                    Upcoming
+                  </button>
+                  <button 
+                    className={`filter-btn px-4 py-2 rounded-md transition-colors ${
+                      filter === "past" 
+                        ? "bg-blue-500 text-white dark:text-white font-medium active" 
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+                    }`}
+                    onClick={() => setFilter("past")}
+                    style={{ 
+                      color: filter === "past" ? "white" : (isDarkMode ? "white" : "#374151") 
+                    }}
+                  >
+                    Past
+                  </button>
+                </div>
+              </div>
+
+              {error && <div className="error-message bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-4 rounded-lg mb-6">{error}</div>}
+
+              {loading ? (
+                <div className="loading-state flex justify-center items-center p-12">
+                  <div className="loading-spinner w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-blue-500 rounded-full animate-spin"></div>
+                  <p className="ml-4 text-gray-600 dark:text-gray-300">Loading events...</p>
+                </div>
+              ) : filteredEvents.length > 0 ? (
+                <div className="events-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredEvents.map((event) => {
+                    const status = getEventStatus(event.date);
+                    const attendees = event.registeredUsers?.length || 0;
+                    
+                    return (
+                      <div key={event._id} 
+                           className="event-card bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700 relative"
+                           style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
+                      >
+                        <div className={`event-status text-xs font-semibold px-3 py-2.5 inline-block absolute left-0 top-0 rounded-br-lg w-auto whitespace-nowrap ${
+                          status === "upcoming" 
+                            ? "bg-green-500 text-white" 
+                            : "bg-gray-500 text-white"
+                        }`}>
+                          {status === 'upcoming' ? 'Upcoming' : 'Past'}
+                        </div>
+                        
+                        <button 
+                          className="absolute top-0 right-0 mt-1 mr-1 p-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors z-10"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/edit-event/${event._id}`);
+                          }}
+                          style={{ fontSize: '8px' }}
+                        >
+                          ✏️
+                        </button>
+                        
+                        <div className="event-content p-5">
+                          <h3 className="event-title text-xl font-bold text-gray-900 dark:text-white mb-2">{event.title}</h3>
+                          <p className="event-description text-gray-600 dark:text-gray-300 mb-4">{event.description}</p>
+                          
+                          <div className="event-details space-y-2">
+                            <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
+                              <span className="detail-icon mr-2">📅</span>
+                              <span>{new Date(event.date).toLocaleDateString()}</span>
+                            </div>
+                            <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
+                              <span className="detail-icon mr-2">⏰</span>
+                              <span>{event.time}</span>
+                            </div>
+                            <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
+                              <span className="detail-icon mr-2">📍</span>
+                              <span>{event.location}</span>
+                            </div>
+                            <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
+                              <span className="detail-icon mr-2">👥</span>
+                              <span>{attendees} {attendees === 1 ? 'Student' : 'Students'} Registered</span>
+                            </div>
+                          </div>
+                          
+                          <div className="event-actions mt-4 flex gap-2">
+                            <button
+                              className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                              onClick={() => navigate(`/events/${event._id}`)}
+                            >
+                              View Details
+                            </button>
+                            <button
+                              className="py-2 px-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                              onClick={() => {
+                                if(window.confirm(`Are you sure you want to delete "${event.title}"?`)) {
+                                  // Call API to delete event
+                                  fetch(`${API_URL}/api/events/${event._id}?firebaseUID=${user?.uid}&role=${role}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Content-Type': 'application/json' }
+                                  })
+                                  .then(response => {
+                                    if(!response.ok) throw new Error('Failed to delete event');
+                                    return response.json();
+                                  })
+                                  .then(() => {
+                                    // Remove event from the list
+                                    setEvents(events.filter(e => e._id !== event._id));
+                                    alert('Event deleted successfully');
+                                  })
+                                  .catch(err => {
+                                    console.error('Error deleting event:', err);
+                                    alert('Failed to delete event');
+                                  });
+                                }
+                              }}
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="no-events flex flex-col items-center justify-center py-12">
+                  <p className="text-xl text-gray-500 dark:text-gray-400 mb-4">No events found</p>
+                  <button 
+                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                    onClick={() => navigate('/create-event')}
+                  >
+                    Create Your First Event
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeSection === 'resources' && (
+            <div className="resources-section">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white">Teaching Resources</h2>
+                  <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+                    Add Resource
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Resource Cards */}
+                  {materials.map((material) => (
+                    <div key={material.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start">
+                        <div className={`p-3 rounded-full bg-${material.color}-100 dark:bg-${material.color}-900 text-${material.color}-500 dark:text-${material.color}-300 text-xl mr-3`}>
+                          {material.icon}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-800 dark:text-white">{material.title}</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{material.course}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{material.description}</p>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-500 dark:text-gray-400">{material.students} Students</span>
+                            <span className="text-gray-500 dark:text-gray-400">{material.lastUpdated}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'students' && (
+            <div className="students-section">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Students</h2>
+                  <div className="flex gap-3">
+                    <input 
+                      type="text" 
+                      placeholder="Search students..." 
+                      className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    />
+                    <select className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="all">All Courses</option>
+                      <option value="cs101">CS101</option>
+                      <option value="cs301">CS301</option>
+                      <option value="cs401">CS401</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Student
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Course
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Performance
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Last Activity
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {/* Student Rows */}
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white overflow-hidden">
+                              <img src="https://randomuser.me/api/portraits/men/1.jpg" alt="Student" className="h-full w-full object-cover" />
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                Michael Johnson
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                ID: ST10034
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 dark:text-white">CS101</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            Data Structures
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-2 w-24 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div className="h-full bg-green-500" style={{ width: '85%' }}></div>
+                            </div>
+                            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">85%</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          Yesterday, 3:24 PM
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <a href="#" className="text-blue-500 hover:text-blue-600 mr-3">View</a>
+                          <a href="#" className="text-blue-500 hover:text-blue-600">Message</a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white overflow-hidden">
+                              <img src="https://randomuser.me/api/portraits/women/2.jpg" alt="Student" className="h-full w-full object-cover" />
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                Emma Wilson
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                ID: ST10045
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 dark:text-white">CS301</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            Web Development
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-2 w-24 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div className="h-full bg-blue-500" style={{ width: '92%' }}></div>
+                            </div>
+                            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">92%</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          Today, 10:15 AM
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <a href="#" className="text-blue-500 hover:text-blue-600 mr-3">View</a>
+                          <a href="#" className="text-blue-500 hover:text-blue-600">Message</a>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'settings' && (
+            <div className="settings-section">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Settings</h2>
+                
+                <div className="space-y-6">
+                  {/* Account Settings */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Account Settings</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                        <input 
+                          type="email" 
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white" 
+                          value={user?.email || "teacher@example.com"}
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                        <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm">
+                          Change Password
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Preferences */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Preferences</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-gray-800 dark:text-white font-medium">Dark Mode</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Toggle between light and dark theme</p>
+                        </div>
+                        <div className="relative inline-block w-12 align-middle select-none">
+                          <input 
+                            type="checkbox" 
+                            id="theme-toggle" 
+                            className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in-out" 
+                            checked={isDarkMode}
+                            onChange={() => document.documentElement.classList.toggle('dark')}
+                          />
+                          <label htmlFor="theme-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-gray-800 dark:text-white font-medium">Email Notifications</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Receive email notifications</p>
+                        </div>
+                        <div className="relative inline-block w-12 align-middle select-none">
+                          <input type="checkbox" id="email-notif-toggle" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in-out" defaultChecked />
+                          <label htmlFor="email-notif-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Privacy */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Privacy</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-gray-800 dark:text-white font-medium">Profile Visibility</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Control who can see your profile</p>
+                        </div>
+                        <select className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+                          <option value="public">Public</option>
+                          <option value="connections">Connections Only</option>
+                          <option value="private">Private</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Save Button */}
+                  <div className="mt-6">
+                    <button className="w-full sm:w-auto px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </main>
