@@ -5,6 +5,7 @@ import Mentorship from './Mentorship';
 import Jobs from './Jobs';
 import Events from './Events';
 import Settings from './Settings';
+import Network from './Network';
 
 export {
   Overview,
@@ -13,5 +14,6 @@ export {
   Mentorship,
   Jobs,
   Events,
-  Settings
+  Settings,
+  Network
 }; 

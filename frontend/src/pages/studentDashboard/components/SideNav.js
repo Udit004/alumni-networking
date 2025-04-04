@@ -22,6 +22,7 @@ const SideNav = ({
     { id: 'events', label: 'Events', icon: '📅' },
     { id: 'mentorship', label: 'Mentorship', icon: '🤝' },
     { id: 'jobs', label: 'Jobs', icon: '💼' },
+    { id: 'network', label: 'Network', icon: '👥' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];
 

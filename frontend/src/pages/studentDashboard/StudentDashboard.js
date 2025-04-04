@@ -5,6 +5,7 @@ import EnrolledEvents from "./EnrolledEvents";
 import "./StudentDashboard.css";
 import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import Network from "./components/Network";
 
 const StudentDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -184,6 +185,7 @@ const StudentDashboard = () => {
     { id: 'courses', label: 'Course Materials', icon: '📚' },
     { id: 'mentorship', label: 'Mentorship', icon: '🎓' },
     { id: 'jobs', label: 'Jobs & Internships', icon: '💼' },
+    { id: 'network', label: 'Network', icon: '👥' },
     { id: 'forum', label: 'Forums', icon: '💬' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];
@@ -2485,6 +2487,12 @@ const StudentDashboard = () => {
           )}
 
           {/* Other dashboard sections remain here */}
+          
+          {activeSection === 'network' && (
+            <div className="network-section">
+              <Network currentUser={currentUser} isDarkMode={isDarkMode} />
+            </div>
+          )}
         </main>
       </div>
     </div>

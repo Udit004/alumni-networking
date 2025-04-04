@@ -14,6 +14,7 @@ import {
   Events, 
   Settings 
 } from './components';
+import Network from './components/Network';
 
 const AlumniDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -58,6 +59,7 @@ const AlumniDashboard = () => {
     { id: 'mentorship', label: 'Mentorship', icon: '🎓' },
     { id: 'jobs', label: 'Job Opportunities', icon: '💼' },
     { id: 'events', label: 'Events', icon: '📅' },
+    { id: 'network', label: 'Network', icon: '🔗' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];
 
@@ -546,6 +548,13 @@ const AlumniDashboard = () => {
               API_URL={API_URL}
               user={user}
               role={role}
+            />
+          )}
+
+          {activeSection === 'network' && (
+            <Network 
+              currentUser={currentUser}
+              isDarkMode={isDarkMode}
             />
           )}
 

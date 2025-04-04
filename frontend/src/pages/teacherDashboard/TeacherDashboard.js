@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import './TeacherDashboard.css';
 import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import Network from "./components/Network";
 
 const TeacherDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -116,6 +117,7 @@ const TeacherDashboard = () => {
     { id: 'events', label: 'Events', icon: '📅' },
     { id: 'resources', label: 'Teaching Resources', icon: '📋' },
     { id: 'students', label: 'My Students', icon: '👨‍🎓' },
+    { id: 'network', label: 'Network', icon: '🔗' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];
 
@@ -1778,6 +1780,12 @@ const TeacherDashboard = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeSection === 'network' && (
+            <div className="network-section">
+              <Network currentUser={user} isDarkMode={isDarkMode} />
             </div>
           )}
         </main>
