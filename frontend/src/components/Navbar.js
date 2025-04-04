@@ -88,6 +88,26 @@ const Navbar = () => {
               Events
             </NavLink>
             <NavLink
+              to="/jobs"
+              className={({ isActive }) => 
+                isActive 
+                  ? "text-primary dark:text-primary nav-link active" 
+                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
+              }
+            >
+              Jobs
+            </NavLink>
+            <NavLink
+              to="/mentorship"
+              className={({ isActive }) => 
+                isActive 
+                  ? "text-primary dark:text-primary nav-link active" 
+                  : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
+              }
+            >
+              Mentorship
+            </NavLink>
+            <NavLink
               to="/directory"
               className={({ isActive }) => 
                 isActive 
@@ -248,30 +268,50 @@ const Navbar = () => {
           <div className="px-2 pt-2 pb-3 space-y-1 bg-white dark:bg-gray-900">
             <NavLink
               to="/"
-              className={({ isActive }) =>
+              className={({ isActive }) => 
                 isActive 
-                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
-                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
+                  ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline" 
+                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline"
               }
             >
               Home
             </NavLink>
             <NavLink
               to="/events"
-              className={({ isActive }) =>
+              className={({ isActive }) => 
                 isActive 
-                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
-                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
+                  ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline" 
+                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline"
               }
             >
               Events
             </NavLink>
             <NavLink
-              to="/directory"
-              className={({ isActive }) =>
+              to="/jobs"
+              className={({ isActive }) => 
                 isActive 
-                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
-                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
+                  ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline" 
+                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline"
+              }
+            >
+              Jobs
+            </NavLink>
+            <NavLink
+              to="/mentorship"
+              className={({ isActive }) => 
+                isActive 
+                  ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline" 
+                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline"
+              }
+            >
+              Mentorship
+            </NavLink>
+            <NavLink
+              to="/directory"
+              className={({ isActive }) => 
+                isActive 
+                  ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline" 
+                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline"
               }
             >
               Directory
@@ -279,35 +319,15 @@ const Navbar = () => {
             {currentUser && role && (
               <NavLink
                 to={`/${role.toLowerCase()}-dashboard`}
-                className={({ isActive }) =>
+                className={({ isActive }) => 
                   isActive 
-                    ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
-                    : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
+                    ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline" 
+                    : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline"
                 }
               >
                 Dashboard
               </NavLink>
             )}
-            <NavLink
-              to="/about"
-              className={({ isActive }) =>
-                isActive 
-                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
-                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
-              }
-            >
-              About
-            </NavLink>
-            <NavLink
-              to="/contact"
-              className={({ isActive }) =>
-                isActive 
-                  ? "block px-3 py-2 rounded-md text-primary dark:text-primary nav-link active" 
-                  : "block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline nav-link"
-              }
-            >
-              Contact
-            </NavLink>
             
             {/* User Menu Items - Mobile */}
             {currentUser ? (

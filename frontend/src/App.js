@@ -8,6 +8,8 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import Events from './pages/Events';
+import Jobs from './pages/Jobs';
+import Mentorship from './pages/Mentorship';
 import CreateEvent from './pages/CreateEvent';
 import About from './pages/About';
 import Contact from './pages/Contact';
@@ -48,6 +50,8 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/events" element={<Events />} />
+              <Route path="/jobs" element={<Jobs />} />
+              <Route path="/mentorship" element={<Mentorship />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/directory" element={<Directory />} />

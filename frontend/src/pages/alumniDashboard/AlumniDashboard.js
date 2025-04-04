@@ -54,7 +54,6 @@ const AlumniDashboard = () => {
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'profile', label: 'Profile', icon: '👤' },
-    { id: 'connections', label: 'Connections', icon: '🤝' },
     { id: 'notifications', label: 'Notifications', icon: '🔔' },
     { id: 'mentorship', label: 'Mentorship', icon: '🎓' },
     { id: 'jobs', label: 'Job Opportunities', icon: '💼' },
@@ -509,14 +508,6 @@ const AlumniDashboard = () => {
             />
           )}
 
-          {activeSection === 'connections' && (
-            <Connections 
-              connections={connections}
-              connectionLoading={connectionLoading}
-              isDarkMode={isDarkMode}
-            />
-          )}
-
           {activeSection === 'notifications' && (
             <Notifications 
               notifications={notifications}
@@ -531,12 +522,18 @@ const AlumniDashboard = () => {
           {activeSection === 'mentorship' && (
             <Mentorship 
               isDarkMode={isDarkMode}
+              API_URL={API_URL}
+              user={user}
+              role={role}
             />
           )}
 
           {activeSection === 'jobs' && (
             <Jobs 
               isDarkMode={isDarkMode}
+              API_URL={API_URL}
+              user={user}
+              role={role}
             />
           )}
 
