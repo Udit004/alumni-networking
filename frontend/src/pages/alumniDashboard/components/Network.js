@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
-import { useAuth } from '../../../AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const Network = ({ isDarkMode }) => {
   const [activeTab, setActiveTab] = useState('connections');
@@ -87,8 +87,8 @@ const Network = ({ isDarkMode }) => {
             }
             
             // Shared skills
-            const userSkills = user.skills || [];
-            const currentUserSkills = userData.skills || [];
+            const userSkills = Array.isArray(user.skills) ? user.skills : [];
+            const currentUserSkills = Array.isArray(userData.skills) ? userData.skills : [];
             const sharedSkills = userSkills.filter(skill => 
               currentUserSkills.includes(skill)
             ).length;
