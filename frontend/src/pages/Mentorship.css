@@ -1,0 +1,48 @@
+.mentorship-page {
+  min-height: 100vh;
+}
+
+.mentorship-hero {
+  background: linear-gradient(to right, #8b5cf6, #6366f1);
+  position: relative;
+  overflow: hidden;
+}
+
+.mentorship-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+  opacity: 0.3;
+  z-index: 1;
+}
+
+.mentorship-hero > * {
+  position: relative;
+  z-index: 2;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Dark mode styles */
+.dark .mentorship-page {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .mentorship-hero {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+} 

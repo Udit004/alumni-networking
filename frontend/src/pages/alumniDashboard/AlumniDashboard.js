@@ -1,7 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../AuthContext';
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './AlumniDashboard.css';
+import { db } from "../../firebaseConfig";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { 
+  Overview, 
+  Profile, 
+  Connections, 
+  Notifications, 
+  Mentorship, 
+  Jobs, 
+  Events, 
+  Settings 
+} from './components';
+import Network from './components/Network';
 
 const AlumniDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -15,14 +28,38 @@ const AlumniDashboard = () => {
   const { user, role } = useAuth();
   const navigate = useNavigate();
   const API_URL = process.env.REACT_APP_API_URL;
+  const [connections, setConnections] = useState([]);
+  const [connectionLoading, setConnectionLoading] = useState(true);
+  const { currentUser } = useAuth();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
+  const [profileData, setProfileData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    address: "",
+    graduationYear: "",
+    program: "",
+    currentPosition: "",
+    company: "",
+    skills: [],
+    achievements: [],
+    projects: [],
+    bio: "",
+    connections: []
+  });
 
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'profile', label: 'Profile', icon: '👤' },
-    { id: 'connections', label: 'Connections', icon: '🤝' },
+    { id: 'notifications', label: 'Notifications', icon: '🔔' },
     { id: 'mentorship', label: 'Mentorship', icon: '🎓' },
     { id: 'jobs', label: 'Job Opportunities', icon: '💼' },
     { id: 'events', label: 'Events', icon: '📅' },
+    { id: 'network', label: 'Network', icon: '🔗' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];
 
@@ -94,24 +131,237 @@ const AlumniDashboard = () => {
     return 'upcoming';
   };
 
-  const filteredEvents = events.filter((event) => {
-    const matchesSearch = event.title?.toLowerCase().includes(search.toLowerCase());
-    const eventDate = new Date(event.date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    let matchesDateFilter = true;
-    if (filter === 'upcoming') {
-      matchesDateFilter = eventDate >= today;
-    } else if (filter === 'past') {
-      matchesDateFilter = eventDate < today;
-    }
-
-    return matchesSearch && matchesDateFilter;
-  });
-
   const handleSectionClick = (section) => {
     setActiveSection(section);
+  };
+
+  useEffect(() => {
+    const fetchAlumniProfile = async () => {
+      if (!currentUser) return;
+      
+      try {
+        setLoading(true);
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log('Alumni profile data loaded:', userData);
+          setProfileData({
+            name: userData.name || currentUser.displayName || "",
+            email: userData.email || currentUser.email || "",
+            phone: userData.phone || "",
+            dateOfBirth: userData.dateOfBirth || "",
+            address: userData.address || "",
+            graduationYear: userData.graduationYear || "",
+            program: userData.program || "",
+            currentPosition: userData.currentPosition || "",
+            company: userData.company || "",
+            skills: userData.skills || [],
+            achievements: userData.achievements || [],
+            projects: userData.projects || [],
+            bio: userData.bio || "",
+            connections: userData.connections || []
+          });
+          
+          // After setting profile data, fetch connected profiles
+          if (userData.connections && userData.connections.length > 0) {
+            console.log('Found connections in user data, fetching details...');
+            fetchConnections(userData.connections);
+          } else {
+            console.log('No connections found in user data');
+            setConnectionLoading(false);
+          }
+        } else {
+          console.log('User document does not exist for current user');
+          setConnectionLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching alumni profile:", error);
+        setConnectionLoading(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAlumniProfile();
+  }, [currentUser]);
+  
+  // Function to fetch connection profile details
+  const fetchConnections = async (connectionIds) => {
+    try {
+      setConnectionLoading(true);
+      console.log('Fetching connections for IDs:', connectionIds);
+      const connectionProfiles = [];
+      
+      // Process each connection in batches
+      for (const connectionId of connectionIds) {
+        const userDocRef = doc(db, "users", connectionId);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log('Found connection:', userData);
+          connectionProfiles.push({
+            id: userDoc.id,
+            name: userData.name || "",
+            role: userData.role || "",
+            jobTitle: userData.jobTitle || "",
+            company: userData.company || "",
+            institution: userData.institution || "",
+            department: userData.department || "",
+            photoURL: userData.photoURL || "",
+            skills: userData.skills || []
+          });
+        } else {
+          console.log('Connection not found for ID:', connectionId);
+        }
+      }
+      
+      console.log('Final connection profiles:', connectionProfiles);
+      setConnections(connectionProfiles);
+    } catch (error) {
+      console.error("Error fetching connections:", error);
+    } finally {
+      setConnectionLoading(false);
+    }
+  };
+  
+  // Handle click outside notifications panel
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [notificationRef]);
+  
+  // Mock notification data
+  useEffect(() => {
+    // This would normally be fetched from an API
+    const mockNotifications = [
+      {
+        id: 1,
+        type: 'connection',
+        message: 'John Doe accepted your connection request',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        read: false,
+        actionUrl: '/profile/123'
+      },
+      {
+        id: 2,
+        type: 'event',
+        message: 'Reminder: Tech Meetup starts in 1 hour',
+        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
+        read: false
+      },
+      {
+        id: 3,
+        type: 'job',
+        message: 'New job posting matches your profile: Senior Developer at TechCorp',
+        timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+        read: true,
+        actionUrl: '/jobs/456'
+      },
+      {
+        id: 4,
+        type: 'message',
+        message: 'Sarah Smith sent you a message',
+        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+        read: true
+      },
+      {
+        id: 5,
+        type: 'system',
+        message: 'Your profile has been successfully updated',
+        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+        read: true
+      }
+    ];
+    
+    setNotifications(mockNotifications);
+    setUnreadCount(mockNotifications.filter(n => !n.read).length);
+  }, []);
+  
+  // Handle notification click
+  const handleNotificationClick = (notification) => {
+    // Mark as read when clicked
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
+    
+    // Navigate to the action URL if available
+    if (notification.actionUrl) {
+      navigate(notification.actionUrl);
+    }
+    
+    setShowNotifications(false);
+  };
+  
+  // Mark a notification as read
+  const markAsRead = (notificationId) => {
+    const updatedNotifications = notifications.map(notification => 
+      notification.id === notificationId ? { ...notification, read: true } : notification
+    );
+    
+    setNotifications(updatedNotifications);
+    setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+  };
+  
+  // Mark all notifications as read
+  const markAllAsRead = () => {
+    const updatedNotifications = notifications.map(notification => ({ ...notification, read: true }));
+    setNotifications(updatedNotifications);
+    setUnreadCount(0);
+  };
+  
+  // Get notification icon based on type
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'connection': return '🤝';
+      case 'event': return '📅';
+      case 'job': return '💼';
+      case 'message': return '✉️';
+      case 'system': return '🔔';
+      default: return '📌';
+    }
+  };
+  
+  // Format notification timestamp
+  const formatNotificationTime = (timestamp) => {
+    const now = new Date();
+    const diff = now - new Date(timestamp);
+    
+    // Less than a minute
+    if (diff < 60 * 1000) {
+      return 'Just now';
+    }
+    
+    // Less than an hour
+    if (diff < 60 * 60 * 1000) {
+      const minutes = Math.floor(diff / (60 * 1000));
+      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+    }
+    
+    // Less than a day
+    if (diff < 24 * 60 * 60 * 1000) {
+      const hours = Math.floor(diff / (60 * 60 * 1000));
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    }
+    
+    // Less than a week
+    if (diff < 7 * 24 * 60 * 60 * 1000) {
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+      return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+    }
+    
+    // Otherwise, return the date
+    return timestamp.toLocaleDateString();
   };
 
   return (
@@ -163,10 +413,80 @@ const AlumniDashboard = () => {
               {menuItems.find(item => item.id === activeSection)?.label}
             </h1>
             <div className="flex items-center gap-4">
-              <button className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-                <span className="text-xl">🔔</span>
-                <span className="absolute top-0 right-0 h-5 w-5 flex items-center justify-center bg-red-500 text-white text-xs rounded-full">3</span>
-              </button>
+              <div className="relative" ref={notificationRef}>
+                <button 
+                  className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                >
+                  <span className="text-xl">🔔</span>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 h-5 w-5 flex items-center justify-center bg-red-500 text-white text-xs rounded-full">{unreadCount}</span>
+                  )}
+                </button>
+
+                {/* Notification Panel */}
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                    <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                      <h3 className="font-semibold text-gray-800 dark:text-white">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button 
+                          className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                          onClick={() => markAllAsRead()}
+                        >
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                          No notifications yet
+                        </div>
+                      ) : (
+                        <div>
+                          {notifications.map(notification => (
+                            <div 
+                              key={notification.id}
+                              className={`p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+                                !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                              }`}
+                              onClick={() => handleNotificationClick(notification)}
+                            >
+                              <div className="flex items-start">
+                                <div className="mr-3 mt-1">
+                                  <span className="text-lg">{getNotificationIcon(notification.type)}</span>
+                                </div>
+                                <div className="flex-1">
+                                  <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-800 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                                    {notification.message}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {formatNotificationTime(notification.timestamp)}
+                                  </p>
+                                </div>
+                                {!notification.read && (
+                                  <div className="ml-2 h-2 w-2 bg-blue-500 rounded-full"></div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="p-2 border-t border-gray-200 dark:border-gray-700 text-center">
+                      <button 
+                        className="text-sm text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                        onClick={() => setActiveSection('notifications')}
+                      >
+                        View all notifications
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
                 {user?.displayName ? user.displayName[0].toUpperCase() : '👤'}
               </div>
@@ -176,887 +496,73 @@ const AlumniDashboard = () => {
 
         <main className="p-6">
           {activeSection === 'overview' && (
-            <div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-4">🤝</div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Connections</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">45</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-4">🎓</div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Number of Student Mentors</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">3</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-4">💼</div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Job Applications</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">12</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-500 dark:text-yellow-300 text-xl mr-4">📅</div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Upcoming Events</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">5</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Recent Activity</h2>
-                <div className="space-y-4">
-                  <div className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-4">🤝</div>
-                    <div>
-                      <p className="text-gray-800 dark:text-white">New connection request from John Doe</p>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">2 hours ago</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="p-2 rounded-full bg-green-100 dark:bg-green-900 text-green-500 dark:text-green-300 text-xl mr-4">💼</div>
-                    <div>
-                      <p className="text-gray-800 dark:text-white">New job opportunity at Google</p>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">5 hours ago</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="p-2 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-500 dark:text-yellow-300 text-xl mr-4">📅</div>
-                    <div>
-                      <p className="text-gray-800 dark:text-white">Upcoming Alumni Meet</p>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">1 day ago</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Overview 
+              connections={connections}
+              isDarkMode={isDarkMode}
+            />
           )}
 
-{activeSection === 'profile' && (
-            <div className="profile-container">
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                  <div className="w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-500 dark:text-blue-300 text-4xl overflow-hidden">
-                    {user?.photoURL ? (
-                      <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                      user?.displayName ? user.displayName[0].toUpperCase() : '👤'
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{user?.displayName || 'Alumni User'}</h2>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">Software Engineer with over 5 years of experience</p>
-                    <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm">
-                      Edit Profile
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Personal Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                    <p className="text-gray-800 dark:text-white">{user?.email || 'email@example.com'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">LinkedIn</p>
-                    <p className="text-gray-800 dark:text-white">linkedin.com/in/username</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Phone</p>
-                    <p className="text-gray-800 dark:text-white">+1 234 567 890</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Location</p>
-                    <p className="text-gray-800 dark:text-white">San Francisco, CA</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Work Experience</h3>
-                
-                <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Senior Software Engineer</h4>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">2019 - Present</span>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-400 mb-2">TechCorp</p>
-                  <p className="text-gray-700 dark:text-gray-300">Leading a team of developers to build innovative web solutions.</p>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Software Developer</h4>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">2016 - 2019</span>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-400 mb-2">WebWorks</p>
-                  <p className="text-gray-700 dark:text-gray-300">Designed and maintained various client-side applications.</p>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Education</h3>
-                
-                <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Master of Science in Computer Science</h4>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">2008 - 2010</span>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-400">University of California, Berkeley</p>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white">Bachelor of Science in Information Technology</h4>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">2004 - 2008</span>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-400">Stanford University</p>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Skills</h3>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">JavaScript</span>
-                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">React</span>
-                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">Node.js</span>
-                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">Python</span>
-                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">AWS</span>
-                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">Docker</span>
-                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">Git</span>
-                  <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">TypeScript</span>
-                </div>
-              </div>
-            </div>
-          )}
-          
-
-{activeSection === 'connections' && (
-            <div className="connections-section">
-              <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Connections</h2>
-                <div className="relative w-full md:w-64">
-                  <input 
-                    type="text" 
-                    placeholder="Search connections..." 
-                    className="w-full py-2 px-10 bg-white dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style={{ backgroundColor: isDarkMode ? '#374151' : 'white' }}
-                  />
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-300">
-                    🔍
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Connection Card 1 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-500 dark:text-blue-300 text-2xl mr-4 overflow-hidden">
-                        <span>JD</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">John Doe</h3>
-                        <p className="text-gray-600 dark:text-gray-400">Software Engineer at Microsoft</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📧</span>
-                        <span className="text-sm">john.doe@example.com</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🌐</span>
-                        <span className="text-sm">linkedin.com/in/johndoe</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📍</span>
-                        <span className="text-sm">Seattle, WA</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Message
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        View Profile
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Connection Card 2 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-16 h-16 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-500 dark:text-purple-300 text-2xl mr-4 overflow-hidden">
-                        <span>JS</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Jane Smith</h3>
-                        <p className="text-gray-600 dark:text-gray-400">Product Manager at Amazon</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📧</span>
-                        <span className="text-sm">jane.smith@example.com</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🌐</span>
-                        <span className="text-sm">linkedin.com/in/janesmith</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📍</span>
-                        <span className="text-sm">San Francisco, CA</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Message
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        View Profile
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Connection Card 3 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-500 dark:text-green-300 text-2xl mr-4 overflow-hidden">
-                        <span>RJ</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Robert Johnson</h3>
-                        <p className="text-gray-600 dark:text-gray-400">Data Scientist at Google</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📧</span>
-                        <span className="text-sm">robert.j@example.com</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🌐</span>
-                        <span className="text-sm">linkedin.com/in/robertj</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📍</span>
-                        <span className="text-sm">New York, NY</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Message
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        View Profile
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Connection Card 4 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center text-yellow-500 dark:text-yellow-300 text-2xl mr-4 overflow-hidden">
-                        <span>EW</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Emily Wilson</h3>
-                        <p className="text-gray-600 dark:text-gray-400">UX Designer at Apple</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📧</span>
-                        <span className="text-sm">emily.w@example.com</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🌐</span>
-                        <span className="text-sm">linkedin.com/in/emilyw</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📍</span>
-                        <span className="text-sm">Cupertino, CA</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Message
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        View Profile
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Connection Card 5 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center text-red-500 dark:text-red-300 text-2xl mr-4 overflow-hidden">
-                        <span>MB</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Michael Brown</h3>
-                        <p className="text-gray-600 dark:text-gray-400">DevOps Engineer at Netflix</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📧</span>
-                        <span className="text-sm">michael.b@example.com</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🌐</span>
-                        <span className="text-sm">linkedin.com/in/michaelb</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📍</span>
-                        <span className="text-sm">Los Angeles, CA</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Message
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        View Profile
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Connection Card 6 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-500 dark:text-indigo-300 text-2xl mr-4 overflow-hidden">
-                        <span>SL</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sarah Lee</h3>
-                        <p className="text-gray-600 dark:text-gray-400">Marketing Director at Spotify</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📧</span>
-                        <span className="text-sm">sarah.l@example.com</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🌐</span>
-                        <span className="text-sm">linkedin.com/in/sarahlee</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📍</span>
-                        <span className="text-sm">Chicago, IL</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Message
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        View Profile
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8 flex justify-center">
-                <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
-                  Load More Connections
-                </button>
-              </div>
-            </div>
+          {activeSection === 'profile' && (
+            <Profile 
+              profileData={profileData}
+              currentUser={currentUser}
+              isDarkMode={isDarkMode}
+            />
           )}
 
+          {activeSection === 'notifications' && (
+            <Notifications 
+              notifications={notifications}
+              getNotificationIcon={getNotificationIcon}
+              formatNotificationTime={formatNotificationTime}
+              markAsRead={markAsRead}
+              markAllAsRead={markAllAsRead}
+              isDarkMode={isDarkMode}
+            />
+          )}
 
-{activeSection === 'mentorship' && (
-            <div className="mentorship-section">
-              <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Mentorship Programs</h2>
-                <button className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center">
-                  <span className="mr-2">+</span> Create Program
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Mentorship Card 1 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#080725' : 'white' }}>
-                  <div className="relative">
-                    <div className="h-24 bg-gradient-to-r from-blue-500 to-purple-600"></div>
-                    <div className="absolute top-12 left-6 w-20 h-20 rounded-full bg-white dark:bg-gray-700 border-4 border-white dark:border-gray-700 flex items-center justify-center text-3xl">
-                      💻
-                    </div>
-                  </div>
-                  
-                  <div className="p-5 pt-14">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Web Development Mentorship</h3>
-                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">Active</span>
-                    </div>
-                    
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">Help students learn modern web development technologies and best practices.</p>
-                    
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">👥</span>
-                        <span className="text-sm">5 Mentees</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">⭐</span>
-                        <span className="text-sm">4.8 Rating (12 reviews)</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">⏱️</span>
-                        <span className="text-sm">Started 3 months ago</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        View Details
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        Manage Mentees
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Mentorship Card 2 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#080725' : 'white' }}>
-                  <div className="relative">
-                    <div className="h-24 bg-gradient-to-r from-green-500 to-teal-600"></div>
-                    <div className="absolute top-12 left-6 w-20 h-20 rounded-full bg-white dark:bg-gray-700 border-4 border-white dark:border-gray-700 flex items-center justify-center text-3xl">
-                      📊
-                    </div>
-                  </div>
-                  
-                  <div className="p-5 pt-14">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Data Science Fundamentals</h3>
-                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">Active</span>
-                    </div>
-                    
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">Guide students through data analysis, visualization, and machine learning basics.</p>
-                    
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">👥</span>
-                        <span className="text-sm">3 Mentees</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">⭐</span>
-                        <span className="text-sm">4.9 Rating (8 reviews)</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">⏱️</span>
-                        <span className="text-sm">Started 2 months ago</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        View Details
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        Manage Mentees
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Mentorship Card 3 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#080725' : 'white' }}>
-                  <div className="relative">
-                    <div className="h-24 bg-gradient-to-r from-yellow-500 to-orange-600"></div>
-                    <div className="absolute top-12 left-6 w-20 h-20 rounded-full bg-white dark:bg-gray-700 border-4 border-white dark:border-gray-700 flex items-center justify-center text-3xl">
-                      🎨
-                    </div>
-                  </div>
-                  
-                  <div className="p-5 pt-14">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">UI/UX Design Workshop</h3>
-                      <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs rounded-full">Starting Soon</span>
-                    </div>
-                    
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">Teach design principles, user research, and prototyping techniques.</p>
-                    
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">👥</span>
-                        <span className="text-sm">0 Mentees (4 spots available)</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">📅</span>
-                        <span className="text-sm">Starts on June 15, 2023</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">⏱️</span>
-                        <span className="text-sm">8-week program</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        View Details
-                      </button>
-                      <button className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-lg transition-colors text-sm">
-                        Edit Program
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Mentorship Card 4 */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700"
-                     style={{ backgroundColor: isDarkMode ? '#080725' : 'white' }}>
-                  <div className="relative">
-                    <div className="h-24 bg-gradient-to-r from-red-500 to-pink-600"></div>
-                    <div className="absolute top-12 left-6 w-20 h-20 rounded-full bg-white dark:bg-gray-700 border-4 border-white dark:border-gray-700 flex items-center justify-center text-3xl">
-                      🚀
-                    </div>
-                  </div>
-                  
-                  <div className="p-5 pt-14">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Career Development</h3>
-                      <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs rounded-full">Completed</span>
-                    </div>
-                    
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">Guide students through resume building, interview prep, and job search strategies.</p>
-                    
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">👥</span>
-                        <span className="text-sm">7 Mentees</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">⭐</span>
-                        <span className="text-sm">4.7 Rating (15 reviews)</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <span className="text-sm mr-2">🏆</span>
-                        <span className="text-sm">5 mentees found jobs</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <button className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        View Details
-                      </button>
-                      <button className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-sm">
-                        Restart Program
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-8 flex justify-center">
-                <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
-                  View All Mentorship Programs
-                </button>
-              </div>
-            </div>
+          {activeSection === 'mentorship' && (
+            <Mentorship 
+              isDarkMode={isDarkMode}
+              API_URL={API_URL}
+              user={user}
+              role={role}
+            />
           )}
 
           {activeSection === 'jobs' && (
-            <div className="jobs-section">
-              <div className="section-header">
-                <h2>Job Opportunities</h2>
-                <div className="search-box">
-                  <input type="text" placeholder="Search jobs..." />
-                  <span className="search-icon">🔍</span>
-                </div>
-              </div>
-              <div className="jobs-grid">
-                <div className="job-card">
-                  <div className="job-header">
-                    <h3>Senior Software Engineer</h3>
-                    <span className="job-status">New</span>
-                  </div>
-                  <p className="company-name">Google</p>
-                  <p className="job-location">Mountain View, CA</p>
-                  <div className="job-tags">
-                    <span>Full-time</span>
-                    <span>Remote</span>
-                    <span>$120k-$180k</span>
-                  </div>
-                  <button className="apply-btn">Apply Now</button>
-                </div>
-                {/* Add more job cards */}
-              </div>
-            </div>
+            <Jobs 
+              isDarkMode={isDarkMode}
+              API_URL={API_URL}
+              user={user}
+              role={role}
+            />
           )}
 
           {activeSection === 'events' && (
-            <div className="events-section">
-              <div className="section-header mb-6 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Events</h2>
-                <button 
-                  className="create-event-btn px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center"
-                  onClick={() => navigate('/create-event')}
-                >
-                  <span className="mr-2">+</span> Create Event
-                </button>
-              </div>
+            <Events 
+              events={events}
+              loading={loading}
+              error={error}
+              isDarkMode={isDarkMode}
+              API_URL={API_URL}
+              user={user}
+              role={role}
+            />
+          )}
 
-              <div className="events-filters mb-6">
-                <div className="search-box mb-4">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search events..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="w-full py-2 px-10 bg-white dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      style={{ backgroundColor: isDarkMode ? '#374151' : 'white' }}
-                    />
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-300">
-                      🔍
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="filter-buttons flex flex-wrap gap-2">
-                  <button 
-                    className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-                    onClick={() => setFilter('all')}
-                    style={{ 
-                      color: filter === 'all' ? 'white' : (isDarkMode ? 'white' : '#374151') 
-                    }}
-                  >
-                    All Events
-                  </button>
-                  <button 
-                    className={`filter-btn ${filter === 'upcoming' ? 'active' : ''}`}
-                    onClick={() => setFilter('upcoming')}
-                    style={{ 
-                      color: filter === 'upcoming' ? 'white' : (isDarkMode ? 'white' : '#374151') 
-                    }}
-                  >
-                    Upcoming
-                  </button>
-                  <button 
-                    className={`filter-btn ${filter === 'past' ? 'active' : ''}`}
-                    onClick={() => setFilter('past')}
-                    style={{ 
-                      color: filter === 'past' ? 'white' : (isDarkMode ? 'white' : '#374151') 
-                    }}
-                  >
-                    Past
-                  </button>
-                </div>
-              </div>
-
-              {error && <div className="error-message bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-4 rounded-lg mb-6">{error}</div>}
-
-              {loading ? (
-                <div className="loading-state flex justify-center items-center p-12">
-                  <div className="loading-spinner w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-blue-500 rounded-full animate-spin"></div>
-                  <p className="ml-4 text-gray-600 dark:text-gray-300">Loading events...</p>
-                </div>
-              ) : filteredEvents.length > 0 ? (
-                <div className="events-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredEvents.map((event) => {
-                    const status = getEventStatus(event.date);
-                    const attendees = event.registeredUsers?.length || 0;
-                    
-                    return (
-                      <div key={event._id} 
-                           className="event-card bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden border border-gray-200 dark:border-gray-700 relative"
-                           style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
-                      >
-                        <div className={`event-status text-xs font-semibold px-3 py-2.5 inline-block absolute left-0 top-0 rounded-br-lg w-auto whitespace-nowrap ${
-                          status === "upcoming" 
-                            ? "bg-green-500 text-white" 
-                            : "bg-gray-500 text-white"
-                        }`}>
-                          {status === 'upcoming' ? 'Upcoming' : 'Past'}
-                        </div>
-                        
-                        <button 
-                          className="absolute top-0 right-0 mt-1 mr-1 p-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors z-10"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            navigate(`/edit-event/${event._id}`);
-                          }}
-                          style={{ fontSize: '8px' }}
-                        >
-                          ✏️
-                        </button>
-                        
-                        <div className="event-content p-5">
-                          <h3 className="event-title text-xl font-bold text-gray-900 dark:text-white mb-2">{event.title}</h3>
-                          <p className="event-description text-gray-600 dark:text-gray-300 mb-4">{event.description}</p>
-                          
-                          <div className="event-details space-y-2">
-                            <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
-                              <span className="detail-icon mr-2">📅</span>
-                              <span>{new Date(event.date).toLocaleDateString()}</span>
-                            </div>
-                            <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
-                              <span className="detail-icon mr-2">⏰</span>
-                              <span>{event.time}</span>
-                            </div>
-                            <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
-                              <span className="detail-icon mr-2">📍</span>
-                              <span>{event.location}</span>
-                            </div>
-                            <div className="detail-item flex items-center text-gray-700 dark:text-gray-300">
-                              <span className="detail-icon mr-2">👥</span>
-                              <span>{attendees} {attendees === 1 ? 'Student' : 'Students'} Registered</span>
-                            </div>
-                          </div>
-                          
-                          <div className="event-actions mt-4 flex gap-2">
-                            <button
-                              className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
-                              onClick={() => navigate(`/events/${event._id}`)}
-                            >
-                              View Details
-                            </button>
-                            <button
-                              className="py-2 px-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
-                              onClick={() => {
-                                if(window.confirm(`Are you sure you want to delete "${event.title}"?`)) {
-                                  // Call API to delete event
-                                  fetch(`${API_URL}/api/events/${event._id}?firebaseUID=${user?.uid}&role=${role}`, {
-                                    method: 'DELETE',
-                                    headers: { 'Content-Type': 'application/json' }
-                                  })
-                                  .then(response => {
-                                    if(!response.ok) throw new Error('Failed to delete event');
-                                    return response.json();
-                                  })
-                                  .then(() => {
-                                    // Remove event from the list
-                                    setEvents(events.filter(e => e._id !== event._id));
-                                    alert('Event deleted successfully');
-                                  })
-                                  .catch(err => {
-                                    console.error('Error deleting event:', err);
-                                    alert('Failed to delete event');
-                                  });
-                                }
-                              }}
-                            >
-                              🗑️ Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="no-events flex flex-col items-center justify-center py-12">
-                  <p className="text-xl text-gray-500 dark:text-gray-400 mb-4">No events found</p>
-                  <button 
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                    onClick={() => navigate('/create-event')}
-                  >
-                    Create Your First Event
-                  </button>
-                </div>
-              )}
-            </div>
+          {activeSection === 'network' && (
+            <Network 
+              currentUser={currentUser}
+              isDarkMode={isDarkMode}
+            />
           )}
 
           {activeSection === 'settings' && (
-            <div className="settings-section">
-              <div className="settings-grid">
-                <div className="settings-card">
-                  <h3>Account Settings</h3>
-                  <form className="settings-form">
-                    <div className="form-group">
-                      <label>Display Name</label>
-                      <input type="text" defaultValue={user?.displayName || ''} />
-                    </div>
-                    <div className="form-group">
-                      <label>Email</label>
-                      <input type="email" defaultValue={user?.email || ''} />
-                    </div>
-                    <div className="form-group">
-                      <label>Phone</label>
-                      <input type="tel" defaultValue="+1 234 567 8900" />
-                    </div>
-                    <button type="submit" className="save-btn">Save Changes</button>
-                  </form>
-                </div>
-                <div className="settings-card">
-                  <h3>Notification Settings</h3>
-                  <div className="notification-settings">
-                    <div className="setting-item">
-                      <label>Job Alerts</label>
-                      <input type="checkbox" defaultChecked />
-                    </div>
-                    <div className="setting-item">
-                      <label>Event Updates</label>
-                      <input type="checkbox" defaultChecked />
-                    </div>
-                    <div className="setting-item">
-                      <label>Connection Requests</label>
-                      <input type="checkbox" defaultChecked />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Settings 
+              isDarkMode={isDarkMode}
+              setIsDarkMode={setIsDarkMode}
+            />
           )}
         </main>
       </div>

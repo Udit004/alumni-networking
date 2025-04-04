@@ -1,0 +1,183 @@
+/* StudentProfile.css */
+
+/* Skill tags with subtle hover effect */
+.skill-tag {
+  transition: all 0.2s ease;
+}
+
+.skill-tag:hover {
+  background-color: rgba(var(--color-tertiary-rgb), 0.1);
+  color: var(--color-tertiary);
+}
+
+/* Dark mode adjustments for skill tags */
+:root.dark .skill-tag:hover {
+  background-color: rgba(var(--color-tertiary-light-rgb), 0.2);
+  color: var(--color-tertiary-light);
+}
+
+/* Section tab transitions */
+button {
+  transition: all 0.15s ease;
+}
+
+/* Profile image with border animation on hover */
+.profile-image {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.profile-image:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 2px var(--color-tertiary);
+}
+
+/* Project card hover effects */
+.project-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.project-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode project card hover adjustment */
+:root.dark .project-card:hover {
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Custom scrollbar for section navigation on small screens */
+@media (max-width: 640px) {
+  .section-tabs {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-tertiary) transparent;
+  }
+
+  .section-tabs::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .section-tabs::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .section-tabs::-webkit-scrollbar-thumb {
+    background-color: var(--color-tertiary);
+    border-radius: 20px;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .profile-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .profile-actions {
+    margin-top: 1.5rem;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+}
+
+/* Skills tag container layout */
+.skills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Contact info grid for mobile */
+@media (max-width: 640px) {
+  .contact-info-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Education timeline styling */
+.education-timeline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  background-color: var(--color-tertiary);
+  opacity: 0.3;
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.loading-pulse {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Connect button hover effect */
+.connect-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.connect-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.connect-btn:hover::after {
+  transform: translateX(0);
+}
+
+/* Message button hover effect */
+.message-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.message-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(var(--color-tertiary-rgb), 0.05);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.message-btn:hover::after {
+  transform: translateX(0);
+}
+
+/* Activity section styling */
+.activity-item {
+  border-left: 2px solid transparent;
+  padding-left: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.activity-item:hover {
+  border-color: var(--color-tertiary);
+} 

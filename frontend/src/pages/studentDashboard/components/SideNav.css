@@ -1,0 +1,35 @@
+.sidenav {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.sidenav.expanded {
+  width: 260px;
+}
+
+.sidenav.collapsed {
+  width: 80px;
+}
+
+.menu-item {
+  position: relative;
+}
+
+.menu-item.active {
+  font-weight: 600;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 30px;
+}
+
+.count {
+  position: relative;
+  min-width: 20px;
+  height: 20px;
+} 
