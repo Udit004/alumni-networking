@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../../context/AuthContext';
+import { sendConnectionRequest } from '../../../services/connectionService';
 import './TeacherProfile.css';
 
 const TeacherProfile = () => {
@@ -67,11 +68,26 @@ const TeacherProfile = () => {
     return () => observer.disconnect();
   }, []);
 
-  const handleConnect = () => {
-    // Implement connection request functionality
-    console.log('Connection request sent to:', profile.name);
-    // In a real app, you would send a connection request to the backend
-    alert(`Connection request sent to ${profile.name}`);
+  const handleConnect = async () => {
+    if (!currentUser) {
+      alert('You need to be logged in to send a connection request');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const result = await sendConnectionRequest(currentUser.uid, id);
+      if (result.success) {
+        alert('Connection request sent successfully');
+      } else {
+        alert(result.message || 'Failed to send connection request');
+      }
+    } catch (error) {
+      console.error('Error sending connection request:', error);
+      alert('An error occurred while sending the connection request');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleMessage = () => {

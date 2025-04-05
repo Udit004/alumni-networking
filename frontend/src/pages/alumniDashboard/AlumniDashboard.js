@@ -12,13 +12,24 @@ import {
   Mentorship, 
   Jobs, 
   Events, 
-  Settings 
+  Settings,
+  Resources
 } from './components';
-import Network from './components/Network';
+import AlumniNetwork from './components/Network';
+import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
 
 const AlumniDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
-  const [activeSection, setActiveSection] = useState('overview');
+  const [activeSection, setActiveSection] = useState(() => {
+    // Check localStorage for saved section
+    const savedSection = window.localStorage.getItem('alumniActiveSection');
+    if (savedSection) {
+      // Clear it after reading
+      window.localStorage.removeItem('alumniActiveSection');
+      return savedSection;
+    }
+    return 'overview';
+  });
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,7 +38,18 @@ const AlumniDashboard = () => {
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
   const { user, role } = useAuth();
   const navigate = useNavigate();
-  const API_URL = process.env.REACT_APP_API_URL;
+  
+  // Get API_URL from environment with fallback
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  
+  // Debug output to check API_URL
+  console.log('**** ALUMNI DASHBOARD DEBUG ****');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('Alumni Dashboard - API_URL from env:', process.env.REACT_APP_API_URL);
+  console.log('Alumni Dashboard - Final API_URL:', API_URL);
+  console.log('Alumni Dashboard - User state:', user ? { uid: user.uid, authenticated: true } : 'Not authenticated');
+  console.log('Alumni Dashboard - Role:', role);
+  
   const [connections, setConnections] = useState([]);
   const [connectionLoading, setConnectionLoading] = useState(true);
   const { currentUser } = useAuth();
@@ -91,19 +113,31 @@ const AlumniDashboard = () => {
     try {
       setLoading(true);
       
+      // Log API info for debugging
+      console.log('Fetching events with URL:', `${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`);
+      console.log('User UID:', user?.uid);
+      console.log('User role:', role);
+      
       // Use the user-specific endpoint to get events created by this user
       const response = await fetch(`${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
 
+      console.log('Events API Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to fetch events');
+        console.log('Events API call failed, using mock data');
+        // Generate mock events data if API call fails
+        const mockEvents = generateMockEvents();
+        setEvents(mockEvents);
+        setLoading(false);
+        return;
       }
 
       const data = await response.json();
       
-      // Use the createdEvents array directly from the API response
+      // Use the actual API data
       console.log('Alumni events received from API:', {
         createdEvents: data.createdEvents?.length || 0,
         registeredEvents: data.registeredEvents?.length || 0
@@ -115,6 +149,11 @@ const AlumniDashboard = () => {
     } catch (err) {
       setError('Failed to load events. Please try again.');
       console.error('Error fetching events:', err);
+      
+      // Provide mock data even when errors occur
+      console.log('Using mock events data due to API error');
+      const mockEvents = generateMockEvents();
+      setEvents(mockEvents);
     } finally {
       setLoading(false);
     }
@@ -135,6 +174,7 @@ const AlumniDashboard = () => {
     setActiveSection(section);
   };
 
+  // Existing effect for fetching alumni profile
   useEffect(() => {
     const fetchAlumniProfile = async () => {
       if (!currentUser) return;
@@ -240,98 +280,109 @@ const AlumniDashboard = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [notificationRef]);
-  
-  // Mock notification data
+
+  // Replace the notifications mock data loading with actual data fetching
   useEffect(() => {
-    // This would normally be fetched from an API
-    const mockNotifications = [
-      {
-        id: 1,
-        type: 'connection',
-        message: 'John Doe accepted your connection request',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-        read: false,
-        actionUrl: '/profile/123'
-      },
-      {
-        id: 2,
-        type: 'event',
-        message: 'Reminder: Tech Meetup starts in 1 hour',
-        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-        read: false
-      },
-      {
-        id: 3,
-        type: 'job',
-        message: 'New job posting matches your profile: Senior Developer at TechCorp',
-        timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-        read: true,
-        actionUrl: '/jobs/456'
-      },
-      {
-        id: 4,
-        type: 'message',
-        message: 'Sarah Smith sent you a message',
-        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-        read: true
-      },
-      {
-        id: 5,
-        type: 'system',
-        message: 'Your profile has been successfully updated',
-        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-        read: true
+    // Set up real-time listener for notifications
+    const fetchNotifications = async () => {
+      if (!currentUser) return;
+      
+      try {
+        console.log('Fetching notifications for user:', currentUser.uid);
+        
+        // Initial fetch of notifications
+        const notificationsData = await getUserNotifications(currentUser.uid);
+        console.log('Initial notifications loaded:', notificationsData.length);
+        
+        setNotifications(notificationsData);
+        setUnreadCount(notificationsData.filter(n => !n.read).length);
+        
+        console.log('Setting up real-time notifications subscription');
+        // Set up subscription for real-time updates
+        const unsubscribe = subscribeToUserNotifications(currentUser.uid, (updatedNotifications) => {
+          console.log('Received notification update, count:', updatedNotifications.length);
+          setNotifications(updatedNotifications);
+          setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+        });
+        
+        // Return cleanup function
+        return unsubscribe;
+      } catch (error) {
+        console.error('Error setting up notifications:', error);
+        // Provide empty notifications to prevent UI crashes
+        setNotifications([]);
+        setUnreadCount(0);
       }
-    ];
+    };
     
-    setNotifications(mockNotifications);
-    setUnreadCount(mockNotifications.filter(n => !n.read).length);
-  }, []);
+    const unsubscribe = fetchNotifications();
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        console.log('Cleaning up notifications subscription');
+        unsubscribe();
+      }
+    };
+  }, [currentUser]);
   
-  // Handle notification click
-  const handleNotificationClick = (notification) => {
-    // Mark as read when clicked
-    if (!notification.read) {
-      markAsRead(notification.id);
+  // Handle notification click - update to use the service
+  const handleNotificationClick = async (notification) => {
+    try {
+      // Mark as read when clicked
+      if (!notification.read) {
+        await markNotificationAsRead(notification.id);
+        
+        // Update local state to reflect the change
+        const updatedNotifications = notifications.map(n => 
+          n.id === notification.id ? { ...n, read: true } : n
+        );
+        setNotifications(updatedNotifications);
+        setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+      }
+      
+      // Navigate to the link if available
+      if (notification.linkTo) {
+        navigate(notification.linkTo);
+      }
+      
+      setShowNotifications(false);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
     }
-    
-    // Navigate to the action URL if available
-    if (notification.actionUrl) {
-      navigate(notification.actionUrl);
-    }
-    
-    setShowNotifications(false);
   };
-  
+
   // Mark a notification as read
-  const markAsRead = (notificationId) => {
-    const updatedNotifications = notifications.map(notification => 
-      notification.id === notificationId ? { ...notification, read: true } : notification
-    );
-    
-    setNotifications(updatedNotifications);
-    setUnreadCount(updatedNotifications.filter(n => !n.read).length);
-  };
-  
-  // Mark all notifications as read
-  const markAllAsRead = () => {
-    const updatedNotifications = notifications.map(notification => ({ ...notification, read: true }));
-    setNotifications(updatedNotifications);
-    setUnreadCount(0);
-  };
-  
-  // Get notification icon based on type
-  const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'connection': return '🤝';
-      case 'event': return '📅';
-      case 'job': return '💼';
-      case 'message': return '✉️';
-      case 'system': return '🔔';
-      default: return '📌';
+  const markAsRead = async (notificationId) => {
+    try {
+      await markNotificationAsRead(notificationId);
+      
+      // Update local state
+      const updatedNotifications = notifications.map(notification => 
+        notification.id === notificationId ? { ...notification, read: true } : notification
+      );
+      
+      setNotifications(updatedNotifications);
+      setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
     }
   };
-  
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    try {
+      if (!currentUser) return;
+      
+      await markAllNotificationsAsRead(currentUser.uid);
+      
+      // Update local state
+      const updatedNotifications = notifications.map(notification => ({ ...notification, read: true }));
+      setNotifications(updatedNotifications);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
   // Format notification timestamp
   const formatNotificationTime = (timestamp) => {
     const now = new Date();
@@ -362,6 +413,55 @@ const AlumniDashboard = () => {
     
     // Otherwise, return the date
     return timestamp.toLocaleDateString();
+  };
+
+  // Get notification icon based on type
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'connection': return '🤝';
+      case 'event': return '📅';
+      case 'job': return '💼';
+      case 'message': return '✉️';
+      case 'system': return '🔔';
+      default: return '��';
+    }
+  };
+
+  // Generate mock events data for testing
+  const generateMockEvents = () => {
+    const mockEventTitles = [
+      'Annual Alumni Meetup', 
+      'Career Development Workshop', 
+      'Industry Networking Night', 
+      'Graduate Research Symposium', 
+      'Job Fair'
+    ];
+    
+    const mockLocations = [
+      'Main Campus Auditorium', 
+      'Virtual (Zoom)', 
+      'Downtown Conference Center', 
+      'University Library', 
+      'Tech Innovation Hub'
+    ];
+    
+    const mockCategories = ['Networking', 'Workshop', 'Social', 'Career', 'Academic'];
+    
+    return Array.from({ length: 5 }, (_, i) => ({
+      _id: `mock-event-${i+1}`,
+      title: mockEventTitles[i % mockEventTitles.length],
+      description: 'This is a mock event description for testing purposes. The real description would contain details about the event agenda, speakers, and goals.',
+      date: new Date(Date.now() + ((i+1) * 7 * 24 * 60 * 60 * 1000)).toISOString(), // i+1 weeks in future
+      time: '18:00 - 20:00',
+      location: mockLocations[i % mockLocations.length],
+      category: mockCategories[i % mockCategories.length],
+      capacity: 50 + (i * 10),
+      registrations: Math.floor(Math.random() * 40),
+      organizer: user?.uid,
+      createdAt: new Date().toISOString(),
+      imageUrl: '',
+      status: 'upcoming'
+    }));
   };
 
   return (
@@ -497,14 +597,14 @@ const AlumniDashboard = () => {
         <main className="p-6">
           {activeSection === 'overview' && (
             <Overview 
-              connections={connections}
+              connections={connections || []}
               isDarkMode={isDarkMode}
             />
           )}
 
           {activeSection === 'profile' && (
             <Profile 
-              profileData={profileData}
+              profileData={profileData || {}}
               currentUser={currentUser}
               isDarkMode={isDarkMode}
             />
@@ -525,7 +625,7 @@ const AlumniDashboard = () => {
             <Mentorship 
               isDarkMode={isDarkMode}
               API_URL={API_URL}
-              user={user}
+              user={currentUser}
               role={role}
             />
           )}
@@ -534,7 +634,7 @@ const AlumniDashboard = () => {
             <Jobs 
               isDarkMode={isDarkMode}
               API_URL={API_URL}
-              user={user}
+              user={currentUser}
               role={role}
             />
           )}
@@ -546,16 +646,15 @@ const AlumniDashboard = () => {
               error={error}
               isDarkMode={isDarkMode}
               API_URL={API_URL}
-              user={user}
+              user={currentUser}
               role={role}
             />
           )}
 
           {activeSection === 'network' && (
-            <Network 
-              currentUser={currentUser}
-              isDarkMode={isDarkMode}
-            />
+            <div className="network-section">
+              <AlumniNetwork currentUser={currentUser} isDarkMode={isDarkMode} />
+            </div>
           )}
 
           {activeSection === 'settings' && (

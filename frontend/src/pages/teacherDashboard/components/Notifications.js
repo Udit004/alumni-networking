@@ -1,8 +1,8 @@
 import React from 'react';
 
 const Notifications = ({ 
-  notifications, 
-  unreadCount, 
+  notifications = [],
+  unreadCount = 0, 
   markAsRead, 
   markAllAsRead, 
   handleNotificationClick, 
@@ -10,6 +10,8 @@ const Notifications = ({
   formatNotificationTime, 
   isDarkMode 
 }) => {
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+
   return (
     <div className="notifications-section">
       <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
@@ -50,7 +52,7 @@ const Notifications = ({
           <div>
             <h3 className="font-medium text-gray-500 dark:text-gray-400 mb-2 text-sm">Today</h3>
             <div className="space-y-1">
-              {notifications
+              {safeNotifications
                 .filter(notification => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
@@ -101,7 +103,7 @@ const Notifications = ({
           <div>
             <h3 className="font-medium text-gray-500 dark:text-gray-400 mb-2 text-sm">Earlier</h3>
             <div className="space-y-1">
-              {notifications
+              {safeNotifications
                 .filter(notification => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
@@ -150,7 +152,7 @@ const Notifications = ({
         </div>
 
         {/* Empty state */}
-        {notifications.length === 0 && (
+        {safeNotifications.length === 0 && (
           <div className="text-center py-12">
             <div className="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
               <span className="text-2xl">🔔</span>

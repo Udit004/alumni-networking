@@ -6,6 +6,7 @@ import Events from './Events';
 import Resources from './Resources';
 import Students from './Students';
 import Settings from './Settings';
+import Network from './Network';
 
 export {
   Overview,
@@ -15,5 +16,6 @@ export {
   Events,
   Resources,
   Students,
-  Settings
+  Settings,
+  Network
 }; 

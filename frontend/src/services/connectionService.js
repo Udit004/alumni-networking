@@ -103,14 +103,27 @@ export const sendConnectionRequest = async (fromUserId, toUserId) => {
     const docRef = await addDoc(collection(db, 'connectionRequests'), connectionRequest);
     console.log('Connection request created with ID:', docRef.id);
     
-    // Send notification to the recipient
-    await createConnectionRequestNotification(
-      {
-        id: fromUserId,
-        name: userData.name || userData.displayName || 'A user'
-      }, 
-      toUserId
-    );
+    // Send notification to the recipient with improved error handling
+    try {
+      console.log('Sending connection request notification', {
+        fromUserId,
+        fromUserName: userData.name || userData.displayName || 'A user',
+        toUserId
+      });
+      
+      const notificationResult = await createConnectionRequestNotification(
+        {
+          id: fromUserId,
+          name: userData.name || userData.displayName || 'A user'
+        }, 
+        toUserId
+      );
+      
+      console.log('Connection request notification sent successfully:', notificationResult);
+    } catch (notificationError) {
+      console.error('Failed to create notification for connection request, but request was created:', notificationError);
+      // Don't fail the whole operation if just the notification fails
+    }
     
     return { 
       success: true, 
@@ -166,26 +179,23 @@ export const acceptConnectionRequest = async (requestId) => {
     
     const requestData = requestSnap.data();
     
-    // Create a connection document (in both directions for a bidirectional connection)
+    // Create a batch for atomic operations
     const batch = writeBatch(db);
     
     // Create timestamp
     const now = serverTimestamp();
     
-    // Connection from user A to user B
-    const connectionAtoB = doc(collection(db, 'connections'));
-    batch.set(connectionAtoB, {
-      user1: requestData.from,
-      user2: requestData.to,
-      createdAt: now
+    // Get user document references
+    const fromUserRef = doc(db, 'users', requestData.from);
+    const toUserRef = doc(db, 'users', requestData.to);
+    
+    // Update both users' connections arrays
+    batch.update(fromUserRef, {
+      connections: arrayUnion(requestData.to)
     });
     
-    // Connection from user B to user A (for bidirectional lookup)
-    const connectionBtoA = doc(collection(db, 'connections'));
-    batch.set(connectionBtoA, {
-      user1: requestData.to,
-      user2: requestData.from,
-      createdAt: now
+    batch.update(toUserRef, {
+      connections: arrayUnion(requestData.from)
     });
     
     // Update the request status to accepted
@@ -193,6 +203,19 @@ export const acceptConnectionRequest = async (requestId) => {
       status: 'accepted',
       updatedAt: now
     });
+    
+    // Get user details for notification
+    const fromUserDoc = await getDoc(fromUserRef);
+    const fromUserData = fromUserDoc.data();
+    
+    // Create acceptance notification
+    await createConnectionAcceptanceNotification(
+      {
+        id: requestData.to,
+        name: fromUserData.name || fromUserData.displayName || 'A user'
+      },
+      requestData.from
+    );
     
     // Commit all changes
     await batch.commit();
@@ -261,60 +284,73 @@ export const removeConnection = async (userId, connectionId) => {
 // Get all connection requests for a user
 export const getConnectionRequests = async (userId) => {
   try {
-    console.log(`Getting connection requests for user: ${userId}`);
-    
-    // Ensure the connectionRequests collection exists
-    await setupFirestoreCollections();
-    
-    // Get requests sent to the user
+    // Get incoming requests
     const incomingQuery = query(
       collection(db, 'connectionRequests'),
       where('to', '==', userId),
       where('status', '==', 'pending')
     );
-    
-    // Get requests sent by the user
+
+    // Get outgoing requests
     const outgoingQuery = query(
       collection(db, 'connectionRequests'),
       where('from', '==', userId),
       where('status', '==', 'pending')
     );
-    
+
     try {
       const [incomingSnapshot, outgoingSnapshot] = await Promise.all([
         getDocs(incomingQuery),
         getDocs(outgoingQuery)
       ]);
-      
-      console.log(`Found ${incomingSnapshot.docs.length} incoming and ${outgoingSnapshot.docs.length} outgoing requests`);
-      
-      // Process incoming requests - simplified version
-      const incomingRequests = incomingSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        sender: {
-          id: doc.data().from,
-          name: 'User ' + doc.data().from.substring(0, 5),
-          role: 'user'
-        },
-        createdAt: doc.data().createdAt?.toDate() || new Date()
+
+      // Process incoming requests with full user details
+      const incomingRequests = await Promise.all(incomingSnapshot.docs.map(async request => {
+        const requestData = request.data();
+        const senderRef = doc(db, 'users', requestData.from);
+        const senderDoc = await getDoc(senderRef);
+        const senderData = senderDoc.exists() ? senderDoc.data() : {};
+
+        return {
+          id: request.id,
+          ...requestData,
+          sender: {
+            id: requestData.from,
+            name: senderData.name || senderData.displayName || 'Unknown User',
+            role: senderData.role || 'user',
+            photoURL: senderData.photoURL || '/default-avatar.png',
+            program: senderData.program || '',
+            skills: senderData.skills || []
+          },
+          createdAt: requestData.createdAt?.toDate() || new Date()
+        };
       }));
-      
-      // Process outgoing requests - simplified version
-      const outgoingRequests = outgoingSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        recipient: {
-          id: doc.data().to,
-          name: 'User ' + doc.data().to.substring(0, 5),
-          role: 'user'
-        },
-        createdAt: doc.data().createdAt?.toDate() || new Date()
+
+      // Process outgoing requests with full user details
+      const outgoingRequests = await Promise.all(outgoingSnapshot.docs.map(async request => {
+        const requestData = request.data();
+        const recipientRef = doc(db, 'users', requestData.to);
+        const recipientDoc = await getDoc(recipientRef);
+        const recipientData = recipientDoc.exists() ? recipientDoc.data() : {};
+
+        return {
+          id: request.id,
+          ...requestData,
+          recipient: {
+            id: requestData.to,
+            name: recipientData.name || recipientData.displayName || 'Unknown User',
+            role: recipientData.role || 'user',
+            photoURL: recipientData.photoURL || '/default-avatar.png',
+            program: recipientData.program || '',
+            skills: recipientData.skills || []
+          },
+          createdAt: requestData.createdAt?.toDate() || new Date()
+        };
       }));
-      
-      return { 
-        incoming: incomingRequests, 
-        outgoing: outgoingRequests 
+
+      return {
+        incoming: incomingRequests,
+        outgoing: outgoingRequests
       };
     } catch (err) {
       console.error('Error processing connection requests:', err);
@@ -416,6 +452,76 @@ export const areUsersConnected = async (userId1, userId2) => {
     return connections.includes(userId2);
   } catch (error) {
     console.error('Error checking user connection:', error);
+    return false;
+  }
+};
+
+// Add mock connection requests for testing - call this function to seed test data
+export const createMockConnectionRequests = async (userId) => {
+  try {
+    // Check if there are already pending requests
+    const currentRequests = await getConnectionRequests(userId);
+    
+    if (currentRequests.incoming.length > 0 || currentRequests.outgoing.length > 0) {
+      console.log('User already has connection requests, no mock data needed');
+      return;
+    }
+    
+    // Create mock users to send connection requests
+    const mockUsers = [
+      {
+        id: 'mock-user-1',
+        name: 'John Smith',
+        role: 'student',
+        program: 'Computer Science'
+      },
+      {
+        id: 'mock-user-2',
+        name: 'Emma Johnson',
+        role: 'alumni',
+        company: 'Tech Innovations'
+      },
+      {
+        id: 'mock-user-3',
+        name: 'Dr. Michael Brown',
+        role: 'teacher',
+        department: 'Computer Science'
+      }
+    ];
+    
+    // Create connection requests
+    for (const mockUser of mockUsers) {
+      // Create the mock user if it doesn't exist
+      const userRef = doc(db, 'users', mockUser.id);
+      const userSnapshot = await getDoc(userRef);
+      
+      if (!userSnapshot.exists()) {
+        await setDoc(userRef, {
+          name: mockUser.name,
+          role: mockUser.role,
+          program: mockUser.program || '',
+          company: mockUser.company || '',
+          department: mockUser.department || '',
+          photoURL: '',
+          connections: []
+        });
+      }
+      
+      // Create a connection request from this mock user to the real user
+      const connectionRequest = {
+        from: mockUser.id,
+        to: userId,
+        status: 'pending',
+        createdAt: serverTimestamp()
+      };
+      
+      await addDoc(collection(db, 'connectionRequests'), connectionRequest);
+      console.log(`Created mock connection request from ${mockUser.name} to user ${userId}`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error creating mock connection requests:', error);
     return false;
   }
 }; 
