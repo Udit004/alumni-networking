@@ -1,6 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
-const Overview = ({ connections, studentConnections, alumniConnections, teacherConnections, isDarkMode, navigate, handleRequestConnection }) => {
+const Overview = ({ connections = [], studentConnections = [], alumniConnections = [], teacherConnections = [], isDarkMode, handleRequestConnection }) => {
+  const navigate = useNavigate();
+  
   return (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

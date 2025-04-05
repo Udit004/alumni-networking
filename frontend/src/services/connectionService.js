@@ -441,4 +441,74 @@ export const areUsersConnected = async (userId1, userId2) => {
     console.error('Error checking user connection:', error);
     return false;
   }
+};
+
+// Add mock connection requests for testing - call this function to seed test data
+export const createMockConnectionRequests = async (userId) => {
+  try {
+    // Check if there are already pending requests
+    const currentRequests = await getConnectionRequests(userId);
+    
+    if (currentRequests.incoming.length > 0 || currentRequests.outgoing.length > 0) {
+      console.log('User already has connection requests, no mock data needed');
+      return;
+    }
+    
+    // Create mock users to send connection requests
+    const mockUsers = [
+      {
+        id: 'mock-user-1',
+        name: 'John Smith',
+        role: 'student',
+        program: 'Computer Science'
+      },
+      {
+        id: 'mock-user-2',
+        name: 'Emma Johnson',
+        role: 'alumni',
+        company: 'Tech Innovations'
+      },
+      {
+        id: 'mock-user-3',
+        name: 'Dr. Michael Brown',
+        role: 'teacher',
+        department: 'Computer Science'
+      }
+    ];
+    
+    // Create connection requests
+    for (const mockUser of mockUsers) {
+      // Create the mock user if it doesn't exist
+      const userRef = doc(db, 'users', mockUser.id);
+      const userSnapshot = await getDoc(userRef);
+      
+      if (!userSnapshot.exists()) {
+        await setDoc(userRef, {
+          name: mockUser.name,
+          role: mockUser.role,
+          program: mockUser.program || '',
+          company: mockUser.company || '',
+          department: mockUser.department || '',
+          photoURL: '',
+          connections: []
+        });
+      }
+      
+      // Create a connection request from this mock user to the real user
+      const connectionRequest = {
+        from: mockUser.id,
+        to: userId,
+        status: 'pending',
+        createdAt: serverTimestamp()
+      };
+      
+      await addDoc(collection(db, 'connectionRequests'), connectionRequest);
+      console.log(`Created mock connection request from ${mockUser.name} to user ${userId}`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error creating mock connection requests:', error);
+    return false;
+  }
 }; 

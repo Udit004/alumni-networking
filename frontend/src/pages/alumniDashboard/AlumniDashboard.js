@@ -12,9 +12,10 @@ import {
   Mentorship, 
   Jobs, 
   Events, 
-  Settings 
+  Settings,
+  Resources
 } from './components';
-import Network from './components/Network';
+import AlumniNetwork from './components/Network';
 
 const AlumniDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -165,6 +166,7 @@ const AlumniDashboard = () => {
     setActiveSection(section);
   };
 
+  // Existing effect for fetching alumni profile
   useEffect(() => {
     const fetchAlumniProfile = async () => {
       if (!currentUser) return;
@@ -564,7 +566,7 @@ const AlumniDashboard = () => {
         <main className="p-6">
           {activeSection === 'overview' && (
             <Overview 
-              connections={connections}
+              connections={connections || []}
               isDarkMode={isDarkMode}
             />
           )}
@@ -619,10 +621,9 @@ const AlumniDashboard = () => {
           )}
 
           {activeSection === 'network' && (
-            <Network 
-              currentUser={currentUser}
-              isDarkMode={isDarkMode}
-            />
+            <div className="network-section">
+              <AlumniNetwork currentUser={user} isDarkMode={isDarkMode} />
+            </div>
           )}
 
           {activeSection === 'settings' && (

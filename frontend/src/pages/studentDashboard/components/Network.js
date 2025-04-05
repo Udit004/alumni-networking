@@ -181,8 +181,14 @@ const Network = ({ currentUser, isDarkMode }) => {
     const skills = Array.isArray(person.skills) ? person.skills : 
                   (typeof person.skills === 'string' ? person.skills.split(',').map(s => s.trim()) : []);
     
+    // Generate a unique key based on the person's id and the context
+    // This ensures that the same person in different contexts (incoming/outgoing/connections) gets a unique key
+    const cardKey = person.requestId ? `${person.id}-request-${person.requestId}` : 
+                   (isPendingIncoming ? `${person.id}-incoming` : 
+                   (isPendingOutgoing ? `${person.id}-outgoing` : `${person.id}`));
+    
     return (
-      <div key={person.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+      <div key={cardKey} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
         <div className="flex items-center space-x-4">
           <img
             src={person.photoURL || '/default-avatar.png'}
@@ -378,7 +384,11 @@ const Network = ({ currentUser, isDarkMode }) => {
                         {pendingRequests.incoming.filter(request =>
                           request.sender.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           request.sender.role?.toLowerCase().includes(searchTerm.toLowerCase())
-                        ).map(request => renderPersonCard({ ...request.sender, isPendingIncoming: true, requestId: request.id }))}
+                        ).map(request => renderPersonCard({ 
+                          ...request.sender, 
+                          isPendingIncoming: true, 
+                          requestId: request.id 
+                        }))}
                       </div>
                     </div>
                   )}
@@ -391,7 +401,11 @@ const Network = ({ currentUser, isDarkMode }) => {
                         {pendingRequests.outgoing.filter(request =>
                           request.recipient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           request.recipient.role?.toLowerCase().includes(searchTerm.toLowerCase())
-                        ).map(request => renderPersonCard({ ...request.recipient, isPendingOutgoing: true }))}
+                        ).map(request => renderPersonCard({ 
+                          ...request.recipient, 
+                          isPendingOutgoing: true, 
+                          requestId: request.id 
+                        }))}
                       </div>
                     </div>
                   )}
