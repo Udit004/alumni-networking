@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getConnectionRequests } from "../services/connectionService";
@@ -11,12 +11,43 @@ const Navbar = () => {
   const [pendingRequests, setPendingRequests] = useState(0);
   const { currentUser, role, userData, logout } = useAuth();
   const navigate = useNavigate();
+  const mobileMenuRef = useRef(null);
+  const profileDropdownRef = useRef(null);
 
   // Initialize dark mode state based on class or system preference
   useEffect(() => {
     // Check if dark mode is already enabled
     const darkModeEnabled = document.documentElement.classList.contains('dark');
     setIsDarkMode(darkModeEnabled);
+  }, []);
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Close mobile menu on navigation
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const handleLogout = async () => {
@@ -68,6 +99,12 @@ const Navbar = () => {
     return () => clearInterval(interval);
   }, [currentUser]);
 
+  // Close mobile menu and dropdown after navigating
+  const handleNavClick = () => {
+    setIsOpen(false);
+    setIsDropdownOpen(false);
+  };
+
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-lg z-50 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -78,10 +115,11 @@ const Navbar = () => {
               <img
                 src="/assets/alumniLogo.png"
                 alt="Logo"
-                className="h-12 w-12 mr-3"
+                className="h-10 w-10 md:h-12 md:w-12 mr-2 md:mr-3"
               />
-              <span className="text-2xl font-bold text-primary dark:text-white">
-                ALUMNI NETWORKING
+              <span className="text-xl md:text-2xl font-bold text-primary dark:text-white">
+                <span className="hidden sm:inline">ALUMNI NETWORKING</span>
+                <span className="sm:hidden">ALUMNI</span>
               </span>
             </Link>
           </div>
@@ -154,6 +192,7 @@ const Navbar = () => {
             <button
               onClick={toggleDarkMode}
               className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white"
+              aria-label="Toggle dark mode"
             >
               {isDarkMode ? (
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -168,10 +207,12 @@ const Navbar = () => {
 
             {/* User Menu - Desktop */}
             {currentUser ? (
-              <div className="relative">
+              <div className="relative" ref={profileDropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary focus:outline-none no-underline min-w-[150px] justify-between px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg"
+                  aria-expanded={isDropdownOpen}
+                  aria-label="User menu"
                 >
                   <span className="mr-2 truncate">{getUserDisplayName()}</span>
                   <svg
@@ -192,31 +233,25 @@ const Navbar = () => {
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-md shadow-lg py-1 z-50">
-                    <a
-                      href="#"
+                    <Link
+                      to="/profile"
                       className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        window.location.href = '/profile';
-                      }}
+                      onClick={handleNavClick}
                     >
                       Profile
-                    </a>
-                    <Link
-                      to="/about"
-                      className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
-                    >
-                      About
                     </Link>
-                    <Link
-                      to="/contact"
-                      className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
-                    >
-                      Contact
-                    </Link>
+                    {role && (
+                      <Link
+                        to={`/${role.toLowerCase()}-dashboard`}
+                        className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
+                        onClick={handleNavClick}
+                      >
+                        Dashboard
+                      </Link>
+                    )}
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
+                      className="block w-full text-left px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
                     >
                       Logout
                     </button>
@@ -224,16 +259,16 @@ const Navbar = () => {
                 )}
               </div>
             ) : (
-              <div className="flex items-center space-x-4">
+              <div className="flex space-x-4">
                 <Link
                   to="/login"
-                  className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline"
+                  className="px-4 py-2 text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline"
                 >
                   Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="bg-primary text-white px-4 py-2 rounded-md hover:bg-opacity-90 no-underline"
+                  className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-md no-underline"
                 >
                   Sign Up
                 </Link>
@@ -242,175 +277,12 @@ const Navbar = () => {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
-            >
-              <span className="sr-only">Open main menu</span>
-              {!isOpen ? (
-                <svg
-                  className="block h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="block h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-            {/* Mobile menu */}
-            {isOpen && (
-        <div className="md:hidden">
-          <div className="px-2 pt-2 pb-3 space-y-1 bg-white dark:bg-gray-900">
-            <NavLink
-              to="/"
-              className={({ isActive }) => 
-                isActive 
-                  ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline" 
-                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline"
-              }
-            >
-              Home
-            </NavLink>
-            <NavLink
-              to="/events"
-              className={({ isActive }) => 
-                isActive 
-                  ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline" 
-                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline"
-              }
-            >
-              Events
-            </NavLink>
-            <NavLink
-              to="/jobs"
-              className={({ isActive }) => 
-                isActive 
-                  ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline" 
-                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline"
-              }
-            >
-              Jobs
-            </NavLink>
-            <NavLink
-              to="/mentorship"
-              className={({ isActive }) => 
-                isActive 
-                  ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline" 
-                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline"
-              }
-            >
-              Mentorship
-            </NavLink>
-            <NavLink
-              to="/directory"
-              className={({ isActive }) => 
-                isActive 
-                  ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline" 
-                  : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline"
-              }
-            >
-              Directory
-            </NavLink>
-            {currentUser && role && (
-              <NavLink
-                to={`/${role.toLowerCase()}-dashboard`}
-                className={({ isActive }) => 
-                  isActive 
-                    ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline" 
-                    : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline"
-                }
-              >
-                Dashboard
-              </NavLink>
-            )}
-            
-            {/* Network Link with Badge */}
-            {currentUser && role && (
-              <NavLink
-                to={`/${role?.toLowerCase()}-dashboard/network`}
-                className={({ isActive }) => 
-                  isActive 
-                    ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline relative" 
-                    : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline relative"
-                }
-              >
-                Network
-                {pendingRequests > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {pendingRequests}
-                  </span>
-                )}
-              </NavLink>
-            )}
-            
-            {/* User Menu Items - Mobile */}
-            {currentUser ? (
-              <>
-                <a
-                  href="#"
-                  className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.location.href = '/profile';
-                  }}
-                >
-                  Profile
-                </a>
-                <button
-                  onClick={handleLogout}
-                  className="block w-full text-left px-3 py-2 rounded-md text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 no-underline"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/signup"
-                  className="block px-3 py-2 rounded-md bg-primary text-white hover:bg-opacity-90 hover:text-white no-underline"
-                >
-                  Sign Up
-                </Link>
-              </>
-            )}
-            
-            {/* Dark Mode Toggle for Mobile */}
+          <div className="flex items-center md:hidden space-x-4">
             <button
               onClick={toggleDarkMode}
-              className="flex items-center w-full px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white"
+              aria-label="Toggle dark mode"
             >
-              <span className="mr-2">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
               {isDarkMode ? (
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
@@ -421,9 +293,207 @@ const Navbar = () => {
                 </svg>
               )}
             </button>
+            
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none"
+              aria-expanded={isOpen}
+              aria-label="Main menu"
+            >
+              {isOpen ? (
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Mobile menu */}
+      <div 
+        className={`${
+          isOpen ? 'block' : 'hidden'
+        } md:hidden fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm`}
+        onClick={() => setIsOpen(false)}
+      >
+        <div 
+          ref={mobileMenuRef}
+          className={`fixed inset-y-0 right-0 max-w-[300px] w-full bg-white dark:bg-gray-900 shadow-xl transform transition-transform duration-300 ease-in-out ${
+            isOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Menu</h3>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="py-4 px-5">
+            {currentUser && (
+              <div className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center mb-4">
+                  <div className="h-12 w-12 rounded-full bg-primary-light flex items-center justify-center text-white text-xl mr-3">
+                    {getUserDisplayName().charAt(0)}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">{getUserDisplayName()}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{currentUser.email}</p>
+                  </div>
+                </div>
+                
+                <Link 
+                  to="/profile" 
+                  className="block py-2 text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline"
+                  onClick={handleNavClick}
+                >
+                  View Profile
+                </Link>
+                
+                {role && (
+                  <Link 
+                    to={`/${role.toLowerCase()}-dashboard`} 
+                    className="block py-2 text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline"
+                    onClick={handleNavClick}
+                  >
+                    Dashboard
+                    {pendingRequests > 0 && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        {pendingRequests}
+                      </span>
+                    )}
+                  </Link>
+                )}
+              </div>
+            )}
+            
+            <nav className="space-y-2">
+              <NavLink
+                to="/"
+                className={({ isActive }) => 
+                  isActive 
+                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                    : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
+                }
+                onClick={handleNavClick}
+              >
+                Home
+              </NavLink>
+              <NavLink
+                to="/events"
+                className={({ isActive }) => 
+                  isActive 
+                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                    : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
+                }
+                onClick={handleNavClick}
+              >
+                Events
+              </NavLink>
+              <NavLink
+                to="/jobs"
+                className={({ isActive }) => 
+                  isActive 
+                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                    : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
+                }
+                onClick={handleNavClick}
+              >
+                Jobs
+              </NavLink>
+              <NavLink
+                to="/mentorship"
+                className={({ isActive }) => 
+                  isActive 
+                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                    : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
+                }
+                onClick={handleNavClick}
+              >
+                Mentorship
+              </NavLink>
+              <NavLink
+                to="/directory"
+                className={({ isActive }) => 
+                  isActive 
+                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                    : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
+                }
+                onClick={handleNavClick}
+              >
+                Directory
+              </NavLink>
+            </nav>
+            
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              {currentUser ? (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-left py-3 px-4 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  <span className="flex items-center">
+                    <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Logout
+                  </span>
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <Link
+                    to="/login"
+                    className="block w-full py-3 px-4 rounded-md text-center bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 no-underline"
+                    onClick={handleNavClick}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="block w-full py-3 px-4 rounded-md text-center bg-primary hover:bg-primary-dark text-white no-underline"
+                    onClick={handleNavClick}
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </nav>
   );
 };
