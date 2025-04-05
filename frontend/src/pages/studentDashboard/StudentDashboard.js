@@ -7,6 +7,7 @@ import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import Network from "./components/Network";
 import { getConnectionRequests } from "../../services/connectionService";
+import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
 
 const StudentDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -227,85 +228,96 @@ const StudentDashboard = () => {
     };
   }, [notificationRef]);
 
-  // Fetch notifications (mock data for now)
+  // Replace mock notification data loading with actual data fetching
   useEffect(() => {
-    // Simulate fetching notifications from a server
-    const mockNotifications = [
-      {
-        id: 1,
-        type: 'assignment',
-        message: 'New assignment posted: Data Structures Project',
-        timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-        read: false,
-        linkTo: '/courses/cs101/assignments'
-      },
-      {
-        id: 2, 
-        type: 'message',
-        message: 'You received a new message from Prof. Johnson',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-        read: false,
-        linkTo: '/messages/prof-johnson-id'
-      },
-      {
-        id: 3,
-        type: 'connection',
-        message: 'Jane Smith (Alumni) accepted your connection request',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
-        read: true,
-        linkTo: '/directory/alumni/jane-smith-id'
-      },
-      {
-        id: 4,
-        type: 'event',
-        message: 'Reminder: Tech Career Fair tomorrow at 10 AM',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-        read: true,
-        linkTo: '/events/456'
-      },
-      {
-        id: 5,
-        type: 'deadline',
-        message: 'Assignment deadline approaching: AI Ethics Paper due in 2 days',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 36), // 1.5 days ago
-        read: true,
-        linkTo: '/courses/ai500/assignments/ethics-paper'
+    // Set up real-time listener for notifications
+    const fetchNotifications = async () => {
+      if (!currentUser) return;
+      
+      try {
+        // Initial fetch of notifications
+        const notificationsData = await getUserNotifications(currentUser.uid);
+        setNotifications(notificationsData);
+        setUnreadCount(notificationsData.filter(n => !n.read).length);
+        
+        // Set up subscription for real-time updates
+        const unsubscribe = subscribeToUserNotifications(currentUser.uid, (updatedNotifications) => {
+          setNotifications(updatedNotifications);
+          setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+        });
+        
+        // Return cleanup function
+        return unsubscribe;
+      } catch (error) {
+        console.error('Error setting up notifications:', error);
       }
-    ];
+    };
     
-    setNotifications(mockNotifications);
-    setUnreadCount(mockNotifications.filter(notification => !notification.read).length);
-  }, []);
+    const unsubscribe = fetchNotifications();
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [currentUser]);
 
-  // Mark a notification as read
-  const markAsRead = (notificationId) => {
-    setNotifications(prevNotifications => 
-      prevNotifications.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, read: true } 
-          : notification
-      )
-    );
-    
-    setUnreadCount(prevUnreadCount => {
-      const notification = notifications.find(n => n.id === notificationId);
-      return notification && !notification.read ? prevUnreadCount - 1 : prevUnreadCount;
-    });
+  // Mark a notification as read - update to use the service
+  const markAsRead = async (notificationId) => {
+    try {
+      await markNotificationAsRead(notificationId);
+      
+      // Update local state
+      const updatedNotifications = notifications.map(notification => 
+        notification.id === notificationId ? { ...notification, read: true } : notification
+      );
+      
+      setNotifications(updatedNotifications);
+      setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  // Mark all notifications as read
-  const markAllAsRead = () => {
-    setNotifications(prevNotifications => 
-      prevNotifications.map(notification => ({ ...notification, read: true }))
-    );
-    setUnreadCount(0);
+  // Mark all notifications as read - update to use the service
+  const markAllAsRead = async () => {
+    try {
+      if (!currentUser) return;
+      
+      await markAllNotificationsAsRead(currentUser.uid);
+      
+      // Update local state
+      const updatedNotifications = notifications.map(notification => ({ ...notification, read: true }));
+      setNotifications(updatedNotifications);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
   };
 
-  // Handle notification click
-  const handleNotificationClick = (notification) => {
-    markAsRead(notification.id);
-    navigate(notification.linkTo);
-    setShowNotifications(false);
+  // Handle notification click - update to use the service
+  const handleNotificationClick = async (notification) => {
+    try {
+      // Mark as read when clicked
+      if (!notification.read) {
+        await markNotificationAsRead(notification.id);
+        
+        // Update local state to reflect the change
+        const updatedNotifications = notifications.map(n => 
+          n.id === notification.id ? { ...n, read: true } : n
+        );
+        setNotifications(updatedNotifications);
+        setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+      }
+      
+      // Navigate to the link if available
+      if (notification.linkTo) {
+        navigate(notification.linkTo);
+      }
+      
+      setShowNotifications(false);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
   // Get notification icon based on type

@@ -16,6 +16,7 @@ import {
   Resources
 } from './components';
 import AlumniNetwork from './components/Network';
+import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
 
 const AlumniDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -273,94 +274,95 @@ const AlumniDashboard = () => {
     };
   }, [notificationRef]);
 
-  // Mock notification data
+  // Replace the notifications mock data loading with actual data fetching
   useEffect(() => {
-    // This would normally be fetched from an API
-    const mockNotifications = [
-      {
-        id: 1,
-        type: 'connection',
-        message: 'John Doe accepted your connection request',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-        read: false,
-        actionUrl: '/profile/123'
-      },
-      {
-        id: 2, 
-        type: 'event',
-        message: 'Reminder: Tech Meetup starts in 1 hour',
-        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-        read: false
-      },
-      {
-        id: 3,
-        type: 'job',
-        message: 'New job posting matches your profile: Senior Developer at TechCorp',
-        timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-        read: true,
-        actionUrl: '/jobs/456'
-      },
-      {
-        id: 4,
-        type: 'message',
-        message: 'Sarah Smith sent you a message',
-        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-        read: true
-      },
-      {
-        id: 5,
-        type: 'system',
-        message: 'Your profile has been successfully updated',
-        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-        read: true
+    // Set up real-time listener for notifications
+    const fetchNotifications = async () => {
+      if (!currentUser) return;
+      
+      try {
+        // Initial fetch of notifications
+        const notificationsData = await getUserNotifications(currentUser.uid);
+        setNotifications(notificationsData);
+        setUnreadCount(notificationsData.filter(n => !n.read).length);
+        
+        // Set up subscription for real-time updates
+        const unsubscribe = subscribeToUserNotifications(currentUser.uid, (updatedNotifications) => {
+          setNotifications(updatedNotifications);
+          setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+        });
+        
+        // Return cleanup function
+        return unsubscribe;
+      } catch (error) {
+        console.error('Error setting up notifications:', error);
       }
-    ];
+    };
     
-    setNotifications(mockNotifications);
-    setUnreadCount(mockNotifications.filter(n => !n.read).length);
-  }, []);
+    const unsubscribe = fetchNotifications();
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [currentUser]);
   
-  // Handle notification click
-  const handleNotificationClick = (notification) => {
-    // Mark as read when clicked
-    if (!notification.read) {
-      markAsRead(notification.id);
+  // Handle notification click - update to use the service
+  const handleNotificationClick = async (notification) => {
+    try {
+      // Mark as read when clicked
+      if (!notification.read) {
+        await markNotificationAsRead(notification.id);
+        
+        // Update local state to reflect the change
+        const updatedNotifications = notifications.map(n => 
+          n.id === notification.id ? { ...n, read: true } : n
+        );
+        setNotifications(updatedNotifications);
+        setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+      }
+      
+      // Navigate to the link if available
+      if (notification.linkTo) {
+        navigate(notification.linkTo);
+      }
+      
+      setShowNotifications(false);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
     }
-    
-    // Navigate to the action URL if available
-    if (notification.actionUrl) {
-      navigate(notification.actionUrl);
-    }
-    
-    setShowNotifications(false);
   };
 
   // Mark a notification as read
-  const markAsRead = (notificationId) => {
-    const updatedNotifications = notifications.map(notification => 
-      notification.id === notificationId ? { ...notification, read: true } : notification
-    );
-    
-    setNotifications(updatedNotifications);
-    setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+  const markAsRead = async (notificationId) => {
+    try {
+      await markNotificationAsRead(notificationId);
+      
+      // Update local state
+      const updatedNotifications = notifications.map(notification => 
+        notification.id === notificationId ? { ...notification, read: true } : notification
+      );
+      
+      setNotifications(updatedNotifications);
+      setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
   // Mark all notifications as read
-  const markAllAsRead = () => {
-    const updatedNotifications = notifications.map(notification => ({ ...notification, read: true }));
-    setNotifications(updatedNotifications);
-    setUnreadCount(0);
-  };
-
-  // Get notification icon based on type
-  const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'connection': return '🤝';
-      case 'event': return '📅';
-      case 'job': return '💼';
-      case 'message': return '✉️';
-      case 'system': return '🔔';
-      default: return '📌';
+  const markAllAsRead = async () => {
+    try {
+      if (!currentUser) return;
+      
+      await markAllNotificationsAsRead(currentUser.uid);
+      
+      // Update local state
+      const updatedNotifications = notifications.map(notification => ({ ...notification, read: true }));
+      setNotifications(updatedNotifications);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
     }
   };
 
@@ -394,6 +396,18 @@ const AlumniDashboard = () => {
     
     // Otherwise, return the date
     return timestamp.toLocaleDateString();
+  };
+
+  // Get notification icon based on type
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'connection': return '🤝';
+      case 'event': return '📅';
+      case 'job': return '💼';
+      case 'message': return '✉️';
+      case 'system': return '🔔';
+      default: return '��';
+    }
   };
 
   // Generate mock events data for testing

@@ -52,19 +52,63 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/events" element={<Events />} />
-              <Route path="/jobs" element={<Jobs />} />
-              <Route path="/mentorship" element={<Mentorship />} />
+              <Route path="/jobs" element={
+                <PrivateRoute>
+                  <Jobs />
+                </PrivateRoute>
+              } />
+              <Route path="/mentorship" element={
+                <PrivateRoute>
+                  <Mentorship />
+                </PrivateRoute>
+              } />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
-              <Route path="/directory" element={<Directory />} />
-              <Route path="/directory/alumni" element={<Directory />} />
-              <Route path="/directory/teacher" element={<Directory />} />
-              <Route path="/directory/student" element={<Directory />} />
-              <Route path="/alumni-directory" element={<Directory />} />
-              <Route path="/alumni-profile/:id" element={<AlumniProfile />} />
-              <Route path="/directory/alumni/:id" element={<AlumniProfile />} />
-              <Route path="/directory/teacher/:id" element={<TeacherProfile />} />
-              <Route path="/directory/student/:id" element={<StudentProfile />} />
+              <Route path="/directory" element={
+                <PrivateRoute>
+                  <Directory />
+                </PrivateRoute>
+              } />
+              <Route path="/directory/alumni" element={
+                <PrivateRoute>
+                  <Directory />
+                </PrivateRoute>
+              } />
+              <Route path="/directory/teacher" element={
+                <PrivateRoute>
+                  <Directory />
+                </PrivateRoute>
+              } />
+              <Route path="/directory/student" element={
+                <PrivateRoute>
+                  <Directory />
+                </PrivateRoute>
+              } />
+              <Route path="/alumni-directory" element={
+                <PrivateRoute>
+                  <Directory />
+                </PrivateRoute>
+              } />
+              <Route path="/alumni-profile/:id" element={
+                <PrivateRoute>
+                  <AlumniProfile />
+                </PrivateRoute>
+              } />
+              <Route path="/directory/alumni/:id" element={
+                <PrivateRoute>
+                  <AlumniProfile />
+                </PrivateRoute>
+              } />
+              <Route path="/directory/teacher/:id" element={
+                <PrivateRoute>
+                  <TeacherProfile />
+                </PrivateRoute>
+              } />
+              <Route path="/directory/student/:id" element={
+                <PrivateRoute>
+                  <StudentProfile />
+                </PrivateRoute>
+              } />
               <Route
                 path="/create-event"
                 element={

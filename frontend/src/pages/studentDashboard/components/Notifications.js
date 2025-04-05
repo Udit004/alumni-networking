@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { db } from '../../../firebaseConfig';
+import { markNotificationAsRead } from '../../../services/notificationService';
 
 const Notifications = ({ currentUser, isDarkMode }) => {
   const [notifications, setNotifications] = useState([]);
@@ -16,8 +17,8 @@ const Notifications = ({ currentUser, isDarkMode }) => {
         const notificationsRef = collection(db, 'notifications');
         const q = query(
           notificationsRef,
-          where('recipientId', '==', currentUser.uid),
-          orderBy('createdAt', 'desc'),
+          where('userId', '==', currentUser.uid),
+          orderBy('timestamp', 'desc'),
           limit(20)
         );
         
@@ -43,6 +44,25 @@ const Notifications = ({ currentUser, isDarkMode }) => {
     
     fetchNotifications();
   }, [currentUser]);
+
+  const handleMarkAsRead = async (event, notificationId) => {
+    event.stopPropagation(); // Prevent the container click event
+    
+    try {
+      await markNotificationAsRead(notificationId);
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === notificationId 
+            ? { ...notification, read: true } 
+            : notification
+        )
+      );
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
 
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return '';
@@ -123,7 +143,7 @@ const Notifications = ({ currentUser, isDarkMode }) => {
                         {notification.title || 'New Notification'}
                       </p>
                       <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">
-                        {formatTimestamp(notification.createdAt)}
+                        {formatTimestamp(notification.timestamp)}
                       </span>
                     </div>
                     
@@ -131,14 +151,25 @@ const Notifications = ({ currentUser, isDarkMode }) => {
                       {notification.message}
                     </p>
                     
-                    {notification.actionUrl && (
-                      <a 
-                        href={notification.actionUrl}
-                        className="text-blue-600 dark:text-blue-400 text-sm hover:underline inline-block mt-1"
-                      >
-                        {notification.actionText || 'View Details'}
-                      </a>
-                    )}
+                    <div className="flex justify-between items-center mt-2">
+                      {notification.actionUrl && (
+                        <a 
+                          href={notification.actionUrl}
+                          className="text-blue-600 dark:text-blue-400 text-sm hover:underline inline-block"
+                        >
+                          {notification.actionText || 'View Details'}
+                        </a>
+                      )}
+                      
+                      {!notification.read && (
+                        <button
+                          onClick={(e) => handleMarkAsRead(e, notification.id)}
+                          className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                        >
+                          Mark as read
+                        </button>
+                      )}
+                    </div>
                   </div>
                   
                   {!notification.read && (

@@ -53,17 +53,44 @@ ensureCollections();
 // Create a new notification
 export const createNotification = async (notification) => {
   try {
+    console.log('Creating notification:', notification);
+    
+    if (!notification || !notification.userId) {
+      console.error('Invalid notification object:', notification);
+      throw new Error('Invalid notification: missing required fields');
+    }
+    
+    // Make sure timestamp is not undefined
+    const timestamp = serverTimestamp();
+    
     const notificationData = {
       ...notification,
-      timestamp: serverTimestamp(),
-      read: false
+      timestamp: timestamp,
+      read: false,
+      createdAt: new Date().toISOString() // Backup readable timestamp
     };
     
-    const docRef = await addDoc(collection(db, 'notifications'), notificationData);
-    console.log('Notification created with ID:', docRef.id);
-    return { id: docRef.id, ...notificationData };
+    console.log('Saving notification to Firestore:', notificationData);
+    
+    // Use try/catch specifically for the Firestore operation
+    try {
+      const docRef = await addDoc(collection(db, 'notifications'), notificationData);
+      console.log('Notification created with ID:', docRef.id);
+      
+      // Return a representation that can be used immediately (serverTimestamp is null until committed)
+      return { 
+        id: docRef.id, 
+        ...notificationData,
+        timestamp: new Date() // Use a JavaScript Date for immediate use
+      };
+    } catch (firestoreError) {
+      console.error('Firestore error while saving notification:', firestoreError);
+      console.error('Notification that failed:', notificationData);
+      throw new Error(`Firestore error: ${firestoreError.message}`);
+    }
   } catch (error) {
-    console.error('Error creating notification:', error);
+    console.error('Error in createNotification:', error);
+    console.error('Original notification data:', notification);
     throw error;
   }
 };
@@ -174,16 +201,41 @@ export const getUnreadNotificationsCount = (userId, callback) => {
 // Helper function to create a connection request notification
 export const createConnectionRequestNotification = async (fromUser, toUserId) => {
   try {
-    return await createNotification({
+    console.log('Creating connection request notification', {
+      fromUser: { id: fromUser.id, name: fromUser.name },
+      toUserId,
+      timestamp: new Date().toISOString()
+    });
+    
+    if (!fromUser || !fromUser.id) {
+      console.error('Invalid fromUser object:', fromUser);
+      throw new Error('Invalid fromUser object');
+    }
+    
+    if (!toUserId) {
+      console.error('Invalid toUserId:', toUserId);
+      throw new Error('Invalid toUserId');
+    }
+    
+    const notificationData = {
       userId: toUserId,
       type: 'connection',
       message: `${fromUser.name || 'Someone'} sent you a connection request`,
       linkTo: `/directory/user/${fromUser.id}`,
       sourceId: fromUser.id,
       sourceType: 'user'
-    });
+    };
+    
+    console.log('Notification data prepared:', notificationData);
+    
+    const notificationResult = await createNotification(notificationData);
+    console.log('Connection request notification created:', notificationResult);
+    
+    return notificationResult;
   } catch (error) {
     console.error('Error creating connection request notification:', error);
+    // Log more details about the parameters that caused the error
+    console.error('Notification parameters:', { fromUser, toUserId });
     throw error;
   }
 };
@@ -191,16 +243,41 @@ export const createConnectionRequestNotification = async (fromUser, toUserId) =>
 // Helper function to create a connection acceptance notification
 export const createConnectionAcceptanceNotification = async (fromUser, toUserId) => {
   try {
-    return await createNotification({
+    console.log('Creating connection acceptance notification', {
+      fromUser: { id: fromUser.id, name: fromUser.name },
+      toUserId,
+      timestamp: new Date().toISOString()
+    });
+    
+    if (!fromUser || !fromUser.id) {
+      console.error('Invalid fromUser object:', fromUser);
+      throw new Error('Invalid fromUser object');
+    }
+    
+    if (!toUserId) {
+      console.error('Invalid toUserId:', toUserId);
+      throw new Error('Invalid toUserId');
+    }
+    
+    const notificationData = {
       userId: toUserId,
       type: 'connection',
       message: `${fromUser.name || 'Someone'} accepted your connection request`,
       linkTo: `/directory/user/${fromUser.id}`,
       sourceId: fromUser.id,
       sourceType: 'user'
-    });
+    };
+    
+    console.log('Notification data prepared:', notificationData);
+    
+    const notificationResult = await createNotification(notificationData);
+    console.log('Connection acceptance notification created:', notificationResult);
+    
+    return notificationResult;
   } catch (error) {
     console.error('Error creating connection acceptance notification:', error);
+    // Log more details about the parameters that caused the error
+    console.error('Notification parameters:', { fromUser, toUserId });
     throw error;
   }
 };

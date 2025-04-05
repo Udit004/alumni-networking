@@ -103,14 +103,27 @@ export const sendConnectionRequest = async (fromUserId, toUserId) => {
     const docRef = await addDoc(collection(db, 'connectionRequests'), connectionRequest);
     console.log('Connection request created with ID:', docRef.id);
     
-    // Send notification to the recipient
-    await createConnectionRequestNotification(
-      {
-        id: fromUserId,
-        name: userData.name || userData.displayName || 'A user'
-      }, 
-      toUserId
-    );
+    // Send notification to the recipient with improved error handling
+    try {
+      console.log('Sending connection request notification', {
+        fromUserId,
+        fromUserName: userData.name || userData.displayName || 'A user',
+        toUserId
+      });
+      
+      const notificationResult = await createConnectionRequestNotification(
+        {
+          id: fromUserId,
+          name: userData.name || userData.displayName || 'A user'
+        }, 
+        toUserId
+      );
+      
+      console.log('Connection request notification sent successfully:', notificationResult);
+    } catch (notificationError) {
+      console.error('Failed to create notification for connection request, but request was created:', notificationError);
+      // Don't fail the whole operation if just the notification fails
+    }
     
     return { 
       success: true, 
