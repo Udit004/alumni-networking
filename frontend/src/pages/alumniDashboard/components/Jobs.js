@@ -30,11 +30,22 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
 
   useEffect(() => {
     fetchJobs();
-  }, []);
+  }, [user]);
 
   const fetchJobs = async () => {
     try {
       setLoading(true);
+      
+      if (!user) {
+        console.log('User not authenticated yet, skipping API call');
+        setJobs([]);
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Fetching jobs with URL:', `${API_URL}/api/jobs/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`);
+      console.log('User UID:', user.uid);
+      console.log('User role:', role);
       
       const response = await fetch(`${API_URL}/api/jobs/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
         method: 'GET',
@@ -44,24 +55,37 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
         }
       });
 
+      console.log('API Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch jobs');
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        throw new Error(`Failed to fetch jobs: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
       
       // Use the actual API data
-      console.log('Jobs received from API:', {
-        jobs: data.jobs?.length || 0
-      });
+      console.log('Jobs received from API:', data);
+      console.log('Jobs array structure:', Array.isArray(data.jobs) ? 'Array' : typeof data.jobs);
+      console.log('Number of jobs received:', data.jobs?.length || 0);
       
       // Sort jobs by date
       const sortedJobs = data.jobs?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) || [];
-      setJobs(sortedJobs);
+      console.log('Sorted jobs length:', sortedJobs.length);
+      
+      // If no jobs returned from API but user is authenticated, show mock data for testing
+      if (sortedJobs.length === 0 && user) {
+        console.log('No jobs returned from API, using mock data for testing');
+        const mockJobs = generateMockJobs();
+        setJobs(mockJobs);
+      } else {
+        setJobs(sortedJobs);
+      }
       
     } catch (err) {
       setError('Failed to load jobs. Please try again.');
-      console.error('Error fetching jobs:', err);
+      console.error('Error fetching jobs (detailed):', err.message, err.stack);
     } finally {
       setLoading(false);
     }
@@ -72,6 +96,13 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
     
     try {
       setLoading(true);
+      
+      // Check if user exists
+      if (!user) {
+        setError('You need to be logged in to create a job posting');
+        setLoading(false);
+        return;
+      }
       
       const jobData = {
         ...jobFormData,
@@ -117,6 +148,13 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
     
     try {
       setLoading(true);
+      
+      // Check if user exists
+      if (!user) {
+        setError('You need to be logged in to update a job posting');
+        setLoading(false);
+        return;
+      }
       
       const jobData = {
         ...jobFormData
@@ -164,6 +202,14 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
       setIsDeleting(true);
       setDeleteId(jobId);
       setDeleteError('');
+      
+      // Check if user exists
+      if (!user) {
+        setDeleteError('You need to be logged in to delete a job posting');
+        setIsDeleting(false);
+        setDeleteId(null);
+        return;
+      }
       
       const response = await fetch(`${API_URL}/api/jobs/${jobId}?firebaseUID=${user?.uid}&role=${role}`, {
         method: 'DELETE',
@@ -269,6 +315,51 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
     
     return matchesSearch && matchesType;
   });
+
+  // Generate mock job data for testing
+  const generateMockJobs = () => {
+    const mockJobTitles = [
+      'Senior Software Engineer', 
+      'Product Manager', 
+      'UX Designer', 
+      'Data Scientist', 
+      'DevOps Engineer'
+    ];
+    
+    const mockCompanies = [
+      'Tech Innovations Inc.', 
+      'Global Solutions Ltd.', 
+      'Digital Frontiers', 
+      'NextGen Systems', 
+      'Data Analytics Pro'
+    ];
+    
+    const mockLocations = [
+      'New York, NY', 
+      'San Francisco, CA', 
+      'Austin, TX', 
+      'Seattle, WA', 
+      'Remote'
+    ];
+    
+    const mockJobTypes = ['Full-time', 'Part-time', 'Contract', 'Internship'];
+    
+    return Array.from({ length: 5 }, (_, i) => ({
+      _id: `mock-job-${i+1}`,
+      title: mockJobTitles[i % mockJobTitles.length],
+      company: mockCompanies[i % mockCompanies.length],
+      location: mockLocations[i % mockLocations.length],
+      type: mockJobTypes[i % mockJobTypes.length],
+      description: 'This is a mock job description for testing purposes. The real job description would contain details about the role, responsibilities, and requirements.',
+      requirements: 'Mock requirements: 3+ years of experience, relevant degree, strong communication skills.',
+      salary: `$${80 + i * 10}k - $${100 + i * 10}k`,
+      contactEmail: 'jobs@example.com',
+      applicationDeadline: new Date(Date.now() + (i + 1) * 7 * 24 * 60 * 60 * 1000).toISOString(), // i+1 weeks from now
+      createdAt: new Date(Date.now() - (i * 24 * 60 * 60 * 1000)).toISOString(), // i days ago
+      applicants: Math.floor(Math.random() * 20),
+      creatorId: user?.uid
+    }));
+  };
 
   return (
     <div className="jobs-section space-y-6">

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import './Navbar.css'; // Add this import
+import { getConnectionRequests } from "../services/connectionService";
+import './Navbar.css';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
+  const [pendingRequests, setPendingRequests] = useState(0);
   const { currentUser, role, userData, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -47,6 +49,25 @@ const Navbar = () => {
     return 'User';
   };
 
+  // Fetch pending connection requests
+  useEffect(() => {
+    const fetchPendingRequests = async () => {
+      if (currentUser) {
+        try {
+          const requests = await getConnectionRequests(currentUser.uid);
+          setPendingRequests(requests.incoming.length);
+        } catch (error) {
+          console.error('Error fetching pending requests:', error);
+        }
+      }
+    };
+
+    fetchPendingRequests();
+    // Set up an interval to check for new requests every minute
+    const interval = setInterval(fetchPendingRequests, 60000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
+
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-lg z-50 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -65,7 +86,7 @@ const Navbar = () => {
             </Link>
           </div>
 
-                    {/* Desktop Navigation */}
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             <NavLink
               to="/"
@@ -129,7 +150,6 @@ const Navbar = () => {
                 Dashboard
               </NavLink>
             )}
-
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
@@ -326,6 +346,25 @@ const Navbar = () => {
                 }
               >
                 Dashboard
+              </NavLink>
+            )}
+            
+            {/* Network Link with Badge */}
+            {currentUser && role && (
+              <NavLink
+                to={`/${role?.toLowerCase()}-dashboard/network`}
+                className={({ isActive }) => 
+                  isActive 
+                    ? "block px-3 py-2 rounded-md text-base font-medium text-primary bg-gray-100 dark:bg-gray-800 dark:text-primary no-underline relative" 
+                    : "block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-primary no-underline relative"
+                }
+              >
+                Network
+                {pendingRequests > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {pendingRequests}
+                  </span>
+                )}
               </NavLink>
             )}
             

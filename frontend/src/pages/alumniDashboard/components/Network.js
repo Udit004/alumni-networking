@@ -4,7 +4,16 @@ import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../../context/AuthContext';
 
 const Network = ({ isDarkMode }) => {
-  const [activeTab, setActiveTab] = useState('connections');
+  const [activeTab, setActiveTab] = useState(() => {
+    // Check localStorage for saved tab
+    const savedTab = window.localStorage.getItem('networkActiveTab');
+    if (savedTab) {
+      // Clear it after reading
+      window.localStorage.removeItem('networkActiveTab');
+      return savedTab;
+    }
+    return 'connections';
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [connections, setConnections] = useState([]);
   const [recommendations, setRecommendations] = useState([]);

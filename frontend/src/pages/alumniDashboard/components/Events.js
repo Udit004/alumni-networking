@@ -66,15 +66,20 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
   };
 
   const filteredEvents = events.filter((event) => {
-    const matchesSearch = event.title?.toLowerCase().includes(search.toLowerCase());
-    const eventDate = new Date(event.date);
+    if (!event) return false;
+    
+    const matchesSearch = event.title?.toLowerCase().includes(search.toLowerCase()) || 
+                          event.description?.toLowerCase().includes(search.toLowerCase()) || 
+                          event.location?.toLowerCase().includes(search.toLowerCase());
+    
+    const eventDate = event.date ? new Date(event.date) : null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     let matchesDateFilter = true;
-    if (filter === 'upcoming') {
+    if (filter === 'upcoming' && eventDate) {
       matchesDateFilter = eventDate >= today;
-    } else if (filter === 'past') {
+    } else if (filter === 'past' && eventDate) {
       matchesDateFilter = eventDate < today;
     }
 

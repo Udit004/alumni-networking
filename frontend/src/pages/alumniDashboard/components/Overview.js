@@ -78,7 +78,15 @@ const Overview = ({ connections, isDarkMode }) => {
               Find New Connections
             </button>
             <button 
-              onClick={() => navigate('/connection-requests')}
+              onClick={() => {
+                navigate('/alumni-dashboard');
+                // Set the active section to network
+                window.localStorage.setItem('alumniActiveSection', 'network');
+                // Set the active tab to pending in the Network component
+                window.localStorage.setItem('networkActiveTab', 'pending');
+                // Force page reload to apply changes
+                window.location.reload();
+              }}
               className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors hover:bg-gray-200 dark:hover:bg-gray-600"
             >
               Connection Requests

@@ -6,6 +6,7 @@ import "./StudentDashboard.css";
 import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import Network from "./components/Network";
+import { getConnectionRequests } from "../../services/connectionService";
 
 const StudentDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -35,6 +36,7 @@ const StudentDashboard = () => {
   });
   const [connections, setConnections] = useState([]);
   const [connectionLoading, setConnectionLoading] = useState(true);
+  const [pendingRequests, setPendingRequests] = useState({ incoming: [], outgoing: [] });
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
@@ -121,7 +123,24 @@ const StudentDashboard = () => {
     
     fetchStudentProfile();
   }, [currentUser]);
-  
+
+  useEffect(() => {
+    const fetchPendingRequests = async () => {
+      if (currentUser) {
+        try {
+          const requests = await getConnectionRequests(currentUser.uid);
+          setPendingRequests(requests);
+        } catch (error) {
+          console.error('Error fetching pending requests:', error);
+        }
+      }
+    };
+
+    fetchPendingRequests();
+    const interval = setInterval(fetchPendingRequests, 60000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
+
   // Function to fetch connection profile details
   const fetchConnections = async (connectionIds) => {
     try {
@@ -370,6 +389,28 @@ const StudentDashboard = () => {
               )}
             </button>
           ))}
+          <button
+            onClick={() => setActiveSection('network')}
+            className={`w-full text-left px-4 py-2 rounded-lg flex items-center ${
+              activeSection === 'network'
+                ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+          >
+            <span className="mr-3">🔗</span>
+            <div className="flex items-center justify-between w-full">
+              {isNavExpanded && (
+                <>
+                  <span>Network</span>
+                  {pendingRequests.incoming.length > 0 && (
+                    <span className="ml-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {pendingRequests.incoming.length}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+          </button>
         </nav>
       </div>
 
@@ -857,10 +898,10 @@ const StudentDashboard = () => {
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex flex-col items-center text-center">
                       <div className="h-20 w-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
-                        <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Suggested Alumni" className="h-full w-full object-cover" />
+                        <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Suggested Alumni" className="w-full h-full object-cover" />
                       </div>
-                      <h4 className="font-semibold text-gray-800 dark:text-white">Robert Johnson</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Software Engineer at Google</p>
+                      <h3 className="text-lg font-bold text-gray-800 dark:text-white">Robert Johnson</h3>
+                      <p className="text-gray-600 dark:text-gray-400">Software Engineer at Google</p>
                       <div className="flex flex-wrap justify-center gap-1 mb-4">
                         <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
                           React
@@ -882,10 +923,10 @@ const StudentDashboard = () => {
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex flex-col items-center text-center">
                       <div className="h-20 w-20 rounded-full bg-purple-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
-                        <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Suggested Teacher" className="h-full w-full object-cover" />
+                        <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Suggested Teacher" className="w-full h-full object-cover" />
                       </div>
-                      <h4 className="font-semibold text-gray-800 dark:text-white">Dr. Emily Williams</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Computer Science Department</p>
+                      <h3 className="text-lg font-bold text-gray-800 dark:text-white">Dr. Emily Williams</h3>
+                      <p className="text-gray-600 dark:text-gray-400">Computer Science Department</p>
                       <div className="flex flex-wrap justify-center gap-1 mb-4">
                         <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs">
                           Machine Learning
@@ -907,10 +948,10 @@ const StudentDashboard = () => {
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex flex-col items-center text-center">
                       <div className="h-20 w-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
-                        <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Suggested Alumni" className="h-full w-full object-cover" />
+                        <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Suggested Alumni" className="w-full h-full object-cover" />
                       </div>
-                      <h4 className="font-semibold text-gray-800 dark:text-white">Sarah Miller</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Product Manager at Amazon</p>
+                      <h3 className="text-lg font-bold text-gray-800 dark:text-white">Sarah Miller</h3>
+                      <p className="text-gray-600 dark:text-gray-400">Product Manager at Amazon</p>
                       <div className="flex flex-wrap justify-center gap-1 mb-4">
                         <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
                           Product Management
@@ -1095,16 +1136,13 @@ const StudentDashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 col-span-1 md:col-span-3"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
-                    <span>Recommended Mentors</span>
-                    <span className="text-sm px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">New</span>
-                  </h2>
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Recommended Mentors</h2>
                 </div>
 
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-transform hover:scale-105"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex flex-col items-center text-center mb-4">
-                    <div className="h-24 w-24 rounded-full overflow-hidden mb-4">
+                    <div className="h-24 w-24 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
                       <img src="https://randomuser.me/api/portraits/men/55.jpg" alt="Recommended Mentor" className="w-full h-full object-cover" />
                     </div>
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white">Michael Chen</h3>
@@ -1128,7 +1166,7 @@ const StudentDashboard = () => {
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-transform hover:scale-105"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex flex-col items-center text-center mb-4">
-                    <div className="h-24 w-24 rounded-full overflow-hidden mb-4">
+                    <div className="h-24 w-24 rounded-full bg-purple-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
                       <img src="https://randomuser.me/api/portraits/women/63.jpg" alt="Recommended Mentor" className="w-full h-full object-cover" />
                     </div>
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white">Emma Rodriguez</h3>
@@ -1152,7 +1190,7 @@ const StudentDashboard = () => {
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-transform hover:scale-105"
                      style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                   <div className="flex flex-col items-center text-center mb-4">
-                    <div className="h-24 w-24 rounded-full overflow-hidden mb-4">
+                    <div className="h-24 w-24 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
                       <img src="https://randomuser.me/api/portraits/men/22.jpg" alt="Recommended Mentor" className="w-full h-full object-cover" />
                     </div>
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white">Daniel Kim</h3>
@@ -1669,7 +1707,7 @@ const StudentDashboard = () => {
           )}
 
           {activeSection === 'forum' && (
-            <div className="px-4 py-6">
+            <div>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
@@ -1710,8 +1748,8 @@ const StudentDashboard = () => {
                 </div>
                 <div className="w-full md:w-auto">
                   <select 
-                    className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
-                    style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
+                    className="py-1 px-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ backgroundColor: isDarkMode ? '#374151' : 'white' }}
                   >
                     <option value="">All Categories</option>
                     <option value="technology">Technology</option>
@@ -2075,13 +2113,12 @@ const StudentDashboard = () => {
           )}
 
           {activeSection === 'settings' && (
-            <div className="px-4 py-6">
+            <div>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     Settings
                   </h2>
@@ -2124,7 +2161,7 @@ const StudentDashboard = () => {
                       <button className="w-full px-4 py-3 flex items-center text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        </svg>
+                      </svg>
                         Account
                       </button>
                     </div>
@@ -2133,7 +2170,8 @@ const StudentDashboard = () => {
 
                 {/* Settings Content */}
                 <div className="md:col-span-3">
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+                       style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                     <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Social Profiles</h3>
                     
                     <div className="space-y-4">
@@ -2212,12 +2250,18 @@ const StudentDashboard = () => {
                         </div>
                         <label className="inline-flex items-center cursor-pointer">
                           <input type="checkbox" value="" className="sr-only peer" />
-                          <div className="relative w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                          <div className="relative inline-block w-12 align-middle select-none">
+                            <input type="checkbox" id="push-toggle" className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in-out translate-x-0" />
+                            <label htmlFor="push-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                          </div>
                         </label>
                       </div>
 
-                      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <h4 className="font-medium text-gray-800 dark:text-white mb-3">Layout Density</h4>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="font-medium text-gray-800 dark:text-white">Layout Density</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Adjust the layout density to your preference</p>
+                        </div>
                         <div className="flex gap-4">
                           <label className="flex-1 relative border border-gray-300 dark:border-gray-600 rounded-lg p-3 flex flex-col items-center cursor-pointer hover:border-blue-500 dark:hover:border-blue-500">
                             <input type="radio" name="density" className="sr-only" defaultChecked />
@@ -2233,7 +2277,7 @@ const StudentDashboard = () => {
                             <input type="radio" name="density" className="sr-only" />
                             <span className="h-10 w-10 flex justify-center items-center bg-gray-100 dark:bg-gray-700 rounded-lg mb-2">
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h16a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zM4 13h16a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4a1 1 0 011-1z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h16a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1zM4 13h16a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4a1 1 0 011-1z" />
                               </svg>
                             </span>
                             <span className="text-sm font-medium text-gray-800 dark:text-white">Comfortable</span>
@@ -2248,8 +2292,9 @@ const StudentDashboard = () => {
           )}
 
           {activeSection === 'notifications' && (
-            <div className="notifications-section">
-              <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <div>
+              <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                   <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 md:mb-0">My Notifications</h2>
                   <div className="flex gap-2">

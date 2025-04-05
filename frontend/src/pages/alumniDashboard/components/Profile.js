@@ -1,13 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 
-const Profile = ({ profileData, currentUser, isDarkMode }) => {
+const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState(profileData);
+  const [formData, setFormData] = useState({
+    name: profileData?.name || "",
+    email: profileData?.email || "",
+    phone: profileData?.phone || "",
+    dateOfBirth: profileData?.dateOfBirth || "",
+    address: profileData?.address || "",
+    graduationYear: profileData?.graduationYear || "",
+    program: profileData?.program || "",
+    currentPosition: profileData?.currentPosition || "",
+    company: profileData?.company || "",
+    skills: Array.isArray(profileData?.skills) ? profileData.skills : [],
+    achievements: Array.isArray(profileData?.achievements) ? profileData.achievements : [],
+    projects: Array.isArray(profileData?.projects) ? profileData.projects : [],
+    bio: profileData?.bio || ""
+  });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  // Update formData when profileData changes
+  useEffect(() => {
+    if (profileData) {
+      setFormData({
+        name: profileData?.name || "",
+        email: profileData?.email || "",
+        phone: profileData?.phone || "",
+        dateOfBirth: profileData?.dateOfBirth || "",
+        address: profileData?.address || "",
+        graduationYear: profileData?.graduationYear || "",
+        program: profileData?.program || "",
+        currentPosition: profileData?.currentPosition || "",
+        company: profileData?.company || "",
+        skills: Array.isArray(profileData?.skills) ? profileData.skills : [],
+        achievements: Array.isArray(profileData?.achievements) ? profileData.achievements : [],
+        projects: Array.isArray(profileData?.projects) ? profileData.projects : [],
+        bio: profileData?.bio || ""
+      });
+    }
+  }, [profileData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -18,7 +53,7 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
   };
 
   const handleSkillChange = (index, value) => {
-    const updatedSkills = [...formData.skills];
+    const updatedSkills = [...(formData.skills || [])];
     updatedSkills[index] = value;
     setFormData({
       ...formData,
@@ -29,12 +64,12 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
   const addSkill = () => {
     setFormData({
       ...formData,
-      skills: [...formData.skills, '']
+      skills: [...(formData.skills || []), '']
     });
   };
 
   const removeSkill = (index) => {
-    const updatedSkills = [...formData.skills];
+    const updatedSkills = [...(formData.skills || [])];
     updatedSkills.splice(index, 1);
     setFormData({
       ...formData,
@@ -60,7 +95,7 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
         program: formData.program,
         currentPosition: formData.currentPosition,
         company: formData.company,
-        skills: formData.skills.filter(skill => skill.trim() !== ''),
+        skills: (formData.skills || []).filter(skill => skill && skill.trim() !== ''),
         bio: formData.bio
       });
 
@@ -128,7 +163,7 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
                   type="text"
                   id="name"
                   name="name"
-                  value={isEditing ? formData.name : profileData.name}
+                  value={isEditing ? (formData.name || "") : (profileData?.name || "")}
                   onChange={handleChange}
                   readOnly={!isEditing}
                   className={`w-full p-2 border rounded-lg ${!isEditing ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} border-gray-300 dark:border-gray-600`}
@@ -141,7 +176,7 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
                   type="email"
                   id="email"
                   name="email"
-                  value={profileData.email}
+                  value={profileData?.email || ""}
                   readOnly
                   className="w-full p-2 border rounded-lg bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
                 />
@@ -154,7 +189,7 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
                   type="tel"
                   id="phone"
                   name="phone"
-                  value={isEditing ? formData.phone : profileData.phone}
+                  value={isEditing ? (formData.phone || "") : (profileData?.phone || "")}
                   onChange={handleChange}
                   readOnly={!isEditing}
                   className={`w-full p-2 border rounded-lg ${!isEditing ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} border-gray-300 dark:border-gray-600`}
@@ -167,7 +202,7 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
                   type="date"
                   id="dateOfBirth"
                   name="dateOfBirth"
-                  value={isEditing ? formData.dateOfBirth : profileData.dateOfBirth}
+                  value={isEditing ? (formData.dateOfBirth || "") : (profileData?.dateOfBirth || "")}
                   onChange={handleChange}
                   readOnly={!isEditing}
                   className={`w-full p-2 border rounded-lg ${!isEditing ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} border-gray-300 dark:border-gray-600`}
@@ -179,7 +214,7 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
                 <textarea
                   id="address"
                   name="address"
-                  value={isEditing ? formData.address : profileData.address}
+                  value={isEditing ? (formData.address || "") : (profileData?.address || "")}
                   onChange={handleChange}
                   readOnly={!isEditing}
                   rows="2"
@@ -195,7 +230,7 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
                   type="number"
                   id="graduationYear"
                   name="graduationYear"
-                  value={isEditing ? formData.graduationYear : profileData.graduationYear}
+                  value={isEditing ? (formData.graduationYear || "") : (profileData?.graduationYear || "")}
                   onChange={handleChange}
                   readOnly={!isEditing}
                   className={`w-full p-2 border rounded-lg ${!isEditing ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} border-gray-300 dark:border-gray-600`}
@@ -208,7 +243,7 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
                   type="text"
                   id="program"
                   name="program"
-                  value={isEditing ? formData.program : profileData.program}
+                  value={isEditing ? (formData.program || "") : (profileData?.program || "")}
                   onChange={handleChange}
                   readOnly={!isEditing}
                   className={`w-full p-2 border rounded-lg ${!isEditing ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} border-gray-300 dark:border-gray-600`}
@@ -221,7 +256,7 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
                   type="text"
                   id="currentPosition"
                   name="currentPosition"
-                  value={isEditing ? formData.currentPosition : profileData.currentPosition}
+                  value={isEditing ? (formData.currentPosition || "") : (profileData?.currentPosition || "")}
                   onChange={handleChange}
                   readOnly={!isEditing}
                   className={`w-full p-2 border rounded-lg ${!isEditing ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} border-gray-300 dark:border-gray-600`}
@@ -234,7 +269,7 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
                   type="text"
                   id="company"
                   name="company"
-                  value={isEditing ? formData.company : profileData.company}
+                  value={isEditing ? (formData.company || "") : (profileData?.company || "")}
                   onChange={handleChange}
                   readOnly={!isEditing}
                   className={`w-full p-2 border rounded-lg ${!isEditing ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} border-gray-300 dark:border-gray-600`}
@@ -246,7 +281,7 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
                 <textarea
                   id="bio"
                   name="bio"
-                  value={isEditing ? formData.bio : profileData.bio}
+                  value={isEditing ? (formData.bio || "") : (profileData?.bio || "")}
                   onChange={handleChange}
                   readOnly={!isEditing}
                   rows="3"
@@ -259,26 +294,33 @@ const Profile = ({ profileData, currentUser, isDarkMode }) => {
           <div className="mt-6">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Skills</label>
             <div className="space-y-2">
-              {(isEditing ? formData.skills : profileData.skills).map((skill, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={skill}
-                    onChange={(e) => isEditing && handleSkillChange(index, e.target.value)}
-                    readOnly={!isEditing}
-                    className={`flex-1 p-2 border rounded-lg ${!isEditing ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} border-gray-300 dark:border-gray-600`}
-                  />
-                  {isEditing && (
-                    <button 
-                      type="button"
-                      onClick={() => removeSkill(index)}
-                      className="p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                    >
-                      ❌
-                    </button>
-                  )}
-                </div>
-              ))}
+              {(() => {
+                // Ensure we have valid arrays to work with
+                const skillsToRender = isEditing 
+                  ? (Array.isArray(formData?.skills) ? formData.skills : []) 
+                  : (Array.isArray(profileData?.skills) ? profileData.skills : []);
+                
+                return skillsToRender.map((skill, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={skill || ""}
+                      onChange={(e) => isEditing && handleSkillChange(index, e.target.value)}
+                      readOnly={!isEditing}
+                      className={`flex-1 p-2 border rounded-lg ${!isEditing ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} border-gray-300 dark:border-gray-600`}
+                    />
+                    {isEditing && (
+                      <button 
+                        type="button"
+                        onClick={() => removeSkill(index)}
+                        className="p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        ❌
+                      </button>
+                    )}
+                  </div>
+                ));
+              })()}
               {isEditing && (
                 <button 
                   type="button"

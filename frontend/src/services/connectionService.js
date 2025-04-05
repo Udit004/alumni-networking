@@ -166,26 +166,23 @@ export const acceptConnectionRequest = async (requestId) => {
     
     const requestData = requestSnap.data();
     
-    // Create a connection document (in both directions for a bidirectional connection)
+    // Create a batch for atomic operations
     const batch = writeBatch(db);
     
     // Create timestamp
     const now = serverTimestamp();
     
-    // Connection from user A to user B
-    const connectionAtoB = doc(collection(db, 'connections'));
-    batch.set(connectionAtoB, {
-      user1: requestData.from,
-      user2: requestData.to,
-      createdAt: now
+    // Get user document references
+    const fromUserRef = doc(db, 'users', requestData.from);
+    const toUserRef = doc(db, 'users', requestData.to);
+    
+    // Update both users' connections arrays
+    batch.update(fromUserRef, {
+      connections: arrayUnion(requestData.to)
     });
     
-    // Connection from user B to user A (for bidirectional lookup)
-    const connectionBtoA = doc(collection(db, 'connections'));
-    batch.set(connectionBtoA, {
-      user1: requestData.to,
-      user2: requestData.from,
-      createdAt: now
+    batch.update(toUserRef, {
+      connections: arrayUnion(requestData.from)
     });
     
     // Update the request status to accepted
@@ -193,6 +190,19 @@ export const acceptConnectionRequest = async (requestId) => {
       status: 'accepted',
       updatedAt: now
     });
+    
+    // Get user details for notification
+    const fromUserDoc = await getDoc(fromUserRef);
+    const fromUserData = fromUserDoc.data();
+    
+    // Create acceptance notification
+    await createConnectionAcceptanceNotification(
+      {
+        id: requestData.to,
+        name: fromUserData.name || fromUserData.displayName || 'A user'
+      },
+      requestData.from
+    );
     
     // Commit all changes
     await batch.commit();
@@ -261,60 +271,73 @@ export const removeConnection = async (userId, connectionId) => {
 // Get all connection requests for a user
 export const getConnectionRequests = async (userId) => {
   try {
-    console.log(`Getting connection requests for user: ${userId}`);
-    
-    // Ensure the connectionRequests collection exists
-    await setupFirestoreCollections();
-    
-    // Get requests sent to the user
+    // Get incoming requests
     const incomingQuery = query(
       collection(db, 'connectionRequests'),
       where('to', '==', userId),
       where('status', '==', 'pending')
     );
-    
-    // Get requests sent by the user
+
+    // Get outgoing requests
     const outgoingQuery = query(
       collection(db, 'connectionRequests'),
       where('from', '==', userId),
       where('status', '==', 'pending')
     );
-    
+
     try {
       const [incomingSnapshot, outgoingSnapshot] = await Promise.all([
         getDocs(incomingQuery),
         getDocs(outgoingQuery)
       ]);
-      
-      console.log(`Found ${incomingSnapshot.docs.length} incoming and ${outgoingSnapshot.docs.length} outgoing requests`);
-      
-      // Process incoming requests - simplified version
-      const incomingRequests = incomingSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        sender: {
-          id: doc.data().from,
-          name: 'User ' + doc.data().from.substring(0, 5),
-          role: 'user'
-        },
-        createdAt: doc.data().createdAt?.toDate() || new Date()
+
+      // Process incoming requests with full user details
+      const incomingRequests = await Promise.all(incomingSnapshot.docs.map(async request => {
+        const requestData = request.data();
+        const senderRef = doc(db, 'users', requestData.from);
+        const senderDoc = await getDoc(senderRef);
+        const senderData = senderDoc.exists() ? senderDoc.data() : {};
+
+        return {
+          id: request.id,
+          ...requestData,
+          sender: {
+            id: requestData.from,
+            name: senderData.name || senderData.displayName || 'Unknown User',
+            role: senderData.role || 'user',
+            photoURL: senderData.photoURL || '/default-avatar.png',
+            program: senderData.program || '',
+            skills: senderData.skills || []
+          },
+          createdAt: requestData.createdAt?.toDate() || new Date()
+        };
       }));
-      
-      // Process outgoing requests - simplified version
-      const outgoingRequests = outgoingSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        recipient: {
-          id: doc.data().to,
-          name: 'User ' + doc.data().to.substring(0, 5),
-          role: 'user'
-        },
-        createdAt: doc.data().createdAt?.toDate() || new Date()
+
+      // Process outgoing requests with full user details
+      const outgoingRequests = await Promise.all(outgoingSnapshot.docs.map(async request => {
+        const requestData = request.data();
+        const recipientRef = doc(db, 'users', requestData.to);
+        const recipientDoc = await getDoc(recipientRef);
+        const recipientData = recipientDoc.exists() ? recipientDoc.data() : {};
+
+        return {
+          id: request.id,
+          ...requestData,
+          recipient: {
+            id: requestData.to,
+            name: recipientData.name || recipientData.displayName || 'Unknown User',
+            role: recipientData.role || 'user',
+            photoURL: recipientData.photoURL || '/default-avatar.png',
+            program: recipientData.program || '',
+            skills: recipientData.skills || []
+          },
+          createdAt: requestData.createdAt?.toDate() || new Date()
+        };
       }));
-      
-      return { 
-        incoming: incomingRequests, 
-        outgoing: outgoingRequests 
+
+      return {
+        incoming: incomingRequests,
+        outgoing: outgoingRequests
       };
     } catch (err) {
       console.error('Error processing connection requests:', err);
