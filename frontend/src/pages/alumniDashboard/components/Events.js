@@ -102,7 +102,7 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
             </button>
             
             <button 
-              onClick={() => navigate('/create-event')}
+              onClick={() => user ? navigate('/alumni-dashboard/events/create') : alert('Please log in to create events')}
               className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-2"
             >
               <span>Create Event</span> <span>➕</span>
@@ -174,6 +174,14 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
             <div className="text-5xl mb-4">⚠️</div>
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Error loading events</h3>
             <p className="text-gray-600 dark:text-gray-400">{error}</p>
+            {error.includes('authentication') && (
+              <button 
+                onClick={() => navigate('/login')}
+                className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+              >
+                Log In
+              </button>
+            )}
           </div>
         ) : filteredEvents.length === 0 ? (
           <div className="text-center py-10">
@@ -183,7 +191,7 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">You haven't created any events yet</h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">Create your first event to share with the community</p>
                 <button 
-                  onClick={() => navigate('/create-event')}
+                  onClick={() => user ? navigate('/alumni-dashboard/events/create') : alert('Please log in to create events')}
                   className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                 >
                   Create an Event
@@ -275,29 +283,33 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
                       
                       <div className="mt-6 flex flex-wrap gap-2">
                         <button 
-                          onClick={() => navigate(`/events/${event._id}`)}
+                          onClick={() => navigate(`/alumni-dashboard/events/${event._id}`)}
                           className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
                         >
                           View Details
                         </button>
-                        <button 
-                          onClick={() => navigate(`/edit-event/${event._id}`)}
-                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm text-gray-700 dark:text-gray-300"
-                        >
-                          Edit Event
-                        </button>
-                        {eventStatus !== 'past' && (
-                          <button className="px-4 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm text-gray-700 dark:text-gray-300">
-                            Manage Registrations
-                          </button>
+                        {user && (
+                          <>
+                            <button 
+                              onClick={() => navigate(`/alumni-dashboard/events/edit/${event._id}`)}
+                              className="px-4 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm text-gray-700 dark:text-gray-300"
+                            >
+                              Edit Event
+                            </button>
+                            {eventStatus !== 'past' && (
+                              <button className="px-4 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm text-gray-700 dark:text-gray-300">
+                                Manage Registrations
+                              </button>
+                            )}
+                            <button 
+                              onClick={() => handleDeleteEvent(event._id)}
+                              disabled={isDeleting && deleteId === event._id}
+                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors text-sm"
+                            >
+                              {isDeleting && deleteId === event._id ? 'Deleting...' : 'Delete Event'}
+                            </button>
+                          </>
                         )}
-                        <button 
-                          onClick={() => handleDeleteEvent(event._id)}
-                          disabled={isDeleting && deleteId === event._id}
-                          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors text-sm"
-                        >
-                          {isDeleting && deleteId === event._id ? 'Deleting...' : 'Delete Event'}
-                        </button>
                       </div>
                     </div>
                     

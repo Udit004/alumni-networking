@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const Settings = ({ isDarkMode, setIsDarkMode }) => {
+const Settings = ({ isDarkMode, setIsDarkMode, handleLogout }) => {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setShowSmsNotifications] = useState(false);
   const [profileVisibility, setProfileVisibility] = useState('public');
@@ -203,6 +203,19 @@ const Settings = ({ isDarkMode, setIsDarkMode }) => {
                 </div>
                 <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
                   Set Up
+                </button>
+              </div>
+              
+              <div className="flex items-center justify-between mt-4">
+                <div>
+                  <p className="text-gray-800 dark:text-white font-medium">Log Out</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Sign out of your account</p>
+                </div>
+                <button 
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                >
+                  Log Out
                 </button>
               </div>
             </div>

@@ -282,6 +282,7 @@ const TeacherDashboard = () => {
       console.log('Fetching events for teacher:', {
         userUid: user?.uid,
         role: role,
+        apiUrl: API_URL,
         endpoint: `${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`
       });
       
@@ -292,23 +293,36 @@ const TeacherDashboard = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch events');
+        throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
       
       // Use the createdEvents array directly from the API response
       console.log('Teacher events received from API:', {
+        response: 'success',
+        responseStatus: response.status,
         createdEvents: data.createdEvents?.length || 0,
         createdEventsData: data.createdEvents,
-        registeredEvents: data.registeredEvents?.length || 0
+        registeredEvents: data.registeredEvents?.length || 0,
+        data: data
       });
       
-      // Sort events by date
-      const sortedEvents = data.createdEvents?.sort((a, b) => new Date(a.date) - new Date(b.date)) || [];
-      setEvents(sortedEvents);
+      // Check if createdEvents exists in the response
+      if (!data.createdEvents) {
+        console.warn('No createdEvents found in API response:', data);
+        // Fallback to data.events if createdEvents doesn't exist
+        const eventsToUse = data.events || [];
+        setEvents(eventsToUse);
+        console.log('Using fallback events array:', eventsToUse);
+      } else {
+        // Sort events by date
+        const sortedEvents = data.createdEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+        console.log('Setting sorted events:', sortedEvents);
+        setEvents(sortedEvents);
+      }
     } catch (err) {
-      setError('Failed to load events. Please try again.');
+      setError(`Failed to load events: ${err.message}`);
       console.error('Error fetching events:', err);
     } finally {
       setLoading(false);
@@ -721,7 +735,21 @@ const TeacherDashboard = () => {
           )}
 
           {activeSection === 'events' && (
-            <Events />
+            <Events 
+              events={filteredEvents} 
+              loading={loading} 
+              error={error}
+              search={search}
+              setSearch={setSearch}
+              filter={filter}
+              setFilter={setFilter}
+              getEventStatus={getEventStatus}
+              navigate={navigate}
+              isDarkMode={isDarkMode}
+              API_URL={API_URL}
+              user={user}
+              role={role}
+            />
           )}
 
           {activeSection === 'resources' && (
@@ -738,7 +766,14 @@ const TeacherDashboard = () => {
 
           {activeSection === 'network' && (
             <div className="network-section">
-              <TeacherNetwork currentUser={user} isDarkMode={isDarkMode} />
+              <TeacherNetwork 
+                pendingRequests={pendingRequests} 
+                connections={connections}
+                handleRequestConnection={handleRequestConnection}
+                loading={connectionLoading}
+                currentUser={user}
+                isDarkMode={isDarkMode}
+              />
             </div>
           )}
         </main>

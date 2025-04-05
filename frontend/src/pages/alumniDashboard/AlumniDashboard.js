@@ -36,7 +36,7 @@ const AlumniDashboard = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
-  const { user, role } = useAuth();
+  const { currentUser, role } = useAuth();
   const navigate = useNavigate();
   
   // Get API_URL from environment with fallback
@@ -47,12 +47,11 @@ const AlumniDashboard = () => {
   console.log('NODE_ENV:', process.env.NODE_ENV);
   console.log('Alumni Dashboard - API_URL from env:', process.env.REACT_APP_API_URL);
   console.log('Alumni Dashboard - Final API_URL:', API_URL);
-  console.log('Alumni Dashboard - User state:', user ? { uid: user.uid, authenticated: true } : 'Not authenticated');
+  console.log('Alumni Dashboard - User state:', currentUser ? { uid: currentUser.uid, authenticated: true } : 'Not authenticated');
   console.log('Alumni Dashboard - Role:', role);
   
   const [connections, setConnections] = useState([]);
   const [connectionLoading, setConnectionLoading] = useState(true);
-  const { currentUser } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -113,13 +112,25 @@ const AlumniDashboard = () => {
     try {
       setLoading(true);
       
+      // Check if user is authenticated before making API calls
+      if (!currentUser || !currentUser.uid) {
+        console.log('User not authenticated, using mock data');
+        const mockEvents = generateMockEvents();
+        setEvents(mockEvents);
+        setLoading(false);
+        return;
+      }
+      
       // Log API info for debugging
-      console.log('Fetching events with URL:', `${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`);
-      console.log('User UID:', user?.uid);
-      console.log('User role:', role);
+      console.log('Fetching events for alumni:', {
+        userUid: currentUser.uid,
+        role: role,
+        apiUrl: API_URL,
+        endpoint: `${API_URL}/api/events/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=${role}`
+      });
       
       // Use the user-specific endpoint to get events created by this user
-      const response = await fetch(`${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
+      const response = await fetch(`${API_URL}/api/events/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=${role}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -127,27 +138,35 @@ const AlumniDashboard = () => {
       console.log('Events API Response status:', response.status);
 
       if (!response.ok) {
-        console.log('Events API call failed, using mock data');
-        // Generate mock events data if API call fails
-        const mockEvents = generateMockEvents();
-        setEvents(mockEvents);
-        setLoading(false);
-        return;
+        throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
       
       // Use the actual API data
       console.log('Alumni events received from API:', {
+        response: 'success',
+        responseStatus: response.status,
         createdEvents: data.createdEvents?.length || 0,
-        registeredEvents: data.registeredEvents?.length || 0
+        registeredEvents: data.registeredEvents?.length || 0,
+        data: data
       });
       
-      // Sort events by date
-      const sortedEvents = data.createdEvents?.sort((a, b) => new Date(a.date) - new Date(b.date)) || [];
-      setEvents(sortedEvents);
+      // Check if createdEvents exists in the response
+      if (!data.createdEvents) {
+        console.warn('No createdEvents found in API response:', data);
+        // Fallback to data.events if createdEvents doesn't exist
+        const eventsToUse = data.events || [];
+        setEvents(eventsToUse);
+        console.log('Using fallback events array:', eventsToUse);
+      } else {
+        // Sort events by date
+        const sortedEvents = data.createdEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+        console.log('Setting sorted events:', sortedEvents);
+        setEvents(sortedEvents);
+      }
     } catch (err) {
-      setError('Failed to load events. Please try again.');
+      setError(`Failed to load events: ${err.message}`);
       console.error('Error fetching events:', err);
       
       // Provide mock data even when errors occur
@@ -429,39 +448,42 @@ const AlumniDashboard = () => {
 
   // Generate mock events data for testing
   const generateMockEvents = () => {
-    const mockEventTitles = [
-      'Annual Alumni Meetup', 
-      'Career Development Workshop', 
-      'Industry Networking Night', 
-      'Graduate Research Symposium', 
-      'Job Fair'
+    // Generate some mock events for testing purposes
+    return [
+      {
+        _id: '1',
+        title: 'Alumni Networking Mixer',
+        description: 'Connect with fellow alumni and expand your professional network.',
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 week from now
+        startTime: '18:00',
+        endTime: '20:00',
+        location: 'Virtual Meeting',
+        category: 'Networking',
+        registeredUsers: new Array(Math.floor(Math.random() * 15) + 5)
+      },
+      {
+        _id: '2',
+        title: 'Career Development Workshop',
+        description: 'Learn strategies for advancing your career in today\'s competitive job market.',
+        date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 2 weeks from now
+        startTime: '10:00',
+        endTime: '12:00',
+        location: 'Campus Center, Room 200',
+        category: 'Workshop',
+        registeredUsers: new Array(Math.floor(Math.random() * 10) + 3)
+      },
+      {
+        _id: '3',
+        title: 'Annual Alumni Gala',
+        description: 'Join us for an evening of celebration and recognition of our accomplished alumni.',
+        date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 month ago
+        startTime: '19:00',
+        endTime: '23:00',
+        location: 'Grand Hotel Ballroom',
+        category: 'Social',
+        registeredUsers: new Array(Math.floor(Math.random() * 30) + 20)
+      }
     ];
-    
-    const mockLocations = [
-      'Main Campus Auditorium', 
-      'Virtual (Zoom)', 
-      'Downtown Conference Center', 
-      'University Library', 
-      'Tech Innovation Hub'
-    ];
-    
-    const mockCategories = ['Networking', 'Workshop', 'Social', 'Career', 'Academic'];
-    
-    return Array.from({ length: 5 }, (_, i) => ({
-      _id: `mock-event-${i+1}`,
-      title: mockEventTitles[i % mockEventTitles.length],
-      description: 'This is a mock event description for testing purposes. The real description would contain details about the event agenda, speakers, and goals.',
-      date: new Date(Date.now() + ((i+1) * 7 * 24 * 60 * 60 * 1000)).toISOString(), // i+1 weeks in future
-      time: '18:00 - 20:00',
-      location: mockLocations[i % mockLocations.length],
-      category: mockCategories[i % mockCategories.length],
-      capacity: 50 + (i * 10),
-      registrations: Math.floor(Math.random() * 40),
-      organizer: user?.uid,
-      createdAt: new Date().toISOString(),
-      imageUrl: '',
-      status: 'upcoming'
-    }));
   };
 
   return (
@@ -493,7 +515,7 @@ const AlumniDashboard = () => {
             <div className="mb-8 text-center">
               <div className="inline-block relative">
                 <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-primary-light flex items-center justify-center text-white text-3xl">
-                  {user?.displayName ? user.displayName[0].toUpperCase() : 'A'}
+                  {currentUser?.displayName ? currentUser.displayName[0].toUpperCase() : 'A'}
                 </div>
                 <div className="absolute bottom-0 right-0 bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-md border border-gray-200 dark:border-gray-700">
                   <Link to="/profile" className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary">
@@ -503,8 +525,8 @@ const AlumniDashboard = () => {
                   </Link>
                 </div>
               </div>
-              <h2 className="mt-4 font-semibold text-gray-800 dark:text-white">{user?.displayName || 'Alumni'}</h2>
-              <p className="text-gray-500 dark:text-gray-400">{user?.company || user?.college || 'Alumni Member'}</p>
+              <h2 className="mt-4 font-semibold text-gray-800 dark:text-white">{currentUser?.displayName || 'Alumni'}</h2>
+              <p className="text-gray-500 dark:text-gray-400">{currentUser?.company || currentUser?.college || 'Alumni Member'}</p>
             </div>
 
             <nav className="mt-4 space-y-1">
@@ -530,39 +552,10 @@ const AlumniDashboard = () => {
             </nav>
 
             <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex items-center mb-6">
-                <button
-                  onClick={() => setIsDarkMode(!isDarkMode)}
-                  className="flex items-center justify-center w-full px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  {isDarkMode ? (
-                    <>
-                      <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
-                      </svg>
-                      <span>Light Mode</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                      </svg>
-                      <span>Dark Mode</span>
-                    </>
-                  )}
-                </button>
+              <div className="text-xs text-center text-gray-500 dark:text-gray-400 mt-4">
+                <p>© 2024 Alumni Network</p>
+                <p className="mt-1">Version 1.0.0</p>
               </div>
-              <button
-                onClick={() => {
-                  // Implement logout functionality
-                }}
-                className="flex items-center justify-center w-full px-4 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                <span>Logout</span>
-              </button>
             </div>
           </div>
         </div>
@@ -701,6 +694,11 @@ const AlumniDashboard = () => {
                 <Settings 
                   isDarkMode={isDarkMode}
                   setIsDarkMode={setIsDarkMode}
+                  handleLogout={() => {
+                    // Implement logout functionality
+                    // For now, just navigate to home
+                    navigate('/');
+                  }}
                 />
               )}
             </div>

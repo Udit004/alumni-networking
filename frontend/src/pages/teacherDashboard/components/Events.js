@@ -192,7 +192,7 @@ const Events = ({
           <p className="text-xl text-gray-500 dark:text-gray-400 mb-4">No events found</p>
           <button 
             className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-            onClick={() => navigate('/create-event')}
+            onClick={() => navigate('/teacher-dashboard/events/create')}
           >
             Create Your First Event
           </button>
