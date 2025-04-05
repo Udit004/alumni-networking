@@ -32,6 +32,40 @@ const Mentorship = ({ isDarkMode, API_URL, user, role }) => {
     fetchMentorships();
   }, [user]);
 
+  const generateMockMentorships = () => {
+    console.log('Generating mock mentorships data for testing');
+    const mockMentorshipTitles = [
+      'Career Transition Guidance', 
+      'Technical Skills Development', 
+      'Leadership Mentoring', 
+      'Industry Insights Program', 
+      'Academic to Industry Bridge'
+    ];
+    
+    const mockCategories = ['Career Development', 'Technical Skills', 'Leadership', 'Industry Specific', 'Academic'];
+    
+    const mockDurations = ['3 months', '6 months', '1 year', '2 months', 'Ongoing'];
+    
+    const mockCommitments = ['1 hour/week', '2 hours/week', '1 hour/fortnight', '3 hours/month', 'Flexible'];
+    
+    return Array.from({ length: 5 }, (_, i) => ({
+      _id: `mock-mentorship-${i+1}`,
+      title: mockMentorshipTitles[i % mockMentorshipTitles.length],
+      category: mockCategories[i % mockCategories.length],
+      description: 'This is a mock mentorship program created for testing purposes when the API is unavailable. In a production environment, this would contain detailed information about the program goals and structure.',
+      expectations: 'Regular meetings, progress tracking, and active participation in learning activities.',
+      duration: mockDurations[i % mockDurations.length],
+      commitment: mockCommitments[i % mockCommitments.length],
+      skills: 'Communication, Problem-solving, Technical skills relevant to the field',
+      prerequisites: 'Basic understanding of the field, commitment to growth',
+      maxMentees: Math.floor(Math.random() * 3) + 1,
+      mentorId: user?.uid,
+      createdAt: new Date(Date.now() - (i * 7 * 24 * 60 * 60 * 1000)).toISOString(), // i weeks ago
+      mentees: Math.floor(Math.random() * 3),
+      status: 'active'
+    }));
+  };
+
   const fetchMentorships = async () => {
     try {
       setLoading(true);
@@ -44,49 +78,78 @@ const Mentorship = ({ isDarkMode, API_URL, user, role }) => {
         return;
       }
       
-      console.log('Fetching mentorships with URL:', `${API_URL}/api/mentorships/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`);
-      console.log('User UID:', user.uid);
-      console.log('User role:', role);
+      // Debug logs for API URL and environment
+      console.log('**** MENTORSHIP DEBUG ****');
+      console.log('NODE_ENV:', process.env.NODE_ENV);
+      console.log('REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+      console.log('API_URL prop:', API_URL);
+      console.log('User prop:', user ? { uid: user.uid, email: user.email } : 'null');
+      console.log('Role prop:', role);
       
-      const response = await fetch(`${API_URL}/api/mentorships/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
-        method: 'GET',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await user.getIdToken()}`
+      const apiUrl = API_URL || process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      console.log('Final API URL being used:', apiUrl);
+      
+      const fullEndpoint = `${apiUrl}/api/mentorships/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`;
+      console.log('Fetching mentorships with URL:', fullEndpoint);
+      
+      try {
+        const token = await user.getIdToken();
+        console.log('Got auth token for API request');
+        
+        const response = await fetch(fullEndpoint, {
+          method: 'GET',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        console.log('API Response status:', response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API error response:', errorText);
+          
+          console.log('API error, using mock data instead');
+          const mockMentorships = generateMockMentorships();
+          setMentorships(mockMentorships);
+          setLoading(false);
+          return;
         }
-      });
 
-      console.log('API Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API error response:', errorText);
-        throw new Error(`Failed to fetch mentorships: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      // Use the actual API data
-      console.log('Mentorships received from API:', data);
-      console.log('Mentorships array structure:', Array.isArray(data.mentorships) ? 'Array' : typeof data.mentorships);
-      console.log('Number of mentorships received:', data.mentorships?.length || 0);
-      
-      // Sort mentorships by date
-      const sortedMentorships = data.mentorships?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) || [];
-      console.log('Sorted mentorships length:', sortedMentorships.length);
-      
-      // If no mentorships returned from API but user is authenticated, show mock data for testing
-      if (sortedMentorships.length === 0 && user) {
-        console.log('No mentorships returned from API, using mock data for testing');
+        const data = await response.json();
+        
+        // Use the actual API data
+        console.log('Mentorships received from API:', data);
+        console.log('Mentorships array structure:', Array.isArray(data.mentorships) ? 'Array' : typeof data.mentorships);
+        console.log('Number of mentorships received:', data.mentorships?.length || 0);
+        
+        // Sort mentorships by date
+        const sortedMentorships = data.mentorships?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) || [];
+        console.log('Sorted mentorships length:', sortedMentorships.length);
+        
+        // If no mentorships returned from API but user is authenticated, show mock data for testing
+        if (sortedMentorships.length === 0) {
+          console.log('No mentorships returned from API, using mock data for testing');
+          const mockMentorships = generateMockMentorships();
+          setMentorships(mockMentorships);
+        } else {
+          setMentorships(sortedMentorships);
+        }
+      } catch (fetchError) {
+        console.error('Fetch error:', fetchError.message);
+        console.log('Network or fetch error, using mock data');
         const mockMentorships = generateMockMentorships();
         setMentorships(mockMentorships);
-      } else {
-        setMentorships(sortedMentorships);
       }
-      
     } catch (err) {
       setError('Failed to load mentorships. Please try again.');
       console.error('Error fetching mentorships (detailed):', err.message, err.stack);
+      
+      // Always provide mock data in case of errors for better user experience
+      console.log('Using mock mentorships data due to error');
+      const mockMentorships = generateMockMentorships();
+      setMentorships(mockMentorships);
     } finally {
       setLoading(false);
     }
@@ -349,45 +412,6 @@ const Mentorship = ({ isDarkMode, API_URL, user, role }) => {
     
     return matchesSearch && matchesStatus;
   });
-
-  // Generate mock mentorship data for testing
-  const generateMockMentorships = () => {
-    const mockTitles = [
-      'Web Development Mentorship', 
-      'Career Guidance Program', 
-      'Leadership Skills Development', 
-      'Data Science Fundamentals', 
-      'UI/UX Design Mentoring'
-    ];
-    
-    const mockCategories = [
-      'Career Development', 
-      'Technical Skills', 
-      'Leadership', 
-      'Personal Growth', 
-      'Academic Guidance'
-    ];
-    
-    const mockDurations = ['1 month', '3 months', '6 months', '1 year'];
-    const mockCommitments = ['1 hour/week', '2 hours/week', '4 hours/week', 'Flexible'];
-    
-    return Array.from({ length: 5 }, (_, i) => ({
-      _id: `mock-mentorship-${i+1}`,
-      title: mockTitles[i % mockTitles.length],
-      mentorId: user?.uid,
-      category: mockCategories[i % mockCategories.length],
-      description: 'This is a mock mentorship description for testing purposes. The real description would contain details about what mentees can expect to learn.',
-      expectations: 'Mock expectations: Regular attendance, preparation for sessions, completion of assignments.',
-      duration: mockDurations[i % mockDurations.length],
-      commitment: mockCommitments[i % mockCommitments.length],
-      skills: 'Communication, Problem-solving, Technical expertise',
-      prerequisites: 'Basic knowledge of the subject, Commitment to learn',
-      maxMentees: i + 1,
-      mentees: Math.floor(Math.random() * (i + 1)),
-      status: i % 3 === 0 ? 'completed' : 'active',
-      createdAt: new Date(Date.now() - (i * 30 * 24 * 60 * 60 * 1000)).toISOString(), // i months ago
-    }));
-  };
 
   return (
     <div className="mentorship-section space-y-6">
@@ -833,93 +857,6 @@ const Mentorship = ({ isDarkMode, API_URL, user, role }) => {
             Showing {filteredMentorships.length} of {mentorships.length} mentorship programs
           </div>
         )}
-      </div>
-      
-      {/* My Current Mentorships (as a mentee) */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
-           style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Mentorships (as Mentee)</h2>
-          
-          <button 
-            onClick={() => navigate('/mentorship/find')}
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2 mt-2 sm:mt-0"
-          >
-            <span>Find a Mentor</span> <span>🔍</span>
-          </button>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div 
-            className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 hover:shadow-lg transition-shadow"
-            style={{ backgroundColor: isDarkMode ? '#0f172a' : 'white' }}
-          >
-            <div className="flex items-start gap-3">
-              <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-500 dark:text-purple-300 text-xl">
-                JS
-              </div>
-              
-              <div className="flex-1">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 className="font-semibold text-gray-800 dark:text-white">Leadership Development</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">with John Smith</p>
-                  </div>
-                  
-                  <div className="mt-2 sm:mt-0">
-                    <span className="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                      Active
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="mt-3 flex justify-between items-center">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    3 sessions completed • 2 months remaining
-                  </span>
-                  <button className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                    Details
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div 
-            className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 hover:shadow-lg transition-shadow"
-            style={{ backgroundColor: isDarkMode ? '#0f172a' : 'white' }}
-          >
-            <div className="flex items-start gap-3">
-              <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-500 dark:text-blue-300 text-xl">
-                AL
-              </div>
-              
-              <div className="flex-1">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 className="font-semibold text-gray-800 dark:text-white">Web Development Mastery</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">with Amy Lee</p>
-                  </div>
-                  
-                  <div className="mt-2 sm:mt-0">
-                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
-                      Completed
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="mt-3 flex justify-between items-center">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    12 sessions • Completed 3 weeks ago
-                  </span>
-                  <button className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                    Details
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

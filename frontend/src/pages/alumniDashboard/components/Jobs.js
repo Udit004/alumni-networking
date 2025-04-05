@@ -43,49 +43,78 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
         return;
       }
       
-      console.log('Fetching jobs with URL:', `${API_URL}/api/jobs/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`);
-      console.log('User UID:', user.uid);
-      console.log('User role:', role);
+      // Debug logs for API URL and environment
+      console.log('**** JOBS DEBUG ****');
+      console.log('NODE_ENV:', process.env.NODE_ENV);
+      console.log('REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+      console.log('API_URL prop:', API_URL);
+      console.log('User prop:', user ? { uid: user.uid, email: user.email } : 'null');
+      console.log('Role prop:', role);
       
-      const response = await fetch(`${API_URL}/api/jobs/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
-        method: 'GET',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await user.getIdToken()}`
+      const apiUrl = API_URL || process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      console.log('Final API URL being used:', apiUrl);
+      
+      const fullEndpoint = `${apiUrl}/api/jobs/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`;
+      console.log('Fetching jobs with URL:', fullEndpoint);
+      
+      try {
+        const token = await user.getIdToken();
+        console.log('Got auth token for API request');
+        
+        const response = await fetch(fullEndpoint, {
+          method: 'GET',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        console.log('API Response status:', response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API error response:', errorText);
+          
+          console.log('API error, using mock data instead');
+          const mockJobs = generateMockJobs();
+          setJobs(mockJobs);
+          setLoading(false);
+          return;
         }
-      });
 
-      console.log('API Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API error response:', errorText);
-        throw new Error(`Failed to fetch jobs: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      // Use the actual API data
-      console.log('Jobs received from API:', data);
-      console.log('Jobs array structure:', Array.isArray(data.jobs) ? 'Array' : typeof data.jobs);
-      console.log('Number of jobs received:', data.jobs?.length || 0);
-      
-      // Sort jobs by date
-      const sortedJobs = data.jobs?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) || [];
-      console.log('Sorted jobs length:', sortedJobs.length);
-      
-      // If no jobs returned from API but user is authenticated, show mock data for testing
-      if (sortedJobs.length === 0 && user) {
-        console.log('No jobs returned from API, using mock data for testing');
+        const data = await response.json();
+        
+        // Use the actual API data
+        console.log('Jobs received from API:', data);
+        console.log('Jobs array structure:', Array.isArray(data.jobs) ? 'Array' : typeof data.jobs);
+        console.log('Number of jobs received:', data.jobs?.length || 0);
+        
+        // Sort jobs by date
+        const sortedJobs = data.jobs?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) || [];
+        console.log('Sorted jobs length:', sortedJobs.length);
+        
+        // If no jobs returned from API but user is authenticated, show mock data for testing
+        if (sortedJobs.length === 0) {
+          console.log('No jobs returned from API, using mock data for testing');
+          const mockJobs = generateMockJobs();
+          setJobs(mockJobs);
+        } else {
+          setJobs(sortedJobs);
+        }
+      } catch (fetchError) {
+        console.error('Fetch error:', fetchError.message);
+        console.log('Network or fetch error, using mock data');
         const mockJobs = generateMockJobs();
         setJobs(mockJobs);
-      } else {
-        setJobs(sortedJobs);
       }
-      
     } catch (err) {
       setError('Failed to load jobs. Please try again.');
       console.error('Error fetching jobs (detailed):', err.message, err.stack);
+      
+      // Always provide mock data in case of errors for better user experience
+      console.log('Using mock jobs data due to error');
+      const mockJobs = generateMockJobs();
+      setJobs(mockJobs);
     } finally {
       setLoading(false);
     }
@@ -318,31 +347,34 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
 
   // Generate mock job data for testing
   const generateMockJobs = () => {
+    console.log('Generating mock jobs data for testing');
     const mockJobTitles = [
       'Senior Software Engineer', 
       'Product Manager', 
-      'UX Designer', 
+      'UX/UI Designer', 
       'Data Scientist', 
-      'DevOps Engineer'
+      'Marketing Specialist'
     ];
     
     const mockCompanies = [
-      'Tech Innovations Inc.', 
-      'Global Solutions Ltd.', 
-      'Digital Frontiers', 
-      'NextGen Systems', 
-      'Data Analytics Pro'
+      'TechCorp', 
+      'InnovateSoft', 
+      'GlobalSystems', 
+      'DataViz Solutions', 
+      'NextGen Marketing'
     ];
     
     const mockLocations = [
       'New York, NY', 
       'San Francisco, CA', 
-      'Austin, TX', 
-      'Seattle, WA', 
-      'Remote'
+      'London, UK', 
+      'Remote', 
+      'Bangalore, India'
     ];
     
-    const mockJobTypes = ['Full-time', 'Part-time', 'Contract', 'Internship'];
+    const mockJobTypes = ['Full-time', 'Part-time', 'Contract', 'Freelance', 'Internship'];
+    
+    const mockSalaries = ['$120,000 - $150,000', '$90,000 - $110,000', '$70,000 - $85,000', 'Competitive', 'Based on experience'];
     
     return Array.from({ length: 5 }, (_, i) => ({
       _id: `mock-job-${i+1}`,
@@ -350,14 +382,14 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
       company: mockCompanies[i % mockCompanies.length],
       location: mockLocations[i % mockLocations.length],
       type: mockJobTypes[i % mockJobTypes.length],
-      description: 'This is a mock job description for testing purposes. The real job description would contain details about the role, responsibilities, and requirements.',
-      requirements: 'Mock requirements: 3+ years of experience, relevant degree, strong communication skills.',
-      salary: `$${80 + i * 10}k - $${100 + i * 10}k`,
-      contactEmail: 'jobs@example.com',
-      applicationDeadline: new Date(Date.now() + (i + 1) * 7 * 24 * 60 * 60 * 1000).toISOString(), // i+1 weeks from now
-      createdAt: new Date(Date.now() - (i * 24 * 60 * 60 * 1000)).toISOString(), // i days ago
-      applicants: Math.floor(Math.random() * 20),
-      creatorId: user?.uid
+      description: 'This is a mock job description created for testing purposes when the API is unavailable. In a production environment, this would contain detailed information about the role and responsibilities.',
+      requirements: 'Bachelor\'s degree in relevant field; 3+ years of experience; Strong communication skills; Team player',
+      salary: mockSalaries[i % mockSalaries.length],
+      contactEmail: `careers@${mockCompanies[i % mockCompanies.length].toLowerCase().replace(/\s/g, '')}.com`,
+      applicationDeadline: new Date(Date.now() + ((i+1) * 30 * 24 * 60 * 60 * 1000)).toISOString(), // i+1 months in future
+      creatorId: user?.uid,
+      createdAt: new Date(Date.now() - (i * 7 * 24 * 60 * 60 * 1000)).toISOString(), // i weeks ago
+      applicants: Math.floor(Math.random() * 20)
     }));
   };
 

@@ -38,11 +38,18 @@ const AlumniDashboard = () => {
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
   const { user, role } = useAuth();
   const navigate = useNavigate();
-  const API_URL = process.env.REACT_APP_API_URL;
+  
+  // Get API_URL from environment with fallback
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  
   // Debug output to check API_URL
-  console.log('Alumni Dashboard - API_URL:', API_URL);
+  console.log('**** ALUMNI DASHBOARD DEBUG ****');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('Alumni Dashboard - API_URL from env:', process.env.REACT_APP_API_URL);
+  console.log('Alumni Dashboard - Final API_URL:', API_URL);
   console.log('Alumni Dashboard - User state:', user ? { uid: user.uid, authenticated: true } : 'Not authenticated');
   console.log('Alumni Dashboard - Role:', role);
+  
   const [connections, setConnections] = useState([]);
   const [connectionLoading, setConnectionLoading] = useState(true);
   const { currentUser } = useAuth();
@@ -281,13 +288,19 @@ const AlumniDashboard = () => {
       if (!currentUser) return;
       
       try {
+        console.log('Fetching notifications for user:', currentUser.uid);
+        
         // Initial fetch of notifications
         const notificationsData = await getUserNotifications(currentUser.uid);
+        console.log('Initial notifications loaded:', notificationsData.length);
+        
         setNotifications(notificationsData);
         setUnreadCount(notificationsData.filter(n => !n.read).length);
         
+        console.log('Setting up real-time notifications subscription');
         // Set up subscription for real-time updates
         const unsubscribe = subscribeToUserNotifications(currentUser.uid, (updatedNotifications) => {
+          console.log('Received notification update, count:', updatedNotifications.length);
           setNotifications(updatedNotifications);
           setUnreadCount(updatedNotifications.filter(n => !n.read).length);
         });
@@ -296,12 +309,16 @@ const AlumniDashboard = () => {
         return unsubscribe;
       } catch (error) {
         console.error('Error setting up notifications:', error);
+        // Provide empty notifications to prevent UI crashes
+        setNotifications([]);
+        setUnreadCount(0);
       }
     };
     
     const unsubscribe = fetchNotifications();
     return () => {
       if (typeof unsubscribe === 'function') {
+        console.log('Cleaning up notifications subscription');
         unsubscribe();
       }
     };
@@ -608,7 +625,7 @@ const AlumniDashboard = () => {
             <Mentorship 
               isDarkMode={isDarkMode}
               API_URL={API_URL}
-              user={user}
+              user={currentUser}
               role={role}
             />
           )}
@@ -617,7 +634,7 @@ const AlumniDashboard = () => {
             <Jobs 
               isDarkMode={isDarkMode}
               API_URL={API_URL}
-              user={user}
+              user={currentUser}
               role={role}
             />
           )}
@@ -629,14 +646,14 @@ const AlumniDashboard = () => {
               error={error}
               isDarkMode={isDarkMode}
               API_URL={API_URL}
-              user={user}
+              user={currentUser}
               role={role}
             />
           )}
 
           {activeSection === 'network' && (
             <div className="network-section">
-              <AlumniNetwork currentUser={user} isDarkMode={isDarkMode} />
+              <AlumniNetwork currentUser={currentUser} isDarkMode={isDarkMode} />
             </div>
           )}
 
