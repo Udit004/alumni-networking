@@ -397,27 +397,50 @@ const TeacherDashboard = () => {
       if (!user) return;
       
       try {
+        console.log('Fetching notifications for user:', user.uid);
+        
         // Initial fetch of notifications
         const notificationsData = await getUserNotifications(user.uid);
-        setNotifications(notificationsData);
-        setUnreadCount(notificationsData.filter(n => !n.read).length);
         
+        // Check if notificationsData is valid
+        if (Array.isArray(notificationsData)) {
+          console.log('Initial notifications loaded:', notificationsData.length);
+          setNotifications(notificationsData);
+          setUnreadCount(notificationsData.filter(n => !n.read).length);
+        } else {
+          console.warn('No notifications data returned or invalid format, using empty array');
+          setNotifications([]);
+          setUnreadCount(0);
+        }
+        
+        console.log('Setting up real-time notifications subscription');
         // Set up subscription for real-time updates
         const unsubscribe = subscribeToUserNotifications(user.uid, (updatedNotifications) => {
-          setNotifications(updatedNotifications);
-          setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+          if (Array.isArray(updatedNotifications)) {
+            console.log('Received notification update, count:', updatedNotifications.length);
+            setNotifications(updatedNotifications);
+            setUnreadCount(updatedNotifications.filter(n => !n.read).length);
+          } else {
+            console.warn('Received invalid notifications update, using empty array');
+            setNotifications([]);
+            setUnreadCount(0);
+          }
         });
         
         // Return cleanup function
         return unsubscribe;
       } catch (error) {
         console.error('Error setting up notifications:', error);
+        // Provide empty notifications to prevent UI crashes
+        setNotifications([]);
+        setUnreadCount(0);
       }
     };
     
     const unsubscribe = fetchNotifications();
     return () => {
       if (typeof unsubscribe === 'function') {
+        console.log('Cleaning up notifications subscription');
         unsubscribe();
       }
     };
