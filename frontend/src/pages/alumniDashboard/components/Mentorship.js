@@ -168,6 +168,16 @@ const Mentorship = ({ isDarkMode, API_URL, user, role }) => {
         return;
       }
       
+      // Validate required fields before submission
+      const requiredFields = ['title', 'category', 'description', 'expectations', 'duration', 'commitment', 'skills'];
+      const missingFields = requiredFields.filter(field => !mentorshipFormData[field]);
+      
+      if (missingFields.length > 0) {
+        setError(`Please fill in the following required fields: ${missingFields.join(', ')}`);
+        setLoading(false);
+        return;
+      }
+      
       const mentorshipData = {
         ...mentorshipFormData,
         mentorId: user?.uid,
@@ -175,6 +185,9 @@ const Mentorship = ({ isDarkMode, API_URL, user, role }) => {
         mentees: 0,
         status: 'active'
       };
+      
+      // Log the data being sent to API for debugging
+      console.log('Sending mentorship data to API:', mentorshipData);
       
       const response = await fetch(`${API_URL}/api/mentorships?firebaseUID=${user?.uid}&role=${role}`, {
         method: 'POST',
@@ -187,6 +200,7 @@ const Mentorship = ({ isDarkMode, API_URL, user, role }) => {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('API error response:', errorData);
         throw new Error(errorData.message || 'Failed to create mentorship program');
       }
       
@@ -417,11 +431,17 @@ const Mentorship = ({ isDarkMode, API_URL, user, role }) => {
     <div className="mentorship-section space-y-6">
       {/* Mentorship Form */}
       {showMentorshipForm && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6"
              style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
           <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
             {editingMentorship ? 'Edit Mentorship Program' : 'Create New Mentorship Program'}
           </h2>
+          
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg">
+              {error}
+            </div>
+          )}
           
           <form onSubmit={editingMentorship ? handleUpdateMentorship : handleCreateMentorship}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -547,6 +567,7 @@ const Mentorship = ({ isDarkMode, API_URL, user, role }) => {
                 rows={3}
                 className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
               ></textarea>
+              <p className="text-sm text-red-500 dark:text-red-400 mt-1">This field is required</p>
             </div>
             
             <div className="mb-6">
@@ -562,7 +583,7 @@ const Mentorship = ({ isDarkMode, API_URL, user, role }) => {
               ></textarea>
             </div>
             
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button
                 type="button"
                 onClick={cancelMentorshipForm}
@@ -582,22 +603,25 @@ const Mentorship = ({ isDarkMode, API_URL, user, role }) => {
       )}
 
       {/* Main Mentorships List */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6"
            style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Mentorship Programs</h2>
           
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button 
               onClick={() => navigate('/mentorship')}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2"
+              className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2 text-sm sm:text-base"
             >
               <span>Find Mentors</span> <span>🔍</span>
             </button>
             
             <button 
-              onClick={() => navigate('/create-mentorship')}
-              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-2"
+              onClick={() => {
+                resetMentorshipForm();
+                setShowMentorshipForm(true);
+              }}
+              className="px-3 py-2 sm:px-4 sm:py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-2 text-sm sm:text-base"
             >
               <span>Create Program</span> <span>➕</span>
             </button>

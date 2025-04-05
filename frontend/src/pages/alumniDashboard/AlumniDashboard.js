@@ -465,206 +465,256 @@ const AlumniDashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-      {/* Sidebar */}
-      <div 
-        className={`h-full transition-all duration-300 bg-white dark:bg-gray-800 shadow-lg
-                   ${isNavExpanded ? 'w-64' : 'w-20'}`}
-        style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
-      >
-        <div className="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
-          {isNavExpanded && (
-            <h3 className="text-xl font-bold text-blue-600 dark:text-blue-400">Alumni Dashboard</h3>
-          )}
-          <button 
-            className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
-            onClick={() => setIsNavExpanded(!isNavExpanded)}
-          >
-            {isNavExpanded ? '◀' : '▶'}
-          </button>
-        </div>
-
-        <nav className="p-2">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              className={`w-full flex items-center p-3 my-1 text-left rounded-lg transition-colors ${
-                activeSection === item.id 
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400' 
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-              onClick={() => handleSectionClick(item.id)}
+    <div className="alumni-dashboard min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex flex-col md:flex-row h-full">
+        {/* Sidebar - hidden on mobile, shown as a drawer or on larger screens */}
+        <div className={`fixed inset-0 z-20 transform transition-transform duration-300 ease-in-out md:relative md:flex md:flex-col md:transform-none ${
+          isNavExpanded ? 'translate-x-0' : '-translate-x-full'
+        } md:w-64 lg:w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto`}>
+          
+          {/* Mobile sidebar header - only visible on mobile */}
+          <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center space-x-3">
+              <img src="/assets/alumniLogo.png" alt="Logo" className="w-8 h-8" />
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Alumni Dashboard</h1>
+            </div>
+            <button 
+              onClick={() => setIsNavExpanded(false)} 
+              className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <span className="text-xl mr-3">{item.icon}</span>
-              {isNavExpanded && (
-                <span className="font-medium">{item.label}</span>
-              )}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
-          ))}
-        </nav>
-      </div>
+          </div>
+          
+          {/* Sidebar content */}
+          <div className="p-4">
+            <div className="mb-8 text-center">
+              <div className="inline-block relative">
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-primary-light flex items-center justify-center text-white text-3xl">
+                  {user?.displayName ? user.displayName[0].toUpperCase() : 'A'}
+                </div>
+                <div className="absolute bottom-0 right-0 bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-md border border-gray-200 dark:border-gray-700">
+                  <Link to="/profile" className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                  </Link>
+                </div>
+              </div>
+              <h2 className="mt-4 font-semibold text-gray-800 dark:text-white">{user?.displayName || 'Alumni'}</h2>
+              <p className="text-gray-500 dark:text-gray-400">{user?.company || user?.college || 'Alumni Member'}</p>
+            </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <header className="bg-white dark:bg-gray-800 shadow-md p-4 sticky top-0 z-10"
-                style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-              {menuItems.find(item => item.id === activeSection)?.label}
-            </h1>
-            <div className="flex items-center gap-4">
-              <div className="relative" ref={notificationRef}>
-                <button 
-                  className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-                  onClick={() => setShowNotifications(!showNotifications)}
+            <nav className="mt-4 space-y-1">
+              {menuItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => handleSectionClick(item.id)}
+                  className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${
+                    activeSection === item.id
+                      ? 'bg-primary-light text-primary'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
                 >
-                  <span className="text-xl">🔔</span>
-                  {unreadCount > 0 && (
-                    <span className="absolute top-0 right-0 h-5 w-5 flex items-center justify-center bg-red-500 text-white text-xs rounded-full">{unreadCount}</span>
+                  <span className="text-xl mr-3">{item.icon}</span>
+                  <span>{item.label}</span>
+                  {item.id === 'notifications' && unreadCount > 0 && (
+                    <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount}
+                    </span>
                   )}
                 </button>
+              ))}
+            </nav>
 
-                {/* Notification Panel */}
-                {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-                    <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                      <h3 className="font-semibold text-gray-800 dark:text-white">Notifications</h3>
-                      {unreadCount > 0 && (
-                        <button 
-                          className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                          onClick={() => markAllAsRead()}
-                        >
-                          Mark all as read
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="max-h-96 overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                          No notifications yet
-                        </div>
-                      ) : (
-                        <div>
-                          {notifications.map(notification => (
-                            <div 
-                              key={notification.id}
-                              className={`p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
-                                !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                              }`}
-                              onClick={() => handleNotificationClick(notification)}
-                            >
-                              <div className="flex items-start">
-                                <div className="mr-3 mt-1">
-                                  <span className="text-lg">{getNotificationIcon(notification.type)}</span>
-                                </div>
-                                <div className="flex-1">
-                                  <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-800 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
-                                    {notification.message}
-                                  </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {formatNotificationTime(notification.timestamp)}
-                                  </p>
-                                </div>
-                                {!notification.read && (
-                                  <div className="ml-2 h-2 w-2 bg-blue-500 rounded-full"></div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="p-2 border-t border-gray-200 dark:border-gray-700 text-center">
-                      <button 
-                        className="text-sm text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                        onClick={() => setActiveSection('notifications')}
-                      >
-                        View all notifications
-                      </button>
-                    </div>
-                  </div>
-                )}
+            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center mb-6">
+                <button
+                  onClick={() => setIsDarkMode(!isDarkMode)}
+                  className="flex items-center justify-center w-full px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  {isDarkMode ? (
+                    <>
+                      <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+                      </svg>
+                      <span>Light Mode</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                      </svg>
+                      <span>Dark Mode</span>
+                    </>
+                  )}
+                </button>
               </div>
-              <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                {user?.displayName ? user.displayName[0].toUpperCase() : '👤'}
-              </div>
+              <button
+                onClick={() => {
+                  // Implement logout functionality
+                }}
+                className="flex items-center justify-center w-full px-4 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+              >
+                <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Logout</span>
+              </button>
             </div>
           </div>
-        </header>
+        </div>
 
-        <main className="p-6">
-          {activeSection === 'overview' && (
-            <Overview 
-              connections={connections || []}
-              isDarkMode={isDarkMode}
-            />
-          )}
-
-          {activeSection === 'profile' && (
-            <Profile 
-              profileData={profileData || {}}
-              currentUser={currentUser}
-              isDarkMode={isDarkMode}
-            />
-          )}
-
-          {activeSection === 'notifications' && (
-            <Notifications 
-              notifications={notifications}
-              getNotificationIcon={getNotificationIcon}
-              formatNotificationTime={formatNotificationTime}
-              markAsRead={markAsRead}
-              markAllAsRead={markAllAsRead}
-              isDarkMode={isDarkMode}
-            />
-          )}
-
-          {activeSection === 'mentorship' && (
-            <Mentorship 
-              isDarkMode={isDarkMode}
-              API_URL={API_URL}
-              user={currentUser}
-              role={role}
-            />
-          )}
-
-          {activeSection === 'jobs' && (
-            <Jobs 
-              isDarkMode={isDarkMode}
-              API_URL={API_URL}
-              user={currentUser}
-              role={role}
-            />
-          )}
-
-          {activeSection === 'events' && (
-            <Events 
-              events={events}
-              loading={loading}
-              error={error}
-              isDarkMode={isDarkMode}
-              API_URL={API_URL}
-              user={currentUser}
-              role={role}
-            />
-          )}
-
-          {activeSection === 'network' && (
-            <div className="network-section">
-              <AlumniNetwork currentUser={currentUser} isDarkMode={isDarkMode} />
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col">
+          {/* Mobile Header */}
+          <header className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setIsNavExpanded(true)} 
+                className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <div className="flex items-center space-x-2">
+                <img src="/assets/alumniLogo.png" alt="Logo" className="w-8 h-8" />
+                <h1 className="text-lg font-bold text-gray-900 dark:text-white">Alumni Dashboard</h1>
+              </div>
+              <div className="relative">
+                <button 
+                  onClick={() => setActiveSection('notifications')}
+                  className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 relative"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
-          )}
+          </header>
 
-          {activeSection === 'settings' && (
-            <Settings 
-              isDarkMode={isDarkMode}
-              setIsDarkMode={setIsDarkMode}
-            />
-          )}
-        </main>
+          {/* Main content */}
+          <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
+            {/* Section Header */}
+            <div className="hidden md:flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+                {menuItems.find(item => item.id === activeSection)?.label || 'Dashboard'}
+              </h1>
+              <div className="flex items-center space-x-4">
+                {/* Notification bell on desktop */}
+                <div className="relative">
+                  <button 
+                    onClick={() => setActiveSection('notifications')}
+                    className={`p-2 rounded-full ${
+                      activeSection === 'notifications' 
+                        ? 'bg-primary-light text-primary' 
+                        : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    {unreadCount > 0 && (
+                      <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Section Content */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+              {activeSection === 'overview' && (
+                <Overview 
+                  connections={connections || []}
+                  isDarkMode={isDarkMode}
+                />
+              )}
+
+              {activeSection === 'profile' && (
+                <Profile 
+                  profileData={profileData || {}}
+                  currentUser={currentUser}
+                  isDarkMode={isDarkMode}
+                />
+              )}
+
+              {activeSection === 'notifications' && (
+                <Notifications 
+                  notifications={notifications}
+                  getNotificationIcon={getNotificationIcon}
+                  formatNotificationTime={formatNotificationTime}
+                  markAsRead={markAsRead}
+                  markAllAsRead={markAllAsRead}
+                  isDarkMode={isDarkMode}
+                />
+              )}
+
+              {activeSection === 'mentorship' && (
+                <Mentorship 
+                  isDarkMode={isDarkMode}
+                  API_URL={API_URL}
+                  user={currentUser}
+                  role={role}
+                />
+              )}
+
+              {activeSection === 'jobs' && (
+                <Jobs 
+                  isDarkMode={isDarkMode}
+                  API_URL={API_URL}
+                  user={currentUser}
+                  role={role}
+                />
+              )}
+
+              {activeSection === 'events' && (
+                <Events 
+                  events={events}
+                  loading={loading}
+                  error={error}
+                  isDarkMode={isDarkMode}
+                  API_URL={API_URL}
+                  user={currentUser}
+                  role={role}
+                />
+              )}
+
+              {activeSection === 'network' && (
+                <div className="network-section">
+                  <AlumniNetwork currentUser={currentUser} isDarkMode={isDarkMode} />
+                </div>
+              )}
+
+              {activeSection === 'settings' && (
+                <Settings 
+                  isDarkMode={isDarkMode}
+                  setIsDarkMode={setIsDarkMode}
+                />
+              )}
+            </div>
+          </main>
+        </div>
       </div>
+
+      {/* Backdrop for mobile sidebar */}
+      {isNavExpanded && (
+        <div 
+          className="md:hidden fixed inset-0 z-10 bg-black bg-opacity-50"
+          onClick={() => setIsNavExpanded(false)}
+        ></div>
+      )}
     </div>
   );
 };
