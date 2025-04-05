@@ -13,9 +13,11 @@ const CreateMentorship = () => {
     description: '',
     category: 'Career Development',
     skills: '',
+    expectations: '',
     commitment: '2-3 hours per week',
     duration: '3 months',
-    maxMentees: 5
+    maxMentees: 5,
+    prerequisites: ''
   });
   
   const [loading, setLoading] = useState(false);
@@ -38,15 +40,17 @@ const CreateMentorship = () => {
       setError('');
       
       // Validate form
-      if (!formData.title || !formData.description || !formData.category) {
+      if (!formData.title || !formData.description || !formData.category || !formData.expectations) {
         throw new Error('Please fill all required fields');
       }
+      
+      console.log('Submitting mentorship data:', formData);
       
       const response = await fetch(`${API_URL}/api/mentorships`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentUser.token}`
+          'Authorization': `Bearer ${await currentUser.getIdToken()}`
         },
         body: JSON.stringify({
           ...formData,
@@ -72,9 +76,11 @@ const CreateMentorship = () => {
         description: '',
         category: 'Career Development',
         skills: '',
+        expectations: '',
         commitment: '2-3 hours per week',
         duration: '3 months',
-        maxMentees: 5
+        maxMentees: 5,
+        prerequisites: ''
       });
       
       // Redirect after success
@@ -242,6 +248,37 @@ const CreateMentorship = () => {
                 rows="5"
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 placeholder="Describe what mentees will learn, your approach to mentoring, and expected outcomes..."
+              ></textarea>
+            </div>
+
+            <div className="mb-6">
+              <label htmlFor="expectations" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Expectations and Goals <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="expectations"
+                name="expectations"
+                value={formData.expectations}
+                onChange={handleChange}
+                required
+                rows="3"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="What are your expectations from mentees? What goals will you help them achieve?"
+              ></textarea>
+            </div>
+
+            <div className="mb-6">
+              <label htmlFor="prerequisites" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Prerequisites
+              </label>
+              <textarea
+                id="prerequisites"
+                name="prerequisites"
+                value={formData.prerequisites}
+                onChange={handleChange}
+                rows="2"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Any prerequisites or requirements for mentees (optional)"
               ></textarea>
             </div>
             
