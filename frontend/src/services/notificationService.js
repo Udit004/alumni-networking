@@ -97,24 +97,33 @@ export const createNotification = async (notification) => {
 
 // Get notifications for a user
 export const getUserNotifications = async (userId, limitCount = 20) => {
+  if (!userId) {
+    console.error('Cannot get notifications: missing userId');
+    return [];
+  }
+
   try {
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', userId),
-      orderBy('timestamp', 'desc'),
-      limit(limitCount)
-    );
-    
+    // Try with ordering first
     try {
+      const q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
+        orderBy('timestamp', 'desc'),
+        limit(limitCount)
+      );
+      
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
+      const notifications = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         timestamp: doc.data().timestamp?.toDate() || new Date()
       }));
+      
+      console.log(`Initial notifications loaded: ${notifications.length}`);
+      return notifications;
     } catch (indexError) {
       // Check if this is a missing index error
-      if (indexError.message && indexError.message.includes('requires an index')) {
+      if (indexError.message && indexError.message.includes('index')) {
         console.warn('Missing Firestore index for notifications query. Please follow the link in the error to create the index.');
         console.warn('Using fallback query without ordering until index is created.');
         
@@ -129,11 +138,20 @@ export const getUserNotifications = async (userId, limitCount = 20) => {
         const notifications = fallbackSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
-          timestamp: doc.data().timestamp?.toDate() || doc.data().createdAt ? new Date(doc.data().createdAt) : new Date()
+          timestamp: doc.data().timestamp?.toDate() || 
+                    (doc.data().createdAt ? new Date(doc.data().createdAt) : new Date())
         }));
         
         // Sort manually by timestamp descending
-        return notifications.sort((a, b) => b.timestamp - a.timestamp).slice(0, limitCount);
+        const sortedNotifications = notifications.sort((a, b) => {
+          // Handle potential missing timestamps
+          const timeA = b.timestamp instanceof Date ? b.timestamp : new Date();
+          const timeB = a.timestamp instanceof Date ? a.timestamp : new Date();
+          return timeA - timeB;
+        }).slice(0, limitCount);
+        
+        console.log(`Initial notifications loaded (fallback): ${sortedNotifications.length}`);
+        return sortedNotifications;
       }
       
       // If it's not an index error, rethrow
@@ -195,10 +213,83 @@ export const deleteNotification = async (notificationId) => {
   }
 };
 
+// Function to create connection request notification
+export const createConnectionRequestNotification = async (fromUser, toUserId) => {
+  try {
+    if (!fromUser || !fromUser.id || !toUserId) {
+      console.error('Invalid parameters for connection request notification:', { fromUser, toUserId });
+      throw new Error('Missing required parameters for connection request notification');
+    }
+    
+    console.log(`Creating connection request notification from ${fromUser.name} (${fromUser.id}) to ${toUserId}`);
+    
+    const notification = {
+      userId: toUserId,
+      type: 'connection_request',
+      fromUserId: fromUser.id,
+      fromUserName: fromUser.name || 'A user',
+      message: `${fromUser.name || 'A user'} sent you a connection request`,
+      actionLink: `/profile/${fromUser.id}`,
+      actionLabel: 'View Profile'
+    };
+    
+    return await createNotification(notification);
+  } catch (error) {
+    console.error('Failed to create connection request notification:', error);
+    // Don't throw, just return false to avoid breaking the connection request flow
+    return false;
+  }
+};
+
+// Function to create connection acceptance notification
+export const createConnectionAcceptanceNotification = async (fromUser, toUserId) => {
+  try {
+    if (!fromUser || !fromUser.id || !toUserId) {
+      console.error('Invalid parameters for connection acceptance notification:', { fromUser, toUserId });
+      throw new Error('Missing required parameters for connection acceptance notification');
+    }
+    
+    console.log(`Creating connection acceptance notification from ${fromUser.name} (${fromUser.id}) to ${toUserId}`);
+    
+    const notification = {
+      userId: toUserId,
+      type: 'connection_accepted',
+      fromUserId: fromUser.id,
+      fromUserName: fromUser.name || 'A user',
+      message: `${fromUser.name || 'A user'} accepted your connection request`,
+      actionLink: `/profile/${fromUser.id}`,
+      actionLabel: 'View Profile'
+    };
+    
+    return await createNotification(notification);
+  } catch (error) {
+    console.error('Failed to create connection acceptance notification:', error);
+    // Don't throw, just return false to avoid breaking the connection acceptance flow
+    return false;
+  }
+};
+
+// Helper function to create a fallback query when index is missing
+const createFallbackQuery = (userId) => {
+  console.log(`Creating fallback query for user ${userId} due to missing index`);
+  return query(
+    collection(db, 'notifications'),
+    where('userId', '==', userId)
+  );
+};
+
 // Set up a real-time listener for new notifications
 export const subscribeToUserNotifications = (userId, callback) => {
+  if (!userId) {
+    console.error('Cannot subscribe to notifications: missing userId');
+    callback([]);
+    return () => {}; // Return empty unsubscribe function
+  }
+
+  console.log(`Setting up notifications subscription for user ${userId}`);
+  
+  // First try the optimal query with ordering
   try {
-    // First try the optimal query with ordering
     const q = query(
       collection(db, 'notifications'),
       where('userId', '==', userId),
@@ -214,20 +305,18 @@ export const subscribeToUserNotifications = (userId, callback) => {
           ...doc.data(),
           timestamp: doc.data().timestamp?.toDate() || new Date()
         }));
+        console.log(`Received notification update, count: ${notifications.length}`);
         callback(notifications);
       },
       // Error handler
       (error) => {
         // Check if this is a missing index error
-        if (error.message && error.message.includes('requires an index')) {
+        if (error.message && error.message.includes('index')) {
           console.warn('Missing Firestore index for notifications subscription. Please follow the link in the error to create the index.');
           console.warn('Using fallback query without ordering until index is created.');
           
           // Fallback: Use a simpler query without ordering
-          const fallbackQuery = query(
-            collection(db, 'notifications'),
-            where('userId', '==', userId)
-          );
+          const fallbackQuery = createFallbackQuery(userId);
           
           // Set up a new listener with the fallback query
           return onSnapshot(fallbackQuery, (fallbackSnapshot) => {
@@ -238,8 +327,20 @@ export const subscribeToUserNotifications = (userId, callback) => {
             }));
             
             // Sort manually by timestamp descending
-            const sortedNotifications = notifications.sort((a, b) => b.timestamp - a.timestamp).slice(0, 20);
+            const sortedNotifications = notifications.sort((a, b) => {
+              // Handle potential missing timestamps
+              const timeA = b.timestamp instanceof Date ? b.timestamp : new Date();
+              const timeB = a.timestamp instanceof Date ? a.timestamp : new Date();
+              return timeA - timeB;
+            }).slice(0, 20);
+            
+            console.log(`Received notification update (fallback), count: ${sortedNotifications.length}`);
             callback(sortedNotifications);
+          }, 
+          // Error handler for fallback
+          (fallbackError) => {
+            console.error('Error in fallback notifications subscription:', fallbackError);
+            callback([]);
           });
         }
         
@@ -248,10 +349,31 @@ export const subscribeToUserNotifications = (userId, callback) => {
         callback([]);
       }
     );
-  } catch (error) {
-    console.error('Failed to set up notifications subscription:', error);
-    // Return a no-op unsubscribe function
-    return () => {};
+  } catch (setupError) {
+    console.error('Error setting up notification subscription:', setupError);
+    // Try with fallback query from the beginning
+    try {
+      const fallbackQuery = createFallbackQuery(userId);
+      return onSnapshot(fallbackQuery, (fallbackSnapshot) => {
+        const notifications = fallbackSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          timestamp: doc.data().timestamp?.toDate() || new Date(doc.data().createdAt || Date.now())
+        }))
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 20);
+        
+        console.log(`Received notification update (direct fallback), count: ${notifications.length}`);
+        callback(notifications);
+      }, (error) => {
+        console.error('Error in direct fallback notification subscription:', error);
+        callback([]);
+      });
+    } catch (finalError) {
+      console.error('Final error setting up notifications, giving up:', finalError);
+      callback([]);
+      return () => {}; // Empty unsubscribe function
+    }
   }
 };
 
@@ -266,90 +388,6 @@ export const getUnreadNotificationsCount = (userId, callback) => {
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.length);
   });
-};
-
-// Helper function to create a connection request notification
-export const createConnectionRequestNotification = async (fromUser, toUserId) => {
-  try {
-    console.log('Creating connection request notification', {
-      fromUser: { id: fromUser.id, name: fromUser.name },
-      toUserId,
-      timestamp: new Date().toISOString()
-    });
-    
-    if (!fromUser || !fromUser.id) {
-      console.error('Invalid fromUser object:', fromUser);
-      throw new Error('Invalid fromUser object');
-    }
-    
-    if (!toUserId) {
-      console.error('Invalid toUserId:', toUserId);
-      throw new Error('Invalid toUserId');
-    }
-    
-    const notificationData = {
-      userId: toUserId,
-      type: 'connection',
-      message: `${fromUser.name || 'Someone'} sent you a connection request`,
-      linkTo: `/directory/user/${fromUser.id}`,
-      sourceId: fromUser.id,
-      sourceType: 'user'
-    };
-    
-    console.log('Notification data prepared:', notificationData);
-    
-    const notificationResult = await createNotification(notificationData);
-    console.log('Connection request notification created:', notificationResult);
-    
-    return notificationResult;
-  } catch (error) {
-    console.error('Error creating connection request notification:', error);
-    // Log more details about the parameters that caused the error
-    console.error('Notification parameters:', { fromUser, toUserId });
-    throw error;
-  }
-};
-
-// Helper function to create a connection acceptance notification
-export const createConnectionAcceptanceNotification = async (fromUser, toUserId) => {
-  try {
-    console.log('Creating connection acceptance notification', {
-      fromUser: { id: fromUser.id, name: fromUser.name },
-      toUserId,
-      timestamp: new Date().toISOString()
-    });
-    
-    if (!fromUser || !fromUser.id) {
-      console.error('Invalid fromUser object:', fromUser);
-      throw new Error('Invalid fromUser object');
-    }
-    
-    if (!toUserId) {
-      console.error('Invalid toUserId:', toUserId);
-      throw new Error('Invalid toUserId');
-    }
-    
-    const notificationData = {
-      userId: toUserId,
-      type: 'connection',
-      message: `${fromUser.name || 'Someone'} accepted your connection request`,
-      linkTo: `/directory/user/${fromUser.id}`,
-      sourceId: fromUser.id,
-      sourceType: 'user'
-    };
-    
-    console.log('Notification data prepared:', notificationData);
-    
-    const notificationResult = await createNotification(notificationData);
-    console.log('Connection acceptance notification created:', notificationResult);
-    
-    return notificationResult;
-  } catch (error) {
-    console.error('Error creating connection acceptance notification:', error);
-    // Log more details about the parameters that caused the error
-    console.error('Notification parameters:', { fromUser, toUserId });
-    throw error;
-  }
 };
 
 // Helper function to create a message notification
