@@ -39,12 +39,32 @@ const CreateMentorship = () => {
       setLoading(true);
       setError('');
       
+      // Check specifically for the expectations field
+      if (!formData.expectations || formData.expectations.trim() === '') {
+        setError('Expectations field is required and cannot be empty');
+        setLoading(false);
+        return;
+      }
+      
       // Validate form
-      if (!formData.title || !formData.description || !formData.category || !formData.expectations) {
+      if (!formData.title || !formData.description || !formData.category || !formData.skills) {
         throw new Error('Please fill all required fields');
       }
       
-      console.log('Submitting mentorship data:', formData);
+      // Create the request payload
+      const mentorshipPayload = {
+        ...formData,
+        mentorId: currentUser.uid,
+        expectations: formData.expectations.trim(), // Ensure expectations is properly formatted
+        mentorName: userData?.name || 'Anonymous',
+        mentorRole: role,
+        mentorPhotoURL: userData?.photoURL || '',
+        mentees: 0,
+        status: 'active'
+      };
+      
+      // Log the exact payload being sent
+      console.log('Submitting mentorship data:', mentorshipPayload);
       
       const response = await fetch(`${API_URL}/api/mentorships`, {
         method: 'POST',
@@ -52,21 +72,29 @@ const CreateMentorship = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${await currentUser.getIdToken()}`
         },
-        body: JSON.stringify({
-          ...formData,
-          mentorId: currentUser.uid,
-          mentorName: userData?.name || 'Anonymous',
-          mentorRole: role,
-          mentorPhotoURL: userData?.photoURL || '',
-          mentees: 0,
-          status: 'active'
-        })
+        body: JSON.stringify(mentorshipPayload)
       });
       
+      // Log the raw response
+      console.log('Response status:', response.status);
+      
+      // If response is not ok, try to get detailed error message
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to create mentorship program');
+        const errorText = await response.text();
+        console.error('Server error response:', errorText);
+        
+        try {
+          // Try to parse as JSON if possible
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.message || 'Failed to create mentorship program');
+        } catch (parseError) {
+          // If parsing fails, use the raw text
+          throw new Error(`Server error: ${errorText || response.statusText}`);
+        }
       }
+      
+      const data = await response.json();
+      console.log('Success response:', data);
       
       setSuccess(true);
       
