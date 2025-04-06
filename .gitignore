@@ -1,3 +1,11 @@
 node_modules/
 .env
+.env.production
 firebaseConfig.js  # If you have sensitive Firebase keys
+.env.local
+.env.development
+.env.test
+.env.test.local
+
+config/firebase-admin-sdk.json
+config/serviceAccountKey.json
