@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import EnrolledEvents from "./EnrolledEvents";
 import "./StudentDashboard.css";
 import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import Network from "./components/Network";
 import { getConnectionRequests } from "../../services/connectionService";
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
+import Profile from "./components/Profile";
+import EnrolledEvents from "./EnrolledEvents";
 
 const StudentDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -520,222 +521,7 @@ const StudentDashboard = () => {
 
         <main className="p-6">
           {activeSection === 'profile' && (
-            <div className="space-y-8">
-              {/* Profile Header */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-                  <div className="w-32 h-32 rounded-full bg-blue-500 flex items-center justify-center text-white text-4xl overflow-hidden">
-                    {profileData.name ? (
-                      profileData.name.charAt(0).toUpperCase()
-                    ) : (
-                      '👤'
-                    )}
-                  </div>
-                  
-                  <div className="flex-1 text-center md:text-left">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                      {profileData.name || "Student Name"}
-                    </h1>
-                    <p className="text-gray-600 dark:text-gray-400 mb-3">
-                      Student • {profileData.program || "Program"} • {profileData.batch || "Batch"}
-                    </p>
-                    
-                    <p className="text-gray-700 dark:text-gray-300 max-w-2xl mb-4">
-                      {profileData.bio || "No bio available"}
-                    </p>
-                    
-                    <div className="flex flex-wrap gap-2">
-                      {Array.isArray(profileData.skills) && profileData.skills.length > 0 ? (
-                        profileData.skills.map((skill, index) => (
-                          <span 
-                            key={index} 
-                            className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
-                          >
-                            {skill}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-gray-500 dark:text-gray-400 text-sm">No skills listed</span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="md:self-start">
-                    <button
-                      onClick={() => navigate('/profile')}
-                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                    >
-                      Edit Profile
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Personal Information */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Personal Information</h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Full Name</h3>
-                    <p className="text-gray-800 dark:text-white">{profileData.name || "Not provided"}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Email Address</h3>
-                    <p className="text-gray-800 dark:text-white">{profileData.email || "Not provided"}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Phone Number</h3>
-                    <p className="text-gray-800 dark:text-white">{profileData.phone || "Not provided"}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Date of Birth</h3>
-                    <p className="text-gray-800 dark:text-white">{profileData.dateOfBirth || "Not provided"}</p>
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Address</h3>
-                    <p className="text-gray-800 dark:text-white">{profileData.address || "Not provided"}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Academic Information */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Academic Information</h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-y-6 gap-x-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Enrollment Number</h3>
-                    <p className="text-gray-800 dark:text-white">{profileData.enrollmentNumber || "Not provided"}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Program</h3>
-                    <p className="text-gray-800 dark:text-white">{profileData.program || "Not provided"}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Admission Year</h3>
-                    <p className="text-gray-800 dark:text-white">{profileData.admissionYear || "Not provided"}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Batch</h3>
-                    <p className="text-gray-800 dark:text-white">{profileData.batch || "Not provided"}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Current Semester</h3>
-                    <p className="text-gray-800 dark:text-white">{profileData.currentSemester || "Not provided"}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">CGPA</h3>
-                    <p className="text-gray-800 dark:text-white">{profileData.cgpa || "Not provided"}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Enrolled Courses */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Enrolled Courses</h2>
-                
-                {Array.isArray(profileData.courses) && profileData.courses.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {profileData.courses.map((course, index) => (
-                      <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                        <h3 className="font-semibold text-gray-800 dark:text-white">{course.name}</h3>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm">{course.code}</p>
-                        <div className="mt-2 flex justify-between">
-                          <span className="text-sm text-gray-500 dark:text-gray-400">Credits: {course.credits}</span>
-                          {course.grade && <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Grade: {course.grade}</span>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-600 dark:text-gray-400">No courses enrolled</p>
-                )}
-              </div>
-              
-              {/* Projects */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Projects</h2>
-                
-                {Array.isArray(profileData.projects) && profileData.projects.length > 0 ? (
-                  <div className="space-y-6">
-                    {profileData.projects.map((project, index) => (
-                      <div key={index} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-0">
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{project.title}</h3>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{project.date}</p>
-                        <p className="text-gray-700 dark:text-gray-300 mb-3">{project.description}</p>
-                        
-                        {Array.isArray(project.technologies) && project.technologies.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {project.technologies.map((tech, techIndex) => (
-                              <span 
-                                key={techIndex}
-                                className="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs"
-                              >
-                                {tech}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        
-                        {project.link && (
-                          <a 
-                            href={project.link} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="mt-3 inline-block text-blue-600 dark:text-blue-400 hover:underline text-sm"
-                          >
-                            View Project →
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-600 dark:text-gray-400">No projects added</p>
-                )}
-              </div>
-              
-              {/* Achievements */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Achievements</h2>
-                
-                {Array.isArray(profileData.achievements) && profileData.achievements.length > 0 ? (
-                  <div className="space-y-4">
-                    {profileData.achievements.map((achievement, index) => (
-                      <div 
-                        key={index} 
-                        className="flex gap-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                      >
-                        <div className="text-2xl text-yellow-500">🏆</div>
-                        <div>
-                          <h3 className="font-semibold text-gray-800 dark:text-white">{achievement.title}</h3>
-                          <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">{achievement.date}</p>
-                          <p className="text-gray-700 dark:text-gray-300">{achievement.description}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-600 dark:text-gray-400">No achievements added</p>
-                )}
-              </div>
-            </div>
+            <Profile user={currentUser} isDarkMode={isDarkMode} />
           )}
 
           {activeSection === 'overview' && (
@@ -912,7 +698,7 @@ const StudentDashboard = () => {
                       <div className="h-20 w-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
                         <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Suggested Alumni" className="w-full h-full object-cover" />
                       </div>
-                      <h3 className="text-lg font-bold text-gray-800 dark:text-white">Robert Johnson</h3>
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-white">Robert Johnson</h3>
                       <p className="text-gray-600 dark:text-gray-400">Software Engineer at Google</p>
                       <div className="flex flex-wrap justify-center gap-1 mb-4">
                         <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
