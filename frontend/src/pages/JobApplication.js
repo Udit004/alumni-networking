@@ -58,25 +58,42 @@ const JobApplication = () => {
       // Get the current user's token
       const token = await currentUser.getIdToken();
       
-      const response = await axios.post(`${API_URL}/api/job-applications/${id}`, 
-        {
-          ...formData,
-          userId: currentUser.uid
-        },
+      // Basic validation
+      if (!formData.name || !formData.email || !formData.phone || 
+          !formData.location || !formData.education || !formData.skills || 
+          !formData.experience || !formData.coverletter) {
+        setError('Please fill in all required fields');
+        setLoading(false);
+        return;
+      }
+      
+      // Use the direct endpoint similar to the mentorship application
+      const response = await axios.post(
+        `${API_URL}/api/jobs/${id}/apply`, 
+        formData, // Don't include userId, it comes from auth middleware
         {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         }
       );
       
+      console.log("Server response:", response.data);
+      
       if (response.data.success) {
         alert('Application submitted successfully!');
         navigate('/jobs');
+      } else {
+        setError(`Submission failed: ${response.data.message || 'Unknown error'}`);
       }
     } catch (err) {
       setError('Failed to submit application');
       console.error('Error submitting application:', err);
+      if (err.response) {
+        console.error('Error status:', err.response.status);
+        console.error('Error data:', err.response.data);
+      }
     } finally {
       setLoading(false);
     }
