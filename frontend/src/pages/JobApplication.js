@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../firebase';
-import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import axios from 'axios';
+import './JobApplication.css';
 
 const JobApplication = () => {
   const { id } = useParams();
@@ -10,63 +10,69 @@ const JobApplication = () => {
   const { currentUser } = useAuth();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
-    coverLetter: '',
-    resume: '',
-    skills: [],
+    name: '',
+    email: '',
+    phone: '',
+    location: '',
+    education: '',
     experience: '',
-    availability: '',
+    skills: '',
+    coverletter: '',
+    resumeLink: '',
+    additionalInfo: ''
   });
+  const API_URL = process.env.REACT_APP_API_URL;
 
   useEffect(() => {
-    const fetchJob = async () => {
-      try {
-        const jobDoc = await getDoc(doc(db, 'jobs', id));
-        if (jobDoc.exists()) {
-          setJob({ id: jobDoc.id, ...jobDoc.data() });
-        } else {
-          setError('Job not found');
-        }
-      } catch (err) {
-        console.error('Error fetching job:', err);
-        setError('Failed to load job details');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchJob();
+    fetchJobDetails();
   }, [id]);
+
+  const fetchJobDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/api/jobs/${id}`);
+      setJob(response.data);
+    } catch (err) {
+      setError('Failed to load job details');
+      console.error('Error fetching job:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!currentUser) {
-      alert('Please login to apply for this job');
-      return;
-    }
-
     try {
-      const jobRef = doc(db, 'jobs', id);
-      await updateDoc(jobRef, {
-        applications: arrayUnion({
-          userId: currentUser.uid,
-          ...formData,
-          status: 'pending',
-          appliedAt: new Date(),
-        }),
+      setLoading(true);
+      const response = await axios.post(`${API_URL}/api/jobs/${id}/apply`, {
+        ...formData,
+        userId: currentUser.uid
       });
-
-      alert('Application submitted successfully!');
-      navigate('/jobs');
+      
+      if (response.data.success) {
+        alert('Application submitted successfully!');
+        navigate('/jobs');
+      }
     } catch (err) {
-      console.error('Error submitting application:', err);
       setError('Failed to submit application');
+      console.error('Error submitting application:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
   }
 
   if (error) {
@@ -78,88 +84,161 @@ const JobApplication = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Apply for {job.title}</h1>
+    <div className="job-application">
+      <h1>Apply for Job: {job.title}</h1>
       
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Cover Letter
-          </label>
+      <div className="job-details">
+        <div className="company-info">
+          <h2>{job.company}</h2>
+          <p className="location">{job.location}</p>
+          <p className="job-type">{job.type}</p>
+          {job.salary && <p className="salary">{job.salary}</p>}
+        </div>
+        
+        <div className="job-description">
+          <p>{job.description}</p>
+        </div>
+      </div>
+      
+      <form onSubmit={handleSubmit} className="application-form">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="form-group">
+            <label>Full Name</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Email</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Phone</label>
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              required
+              className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Location</label>
+            <input
+              type="text"
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
+              required
+              className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Education</label>
+            <input
+              type="text"
+              name="education"
+              value={formData.education}
+              onChange={handleChange}
+              required
+              className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Skills</label>
+            <input
+              type="text"
+              name="skills"
+              value={formData.skills}
+              onChange={handleChange}
+              required
+              className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+          </div>
+        </div>
+        
+        <div className="form-group">
+          <label>Work Experience</label>
           <textarea
-            value={formData.coverLetter}
-            onChange={(e) => setFormData({ ...formData, coverLetter: e.target.value })}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-            rows="6"
+            name="experience"
+            value={formData.experience}
+            onChange={handleChange}
             required
+            rows="4"
+            placeholder="Describe your relevant work experience"
+            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Resume URL
-          </label>
+        
+        <div className="form-group">
+          <label>Cover Letter</label>
+          <textarea
+            name="coverletter"
+            value={formData.coverletter}
+            onChange={handleChange}
+            required
+            rows="6"
+            placeholder="Write a brief cover letter explaining why you're a good fit for this position"
+            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          />
+        </div>
+        
+        <div className="form-group">
+          <label>Resume Link</label>
           <input
             type="url"
-            value={formData.resume}
-            onChange={(e) => setFormData({ ...formData, resume: e.target.value })}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-            required
+            name="resumeLink"
+            value={formData.resumeLink}
+            onChange={handleChange}
+            placeholder="Link to your resume (Google Drive, Dropbox, etc.)"
+            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Skills (comma separated)
-          </label>
-          <input
-            type="text"
-            value={formData.skills.join(', ')}
-            onChange={(e) => setFormData({ ...formData, skills: e.target.value.split(',').map(s => s.trim()) })}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Experience
-          </label>
+        
+        <div className="form-group">
+          <label>Additional Information</label>
           <textarea
-            value={formData.experience}
-            onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+            name="additionalInfo"
+            value={formData.additionalInfo}
+            onChange={handleChange}
             rows="4"
-            required
+            placeholder="Any additional information you'd like to share"
+            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Availability
-          </label>
-          <input
-            type="text"
-            value={formData.availability}
-            onChange={(e) => setFormData({ ...formData, availability: e.target.value })}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-            required
-          />
-        </div>
-
-        <div className="flex justify-end space-x-4">
+        
+        <div className="button-group">
           <button
             type="button"
             onClick={() => navigate('/jobs')}
-            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+            className="cancel-button"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            disabled={loading}
+            className="submit-button"
           >
-            Submit Application
+            {loading ? 'Submitting...' : 'Submit Application'}
           </button>
         </div>
       </form>

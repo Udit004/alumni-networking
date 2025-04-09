@@ -24,6 +24,7 @@ import PrivateRoute from './components/PrivateRoute';
 import CreateJob from './pages/CreateJob';
 import CreateMentorship from './pages/CreateMentorship';
 import MentorshipApplication from './pages/MentorshipApplication';
+import JobApplication from './pages/JobApplication';
 import './App.css';
 
 function App() {
@@ -56,6 +57,11 @@ function App() {
               <Route path="/jobs" element={
                 <PrivateRoute>
                   <Jobs />
+                </PrivateRoute>
+              } />
+              <Route path="/jobs/:id/apply" element={
+                <PrivateRoute>
+                  <JobApplication />
                 </PrivateRoute>
               } />
               <Route path="/mentorship" element={

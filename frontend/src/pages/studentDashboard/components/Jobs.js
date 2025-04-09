@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Jobs = ({ isDarkMode }) => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,26 +30,12 @@ const Jobs = ({ isDarkMode }) => {
     }
   };
 
-  const handleApplyJob = async (jobId) => {
-    if (!currentUser) return;
-    
-    try {
-      await axios.post(`${API_URL}/api/jobs/${jobId}/apply`, {
-        userId: currentUser.uid
-      });
-      
-      // Update local state to reflect the application
-      setJobs(jobs.map(job => 
-        job._id === jobId ? 
-          { ...job, applicants: [...job.applicants, { userId: currentUser.uid }] } : 
-          job
-      ));
-      
-      alert('Application submitted successfully!');
-    } catch (err) {
-      console.error('Error applying for job:', err);
-      alert('Failed to submit application. Please try again.');
+  const handleApplyJob = (jobId) => {
+    if (!currentUser) {
+      alert('Please login to apply for this job');
+      return;
     }
+    navigate(`/jobs/${jobId}/apply`);
   };
 
   const hasApplied = (job) => {
