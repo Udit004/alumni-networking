@@ -1,0 +1,128 @@
+.mentorship-application {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mentorship-application h1 {
+  font-size: 2rem;
+  color: #222;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.mentorship-application .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.mentorship-application label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #555;
+  font-weight: 500;
+}
+
+.mentorship-application input,
+.mentorship-application textarea,
+.mentorship-application select {
+  background: #fff;
+  color: #333;
+  border: 1px solid #ccc;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.mentorship-application input:focus,
+.mentorship-application textarea:focus,
+.mentorship-application select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.mentorship-application textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.mentorship-application .button-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.mentorship-application button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.mentorship-application button[type="submit"] {
+  background-color: #4a90e2;
+  color: white;
+}
+
+.mentorship-application button[type="submit"]:hover {
+  background-color: #357abd;
+}
+
+.mentorship-application button[type="button"] {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.mentorship-application button[type="button"]:hover {
+  background-color: #e0e0e0;
+}
+
+.mentorship-application .error {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.mentorship-application .loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .mentorship-application {
+    background: #2a2a2a;
+    color: #e0e0e0;
+  }
+
+  .mentorship-application h1 {
+    color: #fff;
+  }
+
+  .mentorship-application label {
+    color: #ccc;
+  }
+
+  .mentorship-application input,
+  .mentorship-application textarea,
+  .mentorship-application select {
+    background: #3a3a3a;
+    color: #e0e0e0;
+    border-color: #555;
+  }
+
+  .mentorship-application button[type="button"] {
+    background-color: #404040;
+    color: #fff;
+  }
+
+  .mentorship-application button[type="button"]:hover {
+    background-color: #505050;
+  }
+} 

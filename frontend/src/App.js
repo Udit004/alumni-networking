@@ -23,6 +23,7 @@ import StudentProfile from './pages/directory/studentDirectory/StudentProfile';
 import PrivateRoute from './components/PrivateRoute';
 import CreateJob from './pages/CreateJob';
 import CreateMentorship from './pages/CreateMentorship';
+import MentorshipApplication from './pages/MentorshipApplication';
 import './App.css';
 
 function App() {
@@ -60,6 +61,11 @@ function App() {
               <Route path="/mentorship" element={
                 <PrivateRoute>
                   <Mentorship />
+                </PrivateRoute>
+              } />
+              <Route path="/mentorship/:id/apply" element={
+                <PrivateRoute>
+                  <MentorshipApplication />
                 </PrivateRoute>
               } />
               <Route path="/about" element={<About />} />

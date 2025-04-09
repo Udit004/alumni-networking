@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "react-toastify": "^11.0.5"
+  },
+  "devDependencies": {
+    "cursor-talk-to-figma-mcp": "^0.1.6"
   }
 }
