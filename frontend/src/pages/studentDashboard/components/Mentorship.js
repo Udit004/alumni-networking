@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Mentorship = ({ isDarkMode }) => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [mentorships, setMentorships] = useState([]);
   const [enrolledMentorships, setEnrolledMentorships] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,22 +34,12 @@ const Mentorship = ({ isDarkMode }) => {
     }
   };
 
-  const handleApplyMentorship = async (mentorshipId) => {
-    if (!currentUser) return;
-    
-    try {
-      await axios.post(`${API_URL}/api/mentorships/${mentorshipId}/apply`, {
-        userId: currentUser.uid
-      });
-      
-      // Update local state to reflect the enrollment
-      setEnrolledMentorships([...enrolledMentorships, { mentorshipId }]);
-      
-      alert('Application submitted successfully!');
-    } catch (err) {
-      console.error('Error applying for mentorship:', err);
-      alert('Failed to submit application. Please try again.');
+  const handleApplyMentorship = (mentorshipId) => {
+    if (!currentUser) {
+      alert('Please login to apply for mentorship');
+      return;
     }
+    navigate(`/mentorship/${mentorshipId}/apply`);
   };
 
   const isEnrolled = (mentorshipId) => {

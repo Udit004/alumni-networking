@@ -54,10 +54,21 @@ const JobApplication = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      const response = await axios.post(`${API_URL}/api/jobs/${id}/apply`, {
-        ...formData,
-        userId: currentUser.uid
-      });
+      
+      // Get the current user's token
+      const token = await currentUser.getIdToken();
+      
+      const response = await axios.post(`${API_URL}/api/job-applications/${id}`, 
+        {
+          ...formData,
+          userId: currentUser.uid
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
       
       if (response.data.success) {
         alert('Application submitted successfully!');

@@ -2,13 +2,11 @@ const mongoose = require('mongoose');
 
 const mentorshipApplicationSchema = new mongoose.Schema({
   mentorshipId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Mentorship',
+    type: String,
     required: true
   },
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String,
     required: true
   },
   name: {
@@ -32,7 +30,7 @@ const mentorshipApplicationSchema = new mongoose.Schema({
     required: true
   },
   skills: {
-    type: [String],
+    type: Array,
     required: true
   },
   experience: {
@@ -44,7 +42,8 @@ const mentorshipApplicationSchema = new mongoose.Schema({
     required: true
   },
   additionalInfo: {
-    type: String
+    type: String,
+    default: ''
   },
   status: {
     type: String,
@@ -55,6 +54,21 @@ const mentorshipApplicationSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+});
+
+// Add a pre-save middleware to handle conversion of ID types
+mentorshipApplicationSchema.pre('save', function(next) {
+  // Ensure program is set if not provided
+  if (!this.program && this.currentYear) {
+    this.program = this.currentYear;
+  }
+  
+  // Ensure additionalInfo is set to empty string if not provided
+  if (this.additionalInfo === undefined || this.additionalInfo === null) {
+    this.additionalInfo = '';
+  }
+  
+  next();
 });
 
 module.exports = mongoose.model('MentorshipApplication', mentorshipApplicationSchema); 
