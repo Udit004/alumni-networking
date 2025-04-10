@@ -314,44 +314,6 @@ const Overview = ({ connections, courseCount, isDarkMode, navigate, jobApplicati
           </li>
         </ul>
       </div>
-
-      {/* Upcoming Deadlines */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
-           style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Upcoming Deadlines</h2>
-        
-        <div className="space-y-4">
-          <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-500">
-            <div>
-              <h3 className="font-semibold text-gray-800 dark:text-white">Database Design Project</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">CS301 - Due tomorrow at 11:59 PM</p>
-            </div>
-            <button className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors">
-              View
-            </button>
-          </div>
-          
-          <div className="flex justify-between items-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border-l-4 border-orange-500">
-            <div>
-              <h3 className="font-semibold text-gray-800 dark:text-white">Algorithm Analysis Quiz</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">CS202 - Due in 3 days</p>
-            </div>
-            <button className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors">
-              View
-            </button>
-          </div>
-          
-          <div className="flex justify-between items-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-500">
-            <div>
-              <h3 className="font-semibold text-gray-800 dark:text-white">Machine Learning Lab Report</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">CS401 - Due in 5 days</p>
-            </div>
-            <button className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors">
-              View
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
