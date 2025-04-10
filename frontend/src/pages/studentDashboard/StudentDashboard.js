@@ -11,6 +11,8 @@ import Profile from "./components/Profile";
 import EnrolledEvents from "./EnrolledEvents";
 import Mentorship from "./components/Mentorship";
 import Jobs from "./components/Jobs";
+import Overview from "./components/Overview";
+import axios from 'axios';
 
 const StudentDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -19,6 +21,8 @@ const StudentDashboard = () => {
   const [error, setError] = useState('');
   const [events, setEvents] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
+  const [jobApplicationsCount, setJobApplicationsCount] = useState(0);
+  const [mentorshipsCount, setMentorshipsCount] = useState(0);
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
@@ -297,6 +301,58 @@ const StudentDashboard = () => {
     }
   };
 
+  // Function to fetch job applications and mentorships counts
+  useEffect(() => {
+    const fetchCounts = async () => {
+      if (!currentUser) return;
+      
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      
+      try {
+        // Fetch job applications count
+        const token = await currentUser.getIdToken();
+        const jobAppResponse = await axios.get(
+          `${API_URL}/api/job-applications`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        let applicationData = [];
+        if (jobAppResponse.data && jobAppResponse.data.success) {
+          if (Array.isArray(jobAppResponse.data.data)) {
+            applicationData = jobAppResponse.data.data;
+          } else if (Array.isArray(jobAppResponse.data.applications)) {
+            applicationData = jobAppResponse.data.applications;
+          }
+        } else if (Array.isArray(jobAppResponse.data)) {
+          applicationData = jobAppResponse.data;
+        }
+        
+        // Filter for current user's applications
+        const userApplications = applicationData.filter(app => app.userId === currentUser.uid);
+        setJobApplicationsCount(userApplications.length);
+        
+        // Fetch mentorships count
+        const mentorshipResponse = await axios.get(`${API_URL}/api/mentorships/user/${currentUser.uid}`);
+        
+        const userMentorships = mentorshipResponse.data.success ?
+          (mentorshipResponse.data.mentorships ||
+          mentorshipResponse.data.enrolledMentorships ||
+          []) : [];
+          
+        setMentorshipsCount(Array.isArray(userMentorships) ? userMentorships.length : 0);
+      } catch (error) {
+        console.error("Error fetching application and mentorship counts:", error);
+      }
+    };
+    
+    fetchCounts();
+  }, [currentUser]);
+
   // Handle notification click - update to use the service
   const handleNotificationClick = async (notification) => {
     try {
@@ -505,250 +561,14 @@ const StudentDashboard = () => {
           )}
 
           {activeSection === 'overview' && (
-            <div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                {/* Stats cards - keep this part */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-4">📅</div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Enrolled Events</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">5</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Keep other stat cards... */}
-                
-                {/* Add a Connections stat card */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
-                     style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-500 dark:text-indigo-300 text-xl mr-4">🔗</div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Connections</h3>
-                      <p className="text-3xl font-bold text-gray-900 dark:text-white">{connections.length}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Replace Recent Activity with Connections */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-                  <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 md:mb-0">My Connections</h2>
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={() => navigate('/directory')}
-                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2"
-                    >
-                      <span>Find Connections</span> 🔍
-                    </button>
-                  </div>
-                </div>
-                
-                {connectionLoading ? (
-                  <div className="flex justify-center items-center py-8">
-                    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-                  </div>
-                ) : connections.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">You haven't connected with any alumni or teachers yet.</p>
-                    <button 
-                      onClick={() => navigate('/directory')}
-                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                    >
-                      Browse Directory
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    {/* Alumni Connections */}
-                    {alumniConnections.length > 0 && (
-                      <div className="mb-8">
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-                          Alumni Connections
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {alumniConnections.map((alumni) => (
-                            <div 
-                              key={alumni.id}
-                              className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                              onClick={() => navigate(`/directory/alumni/${alumni.id}`)}
-                            >
-                              <div className="flex items-start gap-3">
-                                <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-white overflow-hidden">
-                                  {alumni.photoURL ? (
-                                    <img src={alumni.photoURL} alt={alumni.name} className="h-full w-full object-cover" />
-                                  ) : (
-                                    alumni.name?.charAt(0).toUpperCase() || "A"
-                                  )}
-                                </div>
-                                <div>
-                                  <h4 className="font-semibold text-gray-800 dark:text-white">{alumni.name}</h4>
-                                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    {alumni.jobTitle} {alumni.company && `at ${alumni.company}`}
-                                  </p>
-                                  <div className="flex flex-wrap gap-1 mt-2">
-                                    {Array.isArray(alumni.skills) && alumni.skills.slice(0, 2).map((skill, index) => (
-                                      <span 
-                                        key={index}
-                                        className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs"
-                                      >
-                                        {skill}
-                                      </span>
-                                    ))}
-                                    {Array.isArray(alumni.skills) && alumni.skills.length > 2 && (
-                                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs">
-                                        +{alumni.skills.length - 2}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Teacher Connections */}
-                    {teacherConnections.length > 0 && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-                          Teacher Connections
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {teacherConnections.map((teacher) => (
-                            <div 
-                              key={teacher.id}
-                              className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                              onClick={() => navigate(`/directory/teacher/${teacher.id}`)}
-                            >
-                              <div className="flex items-start gap-3">
-                                <div className="h-12 w-12 rounded-full bg-purple-500 flex items-center justify-center text-white overflow-hidden">
-                                  {teacher.photoURL ? (
-                                    <img src={teacher.photoURL} alt={teacher.name} className="h-full w-full object-cover" />
-                                  ) : (
-                                    teacher.name?.charAt(0).toUpperCase() || "T"
-                                  )}
-                                </div>
-                                <div>
-                                  <h4 className="font-semibold text-gray-800 dark:text-white">{teacher.name}</h4>
-                                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    {teacher.department} {teacher.institution && `at ${teacher.institution}`}
-                                  </p>
-                                  <div className="flex flex-wrap gap-1 mt-2">
-                                    {Array.isArray(teacher.skills) && teacher.skills.slice(0, 2).map((skill, index) => (
-                                      <span 
-                                        key={index}
-                                        className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs"
-                                      >
-                                        {skill}
-                                      </span>
-                                    ))}
-                                    {Array.isArray(teacher.skills) && teacher.skills.length > 2 && (
-                                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs">
-                                        +{teacher.skills.length - 2}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Suggested Connections */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
-                   style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Suggested Connections</h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Alumni Suggestion */}
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex flex-col items-center text-center">
-                      <div className="h-20 w-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
-                        <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Suggested Alumni" className="w-full h-full object-cover" />
-                      </div>
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-white">Robert Johnson</h3>
-                      <p className="text-gray-600 dark:text-gray-400">Software Engineer at Google</p>
-                      <div className="flex flex-wrap justify-center gap-1 mb-4">
-                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-                          React
-                        </span>
-                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-                          Node.js
-                        </span>
-                      </div>
-                      <button 
-                        onClick={() => handleRequestConnection('robert-johnson-id')}
-                        className="w-full py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
-                      >
-                        Connect
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Teacher Suggestion */}
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex flex-col items-center text-center">
-                      <div className="h-20 w-20 rounded-full bg-purple-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
-                        <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Suggested Teacher" className="w-full h-full object-cover" />
-                      </div>
-                      <h3 className="text-lg font-bold text-gray-800 dark:text-white">Dr. Emily Williams</h3>
-                      <p className="text-gray-600 dark:text-gray-400">Computer Science Department</p>
-                      <div className="flex flex-wrap justify-center gap-1 mb-4">
-                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs">
-                          Machine Learning
-                        </span>
-                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs">
-                          AI
-                        </span>
-                      </div>
-                      <button 
-                        onClick={() => handleRequestConnection('emily-williams-id')}
-                        className="w-full py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors text-sm"
-                      >
-                        Connect
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Alumni Suggestion */}
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex flex-col items-center text-center">
-                      <div className="h-20 w-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl overflow-hidden mb-3">
-                        <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Suggested Alumni" className="w-full h-full object-cover" />
-                      </div>
-                      <h3 className="text-lg font-bold text-gray-800 dark:text-white">Sarah Miller</h3>
-                      <p className="text-gray-600 dark:text-gray-400">Product Manager at Amazon</p>
-                      <div className="flex flex-wrap justify-center gap-1 mb-4">
-                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-                          Product Management
-                        </span>
-                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-                          UX
-                        </span>
-                      </div>
-                      <button 
-                        onClick={() => handleRequestConnection('sarah-miller-id')}
-                        className="w-full py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
-                      >
-                        Connect
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Overview 
+              connections={connections}
+              courseCount={profileData.courses.length}
+              isDarkMode={isDarkMode}
+              navigate={navigate}
+              jobApplicationsCount={jobApplicationsCount}
+              mentorshipsCount={mentorshipsCount}
+            />
           )}
 
           {activeSection === 'events' && <EnrolledEvents />}
