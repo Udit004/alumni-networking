@@ -300,40 +300,40 @@ const Mentorship = ({ isDarkMode }) => {
                 </div>
                 <div className="grid grid-cols-1 gap-4">
                   {suggestedMentorships.map(mentorship => (
-                    <div key={mentorship._id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-5 hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">{mentorship.title}</h3>
-                          <p className="text-gray-600 dark:text-gray-400 mb-2">
-                            Category: {mentorship.category} • Duration: {mentorship.duration}
-                          </p>
-                          <div className="flex flex-wrap gap-2 mb-3">
+              <div key={mentorship._id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-5 hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">{mentorship.title}</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-2">
+                      Category: {mentorship.category} • Duration: {mentorship.duration}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-3">
                             {Array.isArray(mentorship.skills) && mentorship.skills.map((skill, index) => (
-                              <span key={index} className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-                                {skill}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs">
-                            Active
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-gray-700 dark:text-gray-300 mb-4 line-clamp-2">{mentorship.description}</p>
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Commitment: {mentorship.commitment} • Mentees: {mentorship.mentees?.length || 0}/{mentorship.maxMentees}
-                        </p>
-                        <button 
-                          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                          onClick={() => handleApplyMentorship(mentorship._id)}
-                        >
-                          Apply
-                        </button>
-                      </div>
+                        <span key={index} className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                          {skill}
+                        </span>
+                      ))}
                     </div>
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs">
+                        Active
+                      </span>
+                  </div>
+                </div>
+                      <p className="text-gray-700 dark:text-gray-300 mb-4 line-clamp-2">{mentorship.description}</p>
+                <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Commitment: {mentorship.commitment} • Mentees: {mentorship.mentees?.length || 0}/{mentorship.maxMentees}
+                    </p>
+                      <button 
+                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                        onClick={() => handleApplyMentorship(mentorship._id)}
+                      >
+                        Apply
+                      </button>
+                      </div>
+                  </div>
                   ))}
                 </div>
               </div>
@@ -344,12 +344,12 @@ const Mentorship = ({ isDarkMode }) => {
               <div className="text-center py-10">
                 <p className="text-lg text-gray-600 dark:text-gray-400">No mentorships found matching your criteria.</p>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Check back later for new mentorship opportunities.</p>
-              </div>
+          </div>
             )}
           </>
         )}
       </div>
-
+      
       {/* Enrolled Mentorships Section (if any) */}
       {enrolledMentorships.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
