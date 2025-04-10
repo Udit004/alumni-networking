@@ -17,6 +17,7 @@ import {
 } from './components';
 import AlumniNetwork from './components/Network';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
+import axios from 'axios';
 
 const AlumniDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -38,6 +39,13 @@ const AlumniDashboard = () => {
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
   const { currentUser, role } = useAuth();
   const navigate = useNavigate();
+  
+  // Job and mentorship stats
+  const [mentoringCount, setMentoringCount] = useState(0);
+  const [jobPostingsCount, setJobPostingsCount] = useState(0);
+  const [activeJobsCount, setActiveJobsCount] = useState(0);
+  const [filledJobsCount, setFilledJobsCount] = useState(0);
+  const [eventsCount, setEventsCount] = useState(0);
   
   // Get API_URL from environment with fallback
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -83,6 +91,129 @@ const AlumniDashboard = () => {
     { id: 'network', label: 'Network', icon: '🔗' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];
+
+  // Fetch mentoring, job posting, and events data for the alumni
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      if (!currentUser) return;
+      
+      try {
+        console.log('Fetching real mentorship, job, and event data for user:', currentUser.uid);
+        const token = await currentUser.getIdToken();
+        
+        // Fetch mentoring relationships where alumni is the mentor - using the endpoint that works in Mentorship.js
+        const mentorshipEndpoint = `${API_URL}/api/mentorships/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=${role}`;
+        console.log('Fetching mentorships from:', mentorshipEndpoint);
+        
+        const mentorshipResponse = await axios.get(
+          mentorshipEndpoint,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        console.log('Mentorship API response:', mentorshipResponse);
+        
+        // Process mentorship data using the same approach as in Mentorship.js
+        let mentorships = [];
+        if (mentorshipResponse.data && mentorshipResponse.data.success) {
+          mentorships = mentorshipResponse.data.mentorships || [];
+        } else if (Array.isArray(mentorshipResponse.data)) {
+          mentorships = mentorshipResponse.data;
+        } else if (mentorshipResponse.data && Array.isArray(mentorshipResponse.data.data)) {
+          // Some APIs might wrap the data in a data property
+          mentorships = mentorshipResponse.data.data;
+        }
+        
+        console.log('Processed mentorships:', mentorships);
+        setMentoringCount(mentorships.length);
+        
+        // Fetch job postings created by the alumni - using the endpoint that works in Jobs.js
+        const jobsEndpoint = `${API_URL}/api/jobs/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=${role}`;
+        console.log('Fetching jobs from:', jobsEndpoint);
+        
+        const jobsResponse = await axios.get(
+          jobsEndpoint,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        console.log('Jobs API response:', jobsResponse);
+        
+        // Process job data using the same approach as in Jobs.js
+        let jobPostings = [];
+        if (jobsResponse.data && jobsResponse.data.success) {
+          jobPostings = jobsResponse.data.jobs || [];
+        } else if (Array.isArray(jobsResponse.data)) {
+          jobPostings = jobsResponse.data;
+        } else if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
+          // Some APIs might wrap the data in a data property
+          jobPostings = jobsResponse.data.data;
+        }
+        
+        console.log('Processed job postings:', jobPostings);
+        setJobPostingsCount(jobPostings.length);
+        
+        // Count active and filled jobs based on status
+        const activeJobs = jobPostings.filter(job => 
+          job.status === 'open' || job.status === 'active' || !job.status
+        );
+        const filledJobs = jobPostings.filter(job => 
+          job.status === 'filled' || job.status === 'closed'
+        );
+        
+        console.log('Active jobs:', activeJobs.length, 'Filled jobs:', filledJobs.length);
+        setActiveJobsCount(activeJobs.length);
+        setFilledJobsCount(filledJobs.length);
+        
+        // Fetch events created by the alumni - using the endpoint from Events.js
+        const eventsEndpoint = `${API_URL}/api/events/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=${role}`;
+        console.log('Fetching events from:', eventsEndpoint);
+        
+        const eventsResponse = await axios.get(
+          eventsEndpoint,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        console.log('Events API response:', eventsResponse);
+        
+        // Process events data similar to how we process jobs and mentorships
+        let createdEvents = [];
+        if (eventsResponse.data && eventsResponse.data.createdEvents) {
+          createdEvents = eventsResponse.data.createdEvents || [];
+        } else if (eventsResponse.data && eventsResponse.data.events) {
+          createdEvents = eventsResponse.data.events || [];
+        } else if (Array.isArray(eventsResponse.data)) {
+          createdEvents = eventsResponse.data;
+        } else if (eventsResponse.data && Array.isArray(eventsResponse.data.data)) {
+          createdEvents = eventsResponse.data.data;
+        }
+        
+        console.log('Processed events:', createdEvents);
+        setEventsCount(createdEvents.length);
+        
+      } catch (error) {
+        console.error("Error fetching dashboard stats:", error);
+        console.error("Error details:", error.response || error.message);
+      }
+    };
+    
+    if (activeSection === 'overview') {
+      fetchDashboardStats();
+    }
+  }, [currentUser, activeSection, API_URL, role]);
 
   useEffect(() => {
     // Check initial dark mode state
@@ -632,6 +763,12 @@ const AlumniDashboard = () => {
                 <Overview 
                   connections={connections || []}
                   isDarkMode={isDarkMode}
+                  mentoringCount={mentoringCount}
+                  jobPostingsCount={jobPostingsCount}
+                  activeJobsCount={activeJobsCount}
+                  filledJobsCount={filledJobsCount}
+                  eventsCount={eventsCount}
+                  navigate={navigate}
                 />
               )}
 

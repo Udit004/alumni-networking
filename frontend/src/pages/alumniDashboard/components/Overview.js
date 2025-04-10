@@ -1,8 +1,20 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const Overview = ({ connections, isDarkMode }) => {
-  const navigate = useNavigate();
+const Overview = ({ 
+  connections, 
+  isDarkMode, 
+  mentoringCount = 0, 
+  jobPostingsCount = 0, 
+  activeJobsCount = 0, 
+  filledJobsCount = 0,
+  eventsCount = 0,
+  navigate: navigationProp
+}) => {
+  // Always call the hook unconditionally
+  const defaultNavigate = useNavigate();
+  // Use the prop if provided, otherwise use the hook
+  const navigate = navigationProp || defaultNavigate;
 
   // Display only the first 6 connections in the overview
   const displayedConnections = connections.slice(0, 6);
@@ -10,7 +22,7 @@ const Overview = ({ connections, isDarkMode }) => {
   return (
     <div className="overview-section space-y-6">
       {/* Quick Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
              style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
           <div className="flex items-center justify-between mb-4">
@@ -31,16 +43,18 @@ const Overview = ({ connections, isDarkMode }) => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
              style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Mentorships</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Mentoring</h3>
             <span className="text-2xl">🎓</span>
           </div>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">3</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white">{mentoringCount}</p>
           <div className="flex justify-between items-center mt-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">2 as mentor</span>
-            <span className="text-sm text-gray-600 dark:text-gray-400">1 as mentee</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Active mentees</span>
           </div>
           <div className="mt-4">
-            <button className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+            <button 
+              onClick={() => navigate('/mentorship')}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            >
               View Mentorships
             </button>
           </div>
@@ -49,17 +63,40 @@ const Overview = ({ connections, isDarkMode }) => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
              style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Job Applications</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Job Postings</h3>
             <span className="text-2xl">💼</span>
           </div>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">5</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white">{jobPostingsCount}</p>
           <div className="flex justify-between items-center mt-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">2 pending</span>
-            <span className="text-sm text-gray-600 dark:text-gray-400">3 viewed</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">{activeJobsCount} active</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">{filledJobsCount} filled</span>
           </div>
           <div className="mt-4">
-            <button className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+            <button 
+              onClick={() => navigate('/jobs')}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            >
               Browse Job Board
+            </button>
+          </div>
+        </div>
+        
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
+             style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Events</h3>
+            <span className="text-2xl">📅</span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white">{eventsCount}</p>
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Created events</span>
+          </div>
+          <div className="mt-4">
+            <button 
+              onClick={() => navigate('/events')}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              View All Events
             </button>
           </div>
         </div>
@@ -175,74 +212,12 @@ const Overview = ({ connections, isDarkMode }) => {
           
           <div className="border-l-4 border-purple-500 pl-4 py-1">
             <p className="text-sm text-gray-600 dark:text-gray-400">1 week ago</p>
-            <p className="text-gray-800 dark:text-white">You applied for <span className="font-semibold">Senior Developer</span> position at TechCorp</p>
+            <p className="text-gray-800 dark:text-white">You posted a <span className="font-semibold">Senior Developer</span> position at TechCorp</p>
           </div>
           
           <div className="border-l-4 border-yellow-500 pl-4 py-1">
             <p className="text-sm text-gray-600 dark:text-gray-400">2 weeks ago</p>
             <p className="text-gray-800 dark:text-white">You updated your profile information</p>
-          </div>
-        </div>
-      </div>
-      
-      {/* Upcoming Events Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6"
-           style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Upcoming Events</h2>
-          <button 
-            onClick={() => navigate('/events')}
-            className="text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            View all events
-          </button>
-        </div>
-        
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4"
-               style={{ backgroundColor: isDarkMode ? '#0f172a' : 'white' }}>
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-lg flex flex-col items-center justify-center">
-                <span className="text-xl font-bold text-blue-600 dark:text-blue-400">15</span>
-                <span className="text-sm text-blue-600 dark:text-blue-400">Jun</span>
-              </div>
-              
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 dark:text-white">Tech Networking Mixer</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">6:00 PM - 9:00 PM • Downtown Conference Center</p>
-                <div className="mt-2 flex justify-between items-center">
-                  <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
-                    Registered
-                  </span>
-                  <button className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                    Details
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4"
-               style={{ backgroundColor: isDarkMode ? '#0f172a' : 'white' }}>
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-lg flex flex-col items-center justify-center">
-                <span className="text-xl font-bold text-blue-600 dark:text-blue-400">22</span>
-                <span className="text-sm text-blue-600 dark:text-blue-400">Jun</span>
-              </div>
-              
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 dark:text-white">Career Development Workshop</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">1:00 PM - 4:00 PM • Online</p>
-                <div className="mt-2 flex justify-between items-center">
-                  <button className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
-                    Register
-                  </button>
-                  <button className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                    Details
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
