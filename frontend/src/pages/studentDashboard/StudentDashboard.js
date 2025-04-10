@@ -404,28 +404,6 @@ const StudentDashboard = () => {
               )}
             </button>
           ))}
-          <button
-            onClick={() => setActiveSection('network')}
-            className={`w-full text-left px-4 py-2 rounded-lg flex items-center ${
-              activeSection === 'network'
-                ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            <span className="mr-3">🔗</span>
-            <div className="flex items-center justify-between w-full">
-              {isNavExpanded && (
-                <>
-                  <span>Network</span>
-                  {pendingRequests.incoming.length > 0 && (
-                    <span className="ml-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {pendingRequests.incoming.length}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-          </button>
         </nav>
       </div>
 
