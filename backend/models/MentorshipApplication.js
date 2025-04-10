@@ -9,6 +9,10 @@ const mentorshipApplicationSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  firebaseUID: {
+    type: String,
+    required: false
+  },
   name: {
     type: String,
     required: true
@@ -66,6 +70,11 @@ mentorshipApplicationSchema.pre('save', function(next) {
   // Ensure additionalInfo is set to empty string if not provided
   if (this.additionalInfo === undefined || this.additionalInfo === null) {
     this.additionalInfo = '';
+  }
+  
+  // If firebaseUID is not set but userId is provided, use it as fallback
+  if (!this.firebaseUID && this.userId) {
+    this.firebaseUID = this.userId;
   }
   
   next();
