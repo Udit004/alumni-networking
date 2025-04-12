@@ -25,9 +25,11 @@ const Jobs = ({ isDarkMode }) => {
       setLoading(true);
       console.log('Fetching jobs...');
       const response = await axios.get(`${API_URL}/api/jobs`);
-      console.log('Jobs API Response:', response.data);
+      console.log('Raw Jobs API Response:', response);
+      console.log('Jobs API Response Data:', response.data);
       
       const jobsArray = response.data.success ? response.data.jobs : [];
+      console.log('Jobs array before processing:', jobsArray);
       
       const processedJobs = Array.isArray(jobsArray) ? jobsArray.map(job => ({
         ...job,
@@ -58,46 +60,63 @@ const Jobs = ({ isDarkMode }) => {
       const token = await currentUser.getIdToken();
       
       console.log('Fetching job applications...');
-      const response = await axios.get(
-        `${API_URL}/api/job-applications`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
       
-      console.log('Job Applications API Response:', response.data);
+      // Try the real endpoint first, fall back to test endpoint if it fails
+      let response;
+      try {
+        response = await axios.get(
+          `${API_URL}/api/job-applications/user/${currentUser.uid}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        console.log('Real API job applications response:', response);
+      } catch (userError) {
+        console.error('Error fetching from real endpoint:', userError);
+        console.log('Falling back to test endpoint...');
+        // Fallback to the test endpoint
+        response = await axios.get(
+          `${API_URL}/api/job-applications/user-test/${currentUser.uid}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+      }
+      
+      console.log('Raw Job Applications API Response:', response);
+      console.log('Job Applications API Response Data:', response.data);
       
       let applicationsData = [];
       if (response.data && response.data.success) {
+        console.log('Response has success flag');
         if (Array.isArray(response.data.data)) {
+          console.log('Using response.data.data array');
           applicationsData = response.data.data;
         } else if (Array.isArray(response.data.applications)) {
+          console.log('Using response.data.applications array');
           applicationsData = response.data.applications;
         }
       } else if (Array.isArray(response.data)) {
+        console.log('Using direct response.data array');
         applicationsData = response.data;
       }
       
-      // Mock data for testing if the API returns empty
-      if (applicationsData.length === 0) {
-        console.log('No applications found, adding mock data for testing');
-        applicationsData = [{
-          _id: "mockapp1",
-          jobId: "67f133c955e741d8ab42b6cb",
-          userId: currentUser.uid,
-          name: currentUser.displayName || "Test User",
-          email: currentUser.email,
-          status: "pending",
-          appliedAt: new Date().toISOString()
-        }];
-      }
+      console.log('Applications data before filtering:', applicationsData);
       
       // Filter for current user's applications
-      const userApplications = applicationsData.filter(app => app.userId === currentUser.uid);
-      console.log('User applications:', userApplications);
+      const userApplications = applicationsData.filter(app => {
+        console.log('Checking application:', app);
+        console.log('Current user ID:', currentUser.uid);
+        console.log('Application user ID:', app.userId);
+        return app.userId === currentUser.uid;
+      });
+      console.log('Filtered user applications:', userApplications);
       
       const processedApplications = userApplications.map(app => ({
         ...app,
@@ -112,18 +131,8 @@ const Jobs = ({ isDarkMode }) => {
       setApplications(processedApplications);
     } catch (err) {
       console.error('Error fetching job applications:', err);
-      // Add mock data for testing if there's an error
-      const mockApp = {
-        _id: "mockapp1",
-        jobId: "67f133c955e741d8ab42b6cb",
-        userId: currentUser.uid,
-        name: currentUser.displayName || "Test User",
-        email: currentUser.email,
-        status: "pending",
-        appliedAt: new Date().toISOString()
-      };
-      console.log('Adding mock application for testing:', mockApp);
-      setApplications([mockApp]);
+      // Set empty array
+      setApplications([]);
     } finally {
       setApplicationsLoading(false);
     }
@@ -141,11 +150,12 @@ const Jobs = ({ isDarkMode }) => {
     if (!currentUser || !applications.length) return false;
     
     // Convert jobId to string for comparison
-    const jobIdStr = jobId.toString();
+    const jobIdStr = jobId?.toString();
     
     const result = applications.some(app => {
-      const appJobId = app.jobId?.toString();
-      return appJobId === jobIdStr && app.userId === currentUser.uid;
+      // Handle both string IDs and object IDs
+      const appJobId = typeof app.jobId === 'object' ? app.jobId?._id : app.jobId;
+      return appJobId?.toString() === jobIdStr;
     });
     
     console.log(`Checking if applied to job ${jobId}: ${result}`);
@@ -204,10 +214,30 @@ const Jobs = ({ isDarkMode }) => {
 
   // Separate jobs that user has applied for
   const appliedJobs = useMemo(() => {
-    const applied = filteredJobs.filter(job => hasApplied(job._id));
-    console.log('Applied jobs:', applied);
+    console.log('Calculating applied jobs...');
+    console.log('Current jobs:', filteredJobs);
+    console.log('Current applications:', applications);
+    
+    // First, extract all job IDs from applications
+    const applicationJobIds = applications.map(app => {
+      // Handle both string IDs and object IDs
+      const jobId = typeof app.jobId === 'object' ? app.jobId?._id : app.jobId;
+      return jobId?.toString();
+    }).filter(Boolean);
+    
+    console.log('All application job IDs:', applicationJobIds);
+    
+    // Then filter jobs that match these IDs
+    const applied = filteredJobs.filter(job => {
+      const jobIdStr = job._id?.toString();
+      const isApplied = applicationJobIds.includes(jobIdStr);
+      console.log(`Job: ${job.title || job._id}, id: ${jobIdStr}, isApplied: ${isApplied}`);
+      return isApplied;
+    });
+    
+    console.log('Final applied jobs:', applied);
     return applied;
-  }, [filteredJobs, hasApplied]);
+  }, [filteredJobs, applications]);
 
   // Suggested jobs (those the user hasn't applied for)
   const suggestedJobs = useMemo(() => {
