@@ -10,7 +10,7 @@ const EnrolledEvents = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const { user } = useAuth();
-  const [filter, setFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState('all');
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
 
   useEffect(() => {
@@ -87,8 +87,14 @@ const EnrolledEvents = () => {
   };
 
   const filteredEvents = enrolledEvents.filter(event => {
-    if (filter === "all") return true;
-    return event.status === filter;
+    const eventDate = new Date(event.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+
+    if (activeTab === "all") return true;
+    if (activeTab === "upcoming") return eventDate >= today;
+    if (activeTab === "past") return eventDate < today;
+    return true;
   });
 
   if (loading) {
@@ -118,43 +124,34 @@ const EnrolledEvents = () => {
         </p>
       </div>
 
-      <div className="filter-buttons mb-6 flex space-x-2">
-        <button 
-          className={`filter-btn px-4 py-2 rounded-lg transition-all ${
-            filter === "all" 
-              ? "bg-blue-500 text-white active" 
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+      <div className="flex space-x-2 mb-4">
+        <button
+          className={`px-4 py-2 rounded-lg ${
+            activeTab === 'all'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
-          onClick={() => setFilter("all")}
-          style={{ 
-            color: filter === "all" ? "white" : (isDarkMode ? "white" : "#374151") 
-          }}
+          onClick={() => setActiveTab('all')}
         >
           All Events
         </button>
-        <button 
-          className={`filter-btn px-4 py-2 rounded-lg transition-all ${
-            filter === "upcoming" 
-              ? "bg-blue-500 text-white active" 
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+        <button
+          className={`px-4 py-2 rounded-lg ${
+            activeTab === 'upcoming'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
-          onClick={() => setFilter("upcoming")}
-          style={{ 
-            color: filter === "upcoming" ? "white" : (isDarkMode ? "white" : "#374151") 
-          }}
+          onClick={() => setActiveTab('upcoming')}
         >
           Upcoming
         </button>
-        <button 
-          className={`filter-btn px-4 py-2 rounded-lg transition-all ${
-            filter === "past" 
-              ? "bg-blue-500 text-white active" 
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+        <button
+          className={`px-4 py-2 rounded-lg ${
+            activeTab === 'past'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
-          onClick={() => setFilter("past")}
-          style={{ 
-            color: filter === "past" ? "white" : (isDarkMode ? "white" : "#374151") 
-          }}
+          onClick={() => setActiveTab('past')}
         >
           Past Events
         </button>
@@ -176,12 +173,12 @@ const EnrolledEvents = () => {
             >
               <div 
                 className={`event-status text-xs font-semibold px-3 py-1 inline-block absolute right-0 top-0 rounded-bl-lg ${
-                  event.status === "upcoming" 
+                  new Date(event.date) >= new Date().setHours(0, 0, 0, 0)
                     ? "bg-green-500 text-white" 
                     : "bg-gray-500 text-white"
                 }`}
               >
-                {event.status === "upcoming" ? "Upcoming" : "Past"}
+                {new Date(event.date) >= new Date().setHours(0, 0, 0, 0) ? "Upcoming" : "Past"}
               </div>
               
               <div className="event-content p-5">
@@ -211,7 +208,7 @@ const EnrolledEvents = () => {
                   </div>
                 </div>
                 <div className="event-actions mt-4">
-                  {event.status === "upcoming" ? (
+                  {new Date(event.date) >= new Date().setHours(0, 0, 0, 0) ? (
                     <div className="flex space-x-2">
                       <button 
                         className="view-details-btn flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
