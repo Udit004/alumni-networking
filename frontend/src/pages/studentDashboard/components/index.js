@@ -14,7 +14,6 @@ export {
   Profile,
   Notifications,
   Courses,
-  Assignments,
   Events,
   Mentorship,
   Jobs,

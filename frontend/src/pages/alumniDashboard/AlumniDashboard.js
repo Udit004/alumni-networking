@@ -667,7 +667,7 @@ const AlumniDashboard = () => {
                   onClick={() => handleSectionClick(item.id)}
                   className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${
                     activeSection === item.id
-                      ? 'bg-primary-light text-primary'
+                      ? 'bg-primary-light text-gray-800 dark:text-white font-medium'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
