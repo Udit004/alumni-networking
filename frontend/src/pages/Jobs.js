@@ -21,10 +21,10 @@ const Jobs = () => {
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      
+
       const response = await fetch(`${API_URL}/api/jobs`, {
         method: 'GET',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
         }
       });
@@ -34,11 +34,11 @@ const Jobs = () => {
       }
 
       const data = await response.json();
-      
+
       // Sort jobs by date
       const sortedJobs = data.jobs?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) || [];
       setJobs(sortedJobs);
-      
+
     } catch (err) {
       setError('Failed to load jobs. Please try again.');
       console.error('Error fetching jobs:', err);
@@ -51,15 +51,15 @@ const Jobs = () => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
-  
+
   const getDaysRemaining = (deadlineString) => {
     const deadline = new Date(deadlineString);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const diffTime = deadline - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) return "Expired";
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "1 day";
@@ -68,16 +68,16 @@ const Jobs = () => {
 
   const filteredJobs = jobs.filter((job) => {
     // Search filter
-    const matchesSearch = job.title.toLowerCase().includes(search.toLowerCase()) || 
+    const matchesSearch = job.title.toLowerCase().includes(search.toLowerCase()) ||
                          job.company.toLowerCase().includes(search.toLowerCase()) ||
                          job.description.toLowerCase().includes(search.toLowerCase());
-    
+
     // Job type filter
     let matchesType = true;
     if (filter !== 'all') {
       matchesType = job.type.toLowerCase() === filter.toLowerCase();
     }
-    
+
     return matchesSearch && matchesType;
   });
 
@@ -86,7 +86,7 @@ const Jobs = () => {
       <div className="hero-section jobs-hero text-center py-16 px-4">
         <h1 className="text-4xl font-bold text-white mb-4">Find Your Next Opportunity</h1>
         <p className="text-xl text-white mb-8">Explore job opportunities posted by alumni and our partners</p>
-        
+
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
@@ -100,7 +100,7 @@ const Jobs = () => {
               <span className="absolute left-3 top-3 text-gray-400">🔍</span>
             </div>
           </div>
-          
+
           <button
             className="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
             onClick={fetchJobs}
@@ -116,19 +116,19 @@ const Jobs = () => {
       <div className="container mx-auto py-12 px-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-4 md:mb-0">Available Jobs</h2>
-          
+
           {currentUser && (
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={() => navigate(`/${role.toLowerCase()}-dashboard`)}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
               >
                 <span>My Dashboard</span>
               </button>
-              
+
               {/* Only alumni can create jobs */}
               {role === 'alumni' && (
-                <button 
+                <button
                   onClick={() => navigate('/create-job')}
                   className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
                 >
@@ -138,61 +138,61 @@ const Jobs = () => {
             </div>
           )}
         </div>
-        
+
         <div className="flex flex-col md:flex-row gap-8">
           {/* Filters */}
           <div className="md:w-1/4">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 sticky top-24">
               <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-6">Filters</h3>
-              
+
               <div className="mb-6">
                 <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3">Job Type</h4>
                 <div className="space-y-2">
                   <label className="flex items-center">
-                    <input 
-                      type="radio" 
-                      name="jobType" 
-                      checked={filter === 'all'} 
+                    <input
+                      type="radio"
+                      name="jobType"
+                      checked={filter === 'all'}
                       onChange={() => setFilter('all')}
                       className="h-4 w-4 text-primary"
                     />
                     <span className="ml-2 text-gray-600 dark:text-gray-400">All Types</span>
                   </label>
                   <label className="flex items-center">
-                    <input 
-                      type="radio" 
-                      name="jobType" 
-                      checked={filter === 'full-time'} 
+                    <input
+                      type="radio"
+                      name="jobType"
+                      checked={filter === 'full-time'}
                       onChange={() => setFilter('full-time')}
                       className="h-4 w-4 text-primary"
                     />
                     <span className="ml-2 text-gray-600 dark:text-gray-400">Full-time</span>
                   </label>
                   <label className="flex items-center">
-                    <input 
-                      type="radio" 
-                      name="jobType" 
-                      checked={filter === 'part-time'} 
+                    <input
+                      type="radio"
+                      name="jobType"
+                      checked={filter === 'part-time'}
                       onChange={() => setFilter('part-time')}
                       className="h-4 w-4 text-primary"
                     />
                     <span className="ml-2 text-gray-600 dark:text-gray-400">Part-time</span>
                   </label>
                   <label className="flex items-center">
-                    <input 
-                      type="radio" 
-                      name="jobType" 
-                      checked={filter === 'contract'} 
+                    <input
+                      type="radio"
+                      name="jobType"
+                      checked={filter === 'contract'}
                       onChange={() => setFilter('contract')}
                       className="h-4 w-4 text-primary"
                     />
                     <span className="ml-2 text-gray-600 dark:text-gray-400">Contract</span>
                   </label>
                   <label className="flex items-center">
-                    <input 
-                      type="radio" 
-                      name="jobType" 
-                      checked={filter === 'internship'} 
+                    <input
+                      type="radio"
+                      name="jobType"
+                      checked={filter === 'internship'}
                       onChange={() => setFilter('internship')}
                       className="h-4 w-4 text-primary"
                     />
@@ -200,9 +200,9 @@ const Jobs = () => {
                   </label>
                 </div>
               </div>
-              
+
               <div>
-                <button 
+                <button
                   onClick={() => {
                     setFilter('all');
                     setSearch('');
@@ -214,7 +214,7 @@ const Jobs = () => {
               </div>
             </div>
           </div>
-          
+
           {/* Job Listings */}
           <div className="md:w-3/4">
             {loading ? (
@@ -239,7 +239,7 @@ const Jobs = () => {
             ) : (
               <div className="space-y-6">
                 {filteredJobs.map((job) => (
-                  <div 
+                  <div
                     key={job._id}
                     className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
                   >
@@ -249,12 +249,12 @@ const Jobs = () => {
                           <div className="h-14 w-14 flex-shrink-0 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-2xl">
                             💼
                           </div>
-                          
+
                           <div className="flex-1">
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
                               <div>
                                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                                  <a 
+                                  <a
                                     href={`/jobs/${job._id}`}
                                     className="hover:text-primary dark:hover:text-primary-light"
                                   >
@@ -263,18 +263,18 @@ const Jobs = () => {
                                 </h3>
                                 <p className="text-gray-600 dark:text-gray-400">{job.company} • {job.location}</p>
                               </div>
-                              
+
                               <div className="mt-2 sm:mt-0">
                                 <span className="px-3 py-1 text-xs rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                                   {job.type}
                                 </span>
                               </div>
                             </div>
-                            
+
                             <div className="mt-4">
                               <p className="text-gray-700 dark:text-gray-300 line-clamp-2">{job.description}</p>
                             </div>
-                            
+
                             <div className="mt-4 space-y-2">
                               {job.salary && (
                                 <div className="flex items-center text-gray-700 dark:text-gray-300">
@@ -282,39 +282,48 @@ const Jobs = () => {
                                   <span className="text-sm">{job.salary}</span>
                                 </div>
                               )}
-                              
+
                               <div className="flex items-center text-gray-700 dark:text-gray-300">
                                 <span className="text-sm mr-2">📅</span>
                                 <span className="text-sm">Posted on {formatDate(job.createdAt)}</span>
                               </div>
-                              
+
                               <div className="flex items-center text-gray-700 dark:text-gray-300">
                                 <span className="text-sm mr-2">⏰</span>
                                 <span className="text-sm">
-                                  Deadline: {formatDate(job.applicationDeadline)} 
+                                  Deadline: {formatDate(job.applicationDeadline)}
                                   <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
                                     {getDaysRemaining(job.applicationDeadline)} remaining
                                   </span>
                                 </span>
                               </div>
                             </div>
-                            
+
                             <div className="mt-6">
-                              <a 
+                              <a
                                 href={`/jobs/${job._id}`}
                                 className="inline-block px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors"
                               >
                                 View Details
                               </a>
-                              
-                              {/* Only students can apply for jobs */}
+
+                              {/* Only students can apply for jobs that haven't expired */}
                               {currentUser && role === 'student' && (
-                                <button 
-                                  className="inline-block ml-3 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
-                                  onClick={() => navigate(`/jobs/${job._id}/apply`)}
-                                >
-                                  Apply Now
-                                </button>
+                                getDaysRemaining(job.applicationDeadline) === "Expired" ? (
+                                  <button
+                                    className="inline-block ml-3 px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg cursor-not-allowed"
+                                    disabled
+                                  >
+                                    Application Closed
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="inline-block ml-3 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                                    onClick={() => navigate(`/jobs/${job._id}/apply`)}
+                                  >
+                                    Apply Now
+                                  </button>
+                                )
                               )}
                             </div>
                           </div>
@@ -325,7 +334,7 @@ const Jobs = () => {
                 ))}
               </div>
             )}
-            
+
             {filteredJobs.length > 0 && filteredJobs.length < jobs.length && (
               <div className="mt-6 text-center text-gray-600 dark:text-gray-400">
                 Showing {filteredJobs.length} of {jobs.length} jobs
@@ -338,4 +347,4 @@ const Jobs = () => {
   );
 };
 
-export default Jobs; 
+export default Jobs;

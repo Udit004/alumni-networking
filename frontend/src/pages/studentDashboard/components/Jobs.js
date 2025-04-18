@@ -27,10 +27,10 @@ const Jobs = ({ isDarkMode }) => {
       const response = await axios.get(`${API_URL}/api/jobs`);
       console.log('Raw Jobs API Response:', response);
       console.log('Jobs API Response Data:', response.data);
-      
+
       const jobsArray = response.data.success ? response.data.jobs : [];
       console.log('Jobs array before processing:', jobsArray);
-      
+
       const processedJobs = Array.isArray(jobsArray) ? jobsArray.map(job => ({
         ...job,
         title: job.title || 'Untitled Job',
@@ -42,7 +42,7 @@ const Jobs = ({ isDarkMode }) => {
         status: job.status || 'active',
         applicants: Array.isArray(job.applicants) ? job.applicants : []
       })) : [];
-      
+
       console.log('Final processed jobs:', processedJobs);
       setJobs(processedJobs);
     } catch (err) {
@@ -58,9 +58,9 @@ const Jobs = ({ isDarkMode }) => {
     try {
       setApplicationsLoading(true);
       const token = await currentUser.getIdToken();
-      
+
       console.log('Fetching job applications...');
-      
+
       // Try the real endpoint first, fall back to test endpoint if it fails
       let response;
       try {
@@ -88,10 +88,10 @@ const Jobs = ({ isDarkMode }) => {
           }
         );
       }
-      
+
       console.log('Raw Job Applications API Response:', response);
       console.log('Job Applications API Response Data:', response.data);
-      
+
       let applicationsData = [];
       if (response.data && response.data.success) {
         console.log('Response has success flag');
@@ -106,9 +106,9 @@ const Jobs = ({ isDarkMode }) => {
         console.log('Using direct response.data array');
         applicationsData = response.data;
       }
-      
+
       console.log('Applications data before filtering:', applicationsData);
-      
+
       // Filter for current user's applications
       const userApplications = applicationsData.filter(app => {
         console.log('Checking application:', app);
@@ -117,7 +117,7 @@ const Jobs = ({ isDarkMode }) => {
         return app.userId === currentUser.uid;
       });
       console.log('Filtered user applications:', userApplications);
-      
+
       const processedApplications = userApplications.map(app => ({
         ...app,
         jobId: app.jobId,
@@ -126,7 +126,7 @@ const Jobs = ({ isDarkMode }) => {
         name: app.name || currentUser?.displayName || 'Unknown',
         appliedAt: app.appliedAt || new Date().toISOString()
       }));
-      
+
       console.log('Processed applications:', processedApplications);
       setApplications(processedApplications);
     } catch (err) {
@@ -148,31 +148,31 @@ const Jobs = ({ isDarkMode }) => {
 
   const hasApplied = useCallback((jobId) => {
     if (!currentUser || !applications.length) return false;
-    
+
     // Convert jobId to string for comparison
     const jobIdStr = jobId?.toString();
-    
+
     const result = applications.some(app => {
       // Handle both string IDs and object IDs
       const appJobId = typeof app.jobId === 'object' ? app.jobId?._id : app.jobId;
       return appJobId?.toString() === jobIdStr;
     });
-    
+
     console.log(`Checking if applied to job ${jobId}: ${result}`);
     return result;
   }, [applications, currentUser]);
 
   const getApplicationStatus = useCallback((jobId) => {
     if (!currentUser || !applications.length) return null;
-    
+
     // Convert jobId to string for comparison
     const jobIdStr = jobId.toString();
-    
+
     const application = applications.find(app => {
       const appJobId = app.jobId?.toString();
       return appJobId === jobIdStr && app.userId === currentUser.uid;
     });
-    
+
     return application ? application.status : null;
   }, [applications, currentUser]);
 
@@ -180,20 +180,20 @@ const Jobs = ({ isDarkMode }) => {
     return jobs.find(job => job._id === jobId);
   }, [jobs]);
 
-  const filteredJobs = useMemo(() => 
+  const filteredJobs = useMemo(() =>
     Array.isArray(jobs) ? jobs.filter(job => {
       if (!job) return false;
-      
-      const matchesSearch = 
-        (job.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+
+      const matchesSearch =
+        (job.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (job.company || '').toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       if (filter === 'all') return matchesSearch;
       if (filter === 'fullTime' && job.type === 'Full-time') return matchesSearch;
       if (filter === 'partTime' && job.type === 'Part-time') return matchesSearch;
       if (filter === 'internship' && job.type === 'Internship') return matchesSearch;
       if (filter === 'remote' && (job.location || '').toLowerCase().includes('remote')) return matchesSearch;
-      
+
       return false;
     }) : []
   , [jobs, searchTerm, filter]);
@@ -212,21 +212,32 @@ const Jobs = ({ isDarkMode }) => {
     }
   };
 
+  // Check if a job is expired based on application deadline
+  const isJobExpired = (job) => {
+    if (!job || !job.applicationDeadline) return false;
+
+    const deadline = new Date(job.applicationDeadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return deadline < today;
+  };
+
   // Separate jobs that user has applied for
   const appliedJobs = useMemo(() => {
     console.log('Calculating applied jobs...');
     console.log('Current jobs:', filteredJobs);
     console.log('Current applications:', applications);
-    
+
     // First, extract all job IDs from applications
     const applicationJobIds = applications.map(app => {
       // Handle both string IDs and object IDs
       const jobId = typeof app.jobId === 'object' ? app.jobId?._id : app.jobId;
       return jobId?.toString();
     }).filter(Boolean);
-    
+
     console.log('All application job IDs:', applicationJobIds);
-    
+
     // Then filter jobs that match these IDs
     const applied = filteredJobs.filter(job => {
       const jobIdStr = job._id?.toString();
@@ -234,17 +245,21 @@ const Jobs = ({ isDarkMode }) => {
       console.log(`Job: ${job.title || job._id}, id: ${jobIdStr}, isApplied: ${isApplied}`);
       return isApplied;
     });
-    
+
     console.log('Final applied jobs:', applied);
     return applied;
   }, [filteredJobs, applications]);
 
-  // Suggested jobs (those the user hasn't applied for)
+  // Suggested jobs (those the user hasn't applied for and aren't expired)
   const suggestedJobs = useMemo(() => {
-    const suggested = filteredJobs.filter(job => !hasApplied(job._id) && job.status === 'active');
+    const suggested = filteredJobs.filter(job =>
+      !hasApplied(job._id) &&
+      job.status === 'active' &&
+      !isJobExpired(job)
+    );
     console.log('Suggested jobs:', suggested);
     return suggested;
-  }, [filteredJobs, hasApplied]);
+  }, [filteredJobs, hasApplied, isJobExpired]);
 
   return (
     <div className="jobs-section">
@@ -254,7 +269,7 @@ const Jobs = ({ isDarkMode }) => {
         <div className="mb-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Find Your Next Opportunity</h2>
-            <button 
+            <button
               onClick={() => {
                 fetchJobs();
                 fetchJobApplications();
@@ -267,7 +282,7 @@ const Jobs = ({ isDarkMode }) => {
               Refresh
             </button>
           </div>
-          
+
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <input
@@ -291,7 +306,7 @@ const Jobs = ({ isDarkMode }) => {
             </select>
           </div>
         </div>
-        
+
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -312,7 +327,7 @@ const Jobs = ({ isDarkMode }) => {
                   {appliedJobs.map(job => {
                     const status = getApplicationStatus(job._id);
                     const { text: statusText, bgColor, textColor } = getStatusDisplay(status);
-                    
+
                     return (
                       <div key={job._id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-5 hover:shadow-md transition-shadow border-l-4 border-yellow-500">
                         <div className="flex justify-between items-start">
@@ -359,7 +374,7 @@ const Jobs = ({ isDarkMode }) => {
                   {applications.map(application => {
                     const jobDetails = getJobDetails(application.jobId);
                     const { text: statusText, bgColor, textColor } = getStatusDisplay(application.status);
-                    
+
                     return (
                       <div key={application._id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-5 border border-gray-200 dark:border-gray-600">
                         <div className="flex justify-between items-start">
@@ -375,7 +390,7 @@ const Jobs = ({ isDarkMode }) => {
                             </span>
                           </div>
                         </div>
-                        
+
                         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Application Details</h4>
@@ -387,7 +402,7 @@ const Jobs = ({ isDarkMode }) => {
                               Experience: {application.experience || 'Not specified'}
                             </p>
                           </div>
-                          
+
                           <div>
                             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Skills & Cover Letter</h4>
                             <div className="flex flex-wrap gap-2 mb-2">
@@ -446,12 +461,21 @@ const Jobs = ({ isDarkMode }) => {
                             </p>
                           )}
                         </div>
-                        <button 
-                          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                          onClick={() => handleApplyJob(job._id)}
-                        >
-                          Apply Now
-                        </button>
+                        {isJobExpired(job) ? (
+                          <button
+                            className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg cursor-not-allowed"
+                            disabled
+                          >
+                            Application Closed
+                          </button>
+                        ) : (
+                          <button
+                            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                            onClick={() => handleApplyJob(job._id)}
+                          >
+                            Apply Now
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -469,7 +493,7 @@ const Jobs = ({ isDarkMode }) => {
           </>
         )}
       </div>
-      
+
       {/* Loading indicator for applications */}
       {applicationsLoading && !loading && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 flex justify-center"
@@ -477,7 +501,7 @@ const Jobs = ({ isDarkMode }) => {
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       )}
-      
+
       {/* Show message if no data is loaded */}
       {filteredJobs.length === 0 && applications.length === 0 && !applicationsLoading && !loading && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
@@ -497,4 +521,4 @@ const Jobs = ({ isDarkMode }) => {
   );
 };
 
-export default Jobs; 
+export default Jobs;

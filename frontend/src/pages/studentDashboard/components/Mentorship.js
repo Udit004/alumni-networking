@@ -27,13 +27,13 @@ const Mentorship = ({ isDarkMode }) => {
       console.log('Fetching mentorships from:', `${API_URL}/api/mentorships`);
       const response = await axios.get(`${API_URL}/api/mentorships`);
       console.log('Mentorships response:', response.data);
-      
+
       console.log('Fetching user mentorships from:', `${API_URL}/api/mentorships/user/${currentUser.uid}`);
       const userMentorshipsResponse = await axios.get(`${API_URL}/api/mentorships/user/${currentUser.uid}`);
       console.log('User mentorships response:', userMentorshipsResponse.data);
-      
+
       const mentorshipsArray = response.data.success ? response.data.mentorships : [];
-      
+
       const processedMentorships = Array.isArray(mentorshipsArray) ? mentorshipsArray.map(mentorship => ({
         ...mentorship,
         skills: Array.isArray(mentorship.skills) ? mentorship.skills : [],
@@ -43,15 +43,15 @@ const Mentorship = ({ isDarkMode }) => {
         description: mentorship.description || '',
         mentees: Array.isArray(mentorship.mentees) ? mentorship.mentees : []
       })) : [];
-      
+
       setMentorships(processedMentorships);
-      
-      const userMentorships = userMentorshipsResponse.data.success ? 
-                             (userMentorshipsResponse.data.mentorships || 
-                              userMentorshipsResponse.data.enrolledMentorships || 
+
+      const userMentorships = userMentorshipsResponse.data.success ?
+                             (userMentorshipsResponse.data.mentorships ||
+                              userMentorshipsResponse.data.enrolledMentorships ||
                               []) : [];
       setEnrolledMentorships(Array.isArray(userMentorships) ? userMentorships : []);
-      
+
       setLoading(false);
     } catch (err) {
       console.error('Error fetching mentorships:', err);
@@ -66,7 +66,7 @@ const Mentorship = ({ isDarkMode }) => {
       setApplicationsLoading(true);
       // Get the current user's token
       const token = await currentUser.getIdToken();
-      
+
       console.log('Fetching applications from:', `${API_URL}/api/mentorship-applications`);
       const response = await axios.get(
         `${API_URL}/api/mentorship-applications`,
@@ -77,9 +77,9 @@ const Mentorship = ({ isDarkMode }) => {
           }
         }
       );
-      
+
       console.log('Applications response:', response.data);
-      
+
       if (response.data.success) {
         const processedApplications = Array.isArray(response.data.data) ? response.data.data.map(app => ({
           ...app,
@@ -88,7 +88,7 @@ const Mentorship = ({ isDarkMode }) => {
           program: app.program || 'Not specified',
           status: app.status || 'pending'
         })) : [];
-        
+
         setApplications(processedApplications);
       } else {
         console.error('Failed to fetch applications:', response.data.message);
@@ -120,14 +120,14 @@ const Mentorship = ({ isDarkMode }) => {
 
   const filteredMentorships = Array.isArray(mentorships) ? mentorships.filter(mentorship => {
     if (!mentorship) return false;
-    
-    const matchesSearch = (mentorship.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+
+    const matchesSearch = (mentorship.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (mentorship.category || '').toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     if (filter === 'all') return matchesSearch;
     if (filter === 'enrolled' && isEnrolled(mentorship._id)) return matchesSearch;
     if (filter === 'available' && !isEnrolled(mentorship._id)) return matchesSearch;
-    
+
     return false;
   }) : [];
 
@@ -145,13 +145,20 @@ const Mentorship = ({ isDarkMode }) => {
   };
 
   // Separate mentorships that user has applied for
-  const appliedMentorships = filteredMentorships.filter(mentorship => 
+  const appliedMentorships = filteredMentorships.filter(mentorship =>
     hasApplied(mentorship._id)
   );
 
-  // Suggested mentorships (those the user hasn't applied for)
-  const suggestedMentorships = filteredMentorships.filter(mentorship => 
-    !hasApplied(mentorship._id) && mentorship.status === 'active'
+  // Check if a mentorship is full
+  const isMentorshipFull = (mentorship) => {
+    return mentorship.mentees?.length >= mentorship.maxMentees;
+  };
+
+  // Suggested mentorships (those the user hasn't applied for, are active, and not full)
+  const suggestedMentorships = filteredMentorships.filter(mentorship =>
+    !hasApplied(mentorship._id) &&
+    mentorship.status === 'active' &&
+    !isMentorshipFull(mentorship)
   );
 
   return (
@@ -161,7 +168,7 @@ const Mentorship = ({ isDarkMode }) => {
            style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
         <div className="mb-6">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Find a Mentor</h2>
-          
+
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <input
@@ -183,7 +190,7 @@ const Mentorship = ({ isDarkMode }) => {
             </select>
           </div>
         </div>
-        
+
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -241,7 +248,7 @@ const Mentorship = ({ isDarkMode }) => {
                   {applications.map(application => {
                     const mentorshipDetails = application.mentorshipId || {};
                     const { text: statusText, bgColor, textColor } = getStatusDisplay(application.status);
-                    
+
                     // Try to find the mentorship title from the available mentorships if we have the ID as string
                     let mentorshipTitle = "";
                     if (typeof mentorshipDetails === 'object' && mentorshipDetails.title) {
@@ -251,7 +258,7 @@ const Mentorship = ({ isDarkMode }) => {
                       const foundMentorship = mentorships.find(m => m._id === mentorshipId);
                       mentorshipTitle = foundMentorship ? foundMentorship.title : `Mentorship Application`;
                     }
-                    
+
                     return (
                       <div key={application._id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-5 border border-gray-200 dark:border-gray-600">
                         <div className="flex justify-between items-start">
@@ -265,7 +272,7 @@ const Mentorship = ({ isDarkMode }) => {
                             </span>
                           </div>
                         </div>
-                        
+
                         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Skills</h4>
@@ -277,7 +284,7 @@ const Mentorship = ({ isDarkMode }) => {
                               ))}
                             </div>
                           </div>
-                          
+
                           <div>
                             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Application Details</h4>
                             <p className="text-gray-900 dark:text-white text-sm">
@@ -326,12 +333,28 @@ const Mentorship = ({ isDarkMode }) => {
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       Commitment: {mentorship.commitment} • Mentees: {mentorship.mentees?.length || 0}/{mentorship.maxMentees}
                     </p>
-                      <button 
-                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                        onClick={() => handleApplyMentorship(mentorship._id)}
-                      >
-                        Apply
-                      </button>
+                      {mentorship.status !== 'active' ? (
+                        <button
+                          className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg cursor-not-allowed"
+                          disabled
+                        >
+                          Program Completed
+                        </button>
+                      ) : isMentorshipFull(mentorship) ? (
+                        <button
+                          className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg cursor-not-allowed"
+                          disabled
+                        >
+                          Program Full
+                        </button>
+                      ) : (
+                        <button
+                          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                          onClick={() => handleApplyMentorship(mentorship._id)}
+                        >
+                          Apply
+                        </button>
+                      )}
                       </div>
                   </div>
                   ))}
@@ -349,18 +372,18 @@ const Mentorship = ({ isDarkMode }) => {
           </>
         )}
       </div>
-      
+
       {/* Enrolled Mentorships Section (if any) */}
       {enrolledMentorships.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
              style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
           <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">My Mentorships</h2>
-          
+
           <div className="space-y-6">
             {enrolledMentorships.map(enrollment => {
               const mentorship = mentorships.find(m => m._id === enrollment.mentorshipId);
               if (!mentorship) return null;
-              
+
               return (
                 <div key={mentorship._id} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-5">
                   <div className="flex justify-between items-start">
@@ -374,20 +397,20 @@ const Mentorship = ({ isDarkMode }) => {
                       </button>
                     </div>
                   </div>
-                  
+
                   <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                       <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Next Session</h4>
                       <p className="text-gray-900 dark:text-white">Thursday, 3:00 PM</p>
                     </div>
-                    
+
                     <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                       <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Progress</h4>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                         <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '45%' }}></div>
                       </div>
                     </div>
-                    
+
                     <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                       <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time Remaining</h4>
                       <p className="text-gray-900 dark:text-white">4 weeks</p>
@@ -399,7 +422,7 @@ const Mentorship = ({ isDarkMode }) => {
           </div>
         </div>
       )}
-      
+
       {/* Loading indicator for applications */}
       {applicationsLoading && !loading && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6 flex justify-center"
@@ -407,7 +430,7 @@ const Mentorship = ({ isDarkMode }) => {
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       )}
-      
+
       {/* Show debugging info if no data is loaded */}
       {filteredMentorships.length === 0 && applications.length === 0 && enrolledMentorships.length === 0 && !applicationsLoading && !loading && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
@@ -427,4 +450,4 @@ const Mentorship = ({ isDarkMode }) => {
   );
 };
 
-export default Mentorship; 
+export default Mentorship;

@@ -631,10 +631,13 @@ const isUserRegistered = (event) => {
 
                   {user && role === "student" && (
                     <div className="event-actions mt-4">
-                      {/* {isRegistered ? ( */}
                       {isRegistered ? (
                         <button className="action-btn registered w-full py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 font-medium rounded-lg flex items-center justify-center" disabled>
                           <span className="mr-2">✅</span> Registered
+                        </button>
+                      ) : status === "past" ? (
+                        <button className="action-btn past w-full py-2 bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-medium rounded-lg flex items-center justify-center" disabled>
+                          <span className="mr-2">⏰</span> Event Ended
                         </button>
                       ) : (
                         <button
