@@ -6,6 +6,11 @@ require("dotenv").config();
 // Import models before routes
 require("./models/user");
 require("./models/Event");
+require("./models/Job");
+require("./models/Mentorship");
+require("./models/JobApplication");
+require("./models/MentorshipApplication");
+require("./models/EventRegistration");
 
 const eventRoutes = require("./routes/eventRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -35,7 +40,7 @@ app.use(cors({
     origin: function(origin, callback) {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        
+
         if (allowedOrigins.indexOf(origin) === -1) {
             console.log('Blocked origin:', origin); // Debug log
             const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
@@ -72,11 +77,11 @@ app.post('/api/test-mentorship-application/:mentorshipId', async (req, res) => {
     try {
         console.log('Direct test endpoint accessed in server.js');
         console.log('Request body:', req.body);
-        
+
         // Get the MongoDB connection directly
         const db = mongoose.connection.db;
         const collection = db.collection('mentorshipapplications');
-        
+
         // Create application data with all required fields
         const applicationData = {
             mentorshipId: req.body.mentorshipId || req.params.mentorshipId,
@@ -93,13 +98,13 @@ app.post('/api/test-mentorship-application/:mentorshipId', async (req, res) => {
             status: "pending",
             appliedAt: new Date()
         };
-        
+
         console.log('Using application data:', applicationData);
-        
+
         // Insert directly into MongoDB
         const result = await collection.insertOne(applicationData);
         console.log('Direct MongoDB insert result:', result);
-        
+
         if (result.acknowledged) {
             return res.status(201).json({
                 success: true,
@@ -130,7 +135,7 @@ app.get("/api/events-firebase", async (req, res) => {
     try {
         const Event = mongoose.model('Event');
         const events = await Event.find().lean();
-        
+
         // Add placeholder data for frontend compatibility
         const safeEvents = events.map(event => ({
             ...event,
@@ -138,14 +143,14 @@ app.get("/api/events-firebase", async (req, res) => {
             createdBy: event.createdBy || null,
             organizer: event.organizer || "Unknown"
         }));
-        
+
         console.log(`Found ${safeEvents.length} events for Firebase endpoint`);
         res.status(200).json(safeEvents);
     } catch (error) {
         console.error("Error in Firebase events endpoint:", error);
-        res.status(500).json({ 
-            message: "Server error in Firebase events endpoint", 
-            error: error.message 
+        res.status(500).json({
+            message: "Server error in Firebase events endpoint",
+            error: error.message
         });
     }
 });

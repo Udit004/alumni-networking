@@ -23,12 +23,12 @@ router.post('/debug-create-and-get/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
     console.log('Debug - Create and Get job applications for user:', userId);
-    
+
     // Get the MongoDB connection directly
     const mongoose = require('mongoose');
     const db = mongoose.connection.db;
     const collection = db.collection('jobapplications');
-    
+
     // Try to find a real job to use
     let testJobId;
     try {
@@ -46,7 +46,7 @@ router.post('/debug-create-and-get/:userId', async (req, res) => {
       console.log('Error finding job, using generated ObjectId:', err.message);
       testJobId = new mongoose.Types.ObjectId().toString();
     }
-    
+
     // Create test application data specifically with the provided userId
     const applicationData = {
       jobId: testJobId,
@@ -64,30 +64,30 @@ router.post('/debug-create-and-get/:userId', async (req, res) => {
       status: "pending",
       appliedAt: new Date()
     };
-    
+
     console.log('Creating debug test job application with data:', applicationData);
-    
+
     // Insert directly into MongoDB
     const result = await collection.insertOne(applicationData);
     console.log('Debug test job application creation result:', result);
-    
+
     // Verify it exists immediately
     console.log('Immediately checking if job application exists');
-    
+
     // Try both direct find and queries
     const directFind = await collection.findOne({ userId: userId });
     console.log('Direct find result:', directFind ? 'Found' : 'Not found');
-    
+
     // Search with $or to try both fields
-    const orQuery = await collection.find({ 
+    const orQuery = await collection.find({
       $or: [
         { userId: userId },
         { userId: "4EOWySj0hHfLOCWFxi3JeJYsqTj2" }
       ]
     }).toArray();
-    
+
     console.log(`Found ${orQuery.length} job applications with $or query`);
-    
+
     return res.status(200).json({
       success: true,
       message: 'Debug test complete',
@@ -98,8 +98,127 @@ router.post('/debug-create-and-get/:userId', async (req, res) => {
   } catch (error) {
     console.error('Error in debug endpoint:', error);
     return res.status(500).json({
-      success: false, 
+      success: false,
       message: 'Debug endpoint failed',
+      error: error.message
+    });
+  }
+});
+
+// Debug query endpoint to directly query the database for job applications by jobId
+router.get('/debug-query', protect, async (req, res) => {
+  try {
+    const { jobId } = req.query;
+    console.log(`Debug query - Looking for job applications for job ID: ${jobId}`);
+
+    // If no jobId is provided, return all applications
+    if (!jobId) {
+      console.log('No jobId provided, returning all applications');
+
+      const db = mongoose.connection.db;
+      const jobApplicationsCollection = db.collection('jobapplications');
+
+      const allApplications = await jobApplicationsCollection.find({}).toArray();
+      console.log(`Found ${allApplications.length} total applications in the database`);
+
+      return res.status(200).json({
+        success: true,
+        count: allApplications.length,
+        data: allApplications
+      });
+    }
+
+    // Get the MongoDB connection directly
+    const mongoose = require('mongoose');
+    const db = mongoose.connection.db;
+    const collection = db.collection('jobapplications');
+
+    // Try different query approaches
+    console.log('Trying different query approaches for jobId:', jobId);
+
+    // Approach 1: Direct string match
+    const stringMatch = await collection.find({ jobId: jobId }).toArray();
+    console.log(`Approach 1 (string match): Found ${stringMatch.length} applications`);
+
+    // Approach 2: Try with ObjectId
+    let objectIdMatch = [];
+    try {
+      const objectId = new mongoose.Types.ObjectId(jobId);
+      objectIdMatch = await collection.find({ jobId: objectId }).toArray();
+      console.log(`Approach 2 (ObjectId match): Found ${objectIdMatch.length} applications`);
+    } catch (err) {
+      console.log('Error converting to ObjectId:', err.message);
+    }
+
+    // Approach 3: $or query with both formats
+    const orMatch = await collection.find({
+      $or: [
+        { jobId: jobId },
+        { jobId: jobId.toString() },
+        { 'jobId': jobId },
+        { 'jobId': jobId.toString() }
+      ]
+    }).toArray();
+    console.log(`Approach 3 ($or query): Found ${orMatch.length} applications`);
+
+    // Combine results and remove duplicates
+    const allResults = [...stringMatch, ...objectIdMatch, ...orMatch];
+    const uniqueResults = [];
+    const seenIds = new Set();
+
+    allResults.forEach(app => {
+      const idString = app._id.toString();
+      if (!seenIds.has(idString)) {
+        seenIds.add(idString);
+        uniqueResults.push(app);
+      }
+    });
+
+    console.log(`Combined unique results: ${uniqueResults.length} applications`);
+
+    // If we found applications, return them
+    if (uniqueResults.length > 0) {
+      return res.status(200).json({
+        success: true,
+        count: uniqueResults.length,
+        data: uniqueResults
+      });
+    }
+
+    // If no applications found, try to find all applications in the database
+    const allApplications = await collection.find({}).toArray();
+    console.log(`Total applications in database: ${allApplications.length}`);
+
+    // Check if any applications have a jobId that partially matches
+    const partialMatches = allApplications.filter(app => {
+      const appJobId = app.jobId ? app.jobId.toString() : '';
+      return appJobId.includes(jobId) || jobId.includes(appJobId);
+    });
+
+    console.log(`Partial matches: ${partialMatches.length} applications`);
+
+    if (partialMatches.length > 0) {
+      return res.status(200).json({
+        success: true,
+        count: partialMatches.length,
+        data: partialMatches,
+        note: 'These are partial matches based on jobId substring'
+      });
+    }
+
+    // If still no matches, return empty result
+    return res.status(200).json({
+      success: true,
+      count: 0,
+      data: [],
+      note: 'No applications found for this job ID'
+    });
+
+  } catch (error) {
+    console.error('Error in debug query endpoint:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error querying job applications',
       error: error.message
     });
   }
@@ -110,7 +229,7 @@ router.get('/user-test/:userId', (req, res) => {
   try {
     const userId = req.params.userId;
     console.log(`Returning test data for user ${userId}`);
-    
+
     // Return hard-coded job applications based on the user ID
     if (userId === '4EOWySj0hHfLOCWFxi3JeJYsqTj2') {
       // Match the data structure from the database
@@ -148,9 +267,26 @@ router.get('/user-test/:userId', (req, res) => {
           additionalInfo: "",
           status: "pending",
           appliedAt: "2025-04-10T13:03:19.845+00:00"
+        },
+        {
+          _id: "6802413b798e9199ece96910",
+          jobId: "67f043f4e6c88c45191e2188",
+          userId: "4EOWySj0hHfLOCWFxi3JeJYsqTj2",
+          name: "Udit Kr Tiwari",
+          email: "udit52@gmail.com",
+          phone: "539485395",
+          location: "Patna",
+          education: "Btech CSE",
+          experience: "1 Years",
+          skills: "IOS",
+          coverletter: "best for this job",
+          resumeLink: "",
+          additionalInfo: "",
+          status: "pending",
+          appliedAt: "2025-04-18T12:10:35.843+00:00"
         }
       ];
-      
+
       return res.status(200).json({
         success: true,
         count: testData.length,
@@ -177,4 +313,4 @@ router.get('/user-test/:userId', (req, res) => {
 // Get a specific job application
 router.get('/:id', protect, jobApplicationController.getJobApplication);
 
-module.exports = router; 
+module.exports = router;

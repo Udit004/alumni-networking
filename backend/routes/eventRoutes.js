@@ -17,31 +17,31 @@ router.get("/", async (req, res) => {
     try {
         // Check if we should skip population (for fallback mode)
         const skipPopulation = req.query.nopopulate === 'true';
-        
+
         if (skipPopulation) {
             console.log("📝 Skip population requested, returning raw events");
             const rawEvents = await Event.find();
             return res.status(200).json(rawEvents);
         }
-        
+
         // First fetch all events without population
         const events = await Event.find();
-        
+
         // Then populate with special handling for different ID types
         const populatedEvents = await Promise.all(events.map(async (event) => {
             try {
                 // Convert to plain object so we can modify it
                 const eventObj = event.toObject();
-                
+
                 // Handle registered users population
                 if (eventObj.registeredUsers && eventObj.registeredUsers.length > 0) {
                     const userIds = eventObj.registeredUsers
                         .map(reg => reg.userId)
                         .filter(id => mongoose.Types.ObjectId.isValid(id));
-                    
+
                     if (userIds.length > 0) {
                         const users = await User.find({ _id: { $in: userIds } }).select("name email");
-                        
+
                         eventObj.registeredUsers = eventObj.registeredUsers.map(reg => {
                             const user = users.find(u => u._id.toString() === reg.userId.toString());
                             return {
@@ -50,26 +50,26 @@ router.get("/", async (req, res) => {
                         });
                     }
                 }
-                
+
                 // Handle createdBy population
                 if (eventObj.createdBy) {
                     let creator = null;
-                    
+
                     // Try to find by MongoDB ID
                     if (mongoose.Types.ObjectId.isValid(eventObj.createdBy)) {
                         creator = await User.findById(eventObj.createdBy).select("name email");
                     }
-                    
+
                     // If not found and it's a string (likely Firebase UID), try to find by Firebase UID
                     if (!creator && typeof eventObj.createdBy === 'string') {
                         creator = await User.findOne({ firebaseUID: eventObj.createdBy }).select("name email");
                     }
-                    
+
                     if (creator) {
                         eventObj.createdBy = creator;
                     }
                 }
-                
+
                 return eventObj;
             } catch (err) {
                 console.error(`❌ Error populating event ${event._id}:`, err);
@@ -112,10 +112,10 @@ router.get("/:id", async (req, res) => {
             const userIds = eventObj.registeredUsers
                 .map(reg => reg.userId)
                 .filter(id => mongoose.Types.ObjectId.isValid(id));
-            
+
             if (userIds.length > 0) {
                 const users = await User.find({ _id: { $in: userIds } }).select("name email");
-                
+
                 eventObj.registeredUsers = eventObj.registeredUsers.map(reg => {
                     const user = users.find(u => u._id.toString() === reg.userId.toString());
                     return {
@@ -124,21 +124,21 @@ router.get("/:id", async (req, res) => {
                 });
             }
         }
-        
+
         // Handle createdBy population
         if (eventObj.createdBy) {
             let creator = null;
-            
+
             // Try to find by MongoDB ID
             if (mongoose.Types.ObjectId.isValid(eventObj.createdBy)) {
                 creator = await User.findById(eventObj.createdBy).select("name email");
             }
-            
+
             // If not found and it's a string (likely Firebase UID), try to find by Firebase UID
             if (!creator && typeof eventObj.createdBy === 'string') {
                 creator = await User.findOne({ firebaseUID: eventObj.createdBy }).select("name email");
             }
-            
+
             if (creator) {
                 eventObj.createdBy = creator;
             }
@@ -155,15 +155,15 @@ router.get("/:id", async (req, res) => {
 // 📌 Create a new event
 router.post("/", async (req, res) => {
     try {
-        const { 
-            title, 
-            description, 
-            date, 
+        const {
+            title,
+            description,
+            date,
             time,
-            location, 
-            organizer, 
+            location,
+            organizer,
             firebaseUID,
-            createdByRole 
+            createdByRole
         } = req.body;
         const userIdFromBody = req.body.userId; // Renamed to avoid conflicts
 
@@ -173,7 +173,7 @@ router.post("/", async (req, res) => {
         // 🔍 Validate required fields
         if (!title || !description || !date || !location) {
             console.error("❌ Missing required fields");
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: "Missing required fields",
                 required: ["title", "description", "date", "location"],
                 received: { title, description, date, location }
@@ -181,11 +181,11 @@ router.post("/", async (req, res) => {
         }
 
         console.log("🔍 Looking for user with firebaseUID:", firebaseUID);
-        
+
         // 🔍 Step 1: Find the user who is creating the event
         let user;
         let createdById = null; // Changed variable name
-        
+
         if (mongoose.Types.ObjectId.isValid(userIdFromBody)) {
             console.log("👤 Searching by userId:", userIdFromBody);
             try {
@@ -196,7 +196,7 @@ router.post("/", async (req, res) => {
                 console.error("❌ Error finding user by ID:", findError);
             }
         }
-        
+
         if (!user && firebaseUID) {
             console.log("👤 Searching by firebaseUID:", firebaseUID);
             try {
@@ -206,7 +206,7 @@ router.post("/", async (req, res) => {
             } catch (findError) {
                 console.error("❌ Error finding user by firebaseUID:", findError);
             }
-            
+
             try {
                 // DEBUG: Check all users in the database
                 const allUsers = await User.find({});
@@ -283,7 +283,7 @@ router.post("/", async (req, res) => {
     } catch (error) {
         console.error("❌ Error creating event:", error);
         console.error("❌ Error stack:", error.stack);
-        
+
         // Handle Mongoose validation errors
         if (error.name === 'ValidationError') {
             console.error("❌ Validation error details:", JSON.stringify(error.errors, null, 2));
@@ -297,15 +297,148 @@ router.post("/", async (req, res) => {
         }
 
         // Handle other types of errors
-        res.status(500).json({ 
-            message: "Server error", 
+        res.status(500).json({
+            message: "Server error",
             error: error.message,
             stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
 
-// 📌 Register a user for an event
+// 📌 Register a user for an event with form data
+router.post("/:eventId/register-with-form", async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const {
+            firebaseUID,
+            name,
+            email,
+            phone,
+            currentYear,
+            program,
+            whyInterested,
+            additionalInfo
+        } = req.body;
+
+        console.log("📝 Registration form data received:", {
+            eventId,
+            firebaseUID,
+            name,
+            email
+        });
+
+        // 🔍 Step 1: Validate the event ID
+        if (!mongoose.Types.ObjectId.isValid(eventId)) {
+            console.error("❌ Invalid event ID format:", eventId);
+            return res.status(400).json({ message: "Invalid event ID format" });
+        }
+
+        // 🔍 Step 2: Find the event
+        const event = await Event.findById(eventId);
+        if (!event) {
+            console.error("❌ Event not found:", eventId);
+            return res.status(404).json({ message: "Event not found" });
+        }
+
+        // 🔍 Step 3: Find and validate user
+        let user;
+        if (firebaseUID) {
+            user = await User.findOne({ firebaseUID });
+        }
+
+        if (!user) {
+            console.error("❌ User not found");
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        console.log("✅ Found User:", user);
+
+        // 🔄 Step 4: Check if user is already registered
+        const alreadyRegistered = event.registeredUsers.some(
+            (r) => r.userId && r.userId.toString() === user._id.toString()
+        );
+
+        if (alreadyRegistered) {
+            console.log("⚠️ User already registered");
+            return res.status(400).json({ message: "User already registered for this event" });
+        }
+
+        // 🎟 Step 5: Create the event registration
+        const EventRegistration = mongoose.model('EventRegistration');
+        const registration = new EventRegistration({
+            eventId: event._id,
+            userId: user._id.toString(),
+            firebaseUID,
+            name,
+            email,
+            phone,
+            currentYear,
+            program,
+            whyInterested,
+            additionalInfo
+        });
+
+        await registration.save();
+        console.log("✅ Event registration saved:", registration._id);
+
+        // 🎟 Step 6: Register the user in the event
+        event.registeredUsers.push({ userId: user._id });
+        await event.save();
+
+        // 🔄 Step 7: Get updated event and manually populate
+        const updatedEvent = await Event.findById(eventId);
+        const eventObj = updatedEvent.toObject();
+
+        // Handle registered users population
+        if (eventObj.registeredUsers && eventObj.registeredUsers.length > 0) {
+            const userIds = eventObj.registeredUsers
+                .map(reg => reg.userId)
+                .filter(id => mongoose.Types.ObjectId.isValid(id));
+
+            if (userIds.length > 0) {
+                const users = await User.find({ _id: { $in: userIds } }).select("name email");
+
+                eventObj.registeredUsers = eventObj.registeredUsers.map(reg => {
+                    const user = users.find(u => u._id.toString() === reg.userId.toString());
+                    return {
+                        userId: user || reg.userId
+                    };
+                });
+            }
+        }
+
+        // Handle createdBy population
+        if (eventObj.createdBy) {
+            let creator = null;
+
+            // Try to find by MongoDB ID
+            if (mongoose.Types.ObjectId.isValid(eventObj.createdBy)) {
+                creator = await User.findById(eventObj.createdBy).select("name email");
+            }
+
+            // If not found and it's a string (likely Firebase UID), try to find by Firebase UID
+            if (!creator && typeof eventObj.createdBy === 'string') {
+                creator = await User.findOne({ firebaseUID: eventObj.createdBy }).select("name email");
+            }
+
+            if (creator) {
+                eventObj.createdBy = creator;
+            }
+        }
+
+        console.log("✅ Registration successful for:", user.name);
+        res.status(200).json({
+            message: "Registration successful",
+            event: eventObj
+        });
+
+    } catch (error) {
+        console.error("❌ Error in registration with form:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+// 📌 Register a user for an event (legacy endpoint)
 router.post("/:eventId/register", async (req, res) => {
     try {
         const { userId, firebaseUID } = req.body;
@@ -332,11 +465,11 @@ router.post("/:eventId/register", async (req, res) => {
 
         // 🔍 Step 3: Find and validate user
         let user;
-        
+
         if (mongoose.Types.ObjectId.isValid(userId)) {
             user = await User.findById(userId);
         }
-        
+
         if (!user && firebaseUID) {
             user = await User.findOne({ firebaseUID });
         }
@@ -365,16 +498,16 @@ router.post("/:eventId/register", async (req, res) => {
         // 🔄 Step 6: Get updated event and manually populate
         const updatedEvent = await Event.findById(eventId);
         const eventObj = updatedEvent.toObject();
-        
+
         // Handle registered users population
         if (eventObj.registeredUsers && eventObj.registeredUsers.length > 0) {
             const userIds = eventObj.registeredUsers
                 .map(reg => reg.userId)
                 .filter(id => mongoose.Types.ObjectId.isValid(id));
-            
+
             if (userIds.length > 0) {
                 const users = await User.find({ _id: { $in: userIds } }).select("name email");
-                
+
                 eventObj.registeredUsers = eventObj.registeredUsers.map(reg => {
                     const user = users.find(u => u._id.toString() === reg.userId.toString());
                     return {
@@ -383,28 +516,28 @@ router.post("/:eventId/register", async (req, res) => {
                 });
             }
         }
-        
+
         // Handle createdBy population
         if (eventObj.createdBy) {
             let creator = null;
-            
+
             // Try to find by MongoDB ID
             if (mongoose.Types.ObjectId.isValid(eventObj.createdBy)) {
                 creator = await User.findById(eventObj.createdBy).select("name email");
             }
-            
+
             // If not found and it's a string (likely Firebase UID), try to find by Firebase UID
             if (!creator && typeof eventObj.createdBy === 'string') {
                 creator = await User.findOne({ firebaseUID: eventObj.createdBy }).select("name email");
             }
-            
+
             if (creator) {
                 eventObj.createdBy = creator;
             }
         }
 
         console.log("✅ Registration successful for:", user.name);
-        res.status(200).json({ 
+        res.status(200).json({
             message: "Registration successful",
             event: eventObj
         });
@@ -419,7 +552,7 @@ router.post("/:eventId/register", async (req, res) => {
 router.get("/enrolled/:userId", async (req, res) => {
     try {
         const { userId } = req.params;
-        
+
         // Try to find the user by Firebase UID
         const user = await User.findOne({ firebaseUID: userId });
 
@@ -435,16 +568,16 @@ router.get("/enrolled/:userId", async (req, res) => {
         // Manually populate the events
         const populatedEvents = await Promise.all(eventsRaw.map(async (event) => {
             const eventObj = event.toObject();
-            
+
             // Handle registered users population
             if (eventObj.registeredUsers && eventObj.registeredUsers.length > 0) {
                 const userIds = eventObj.registeredUsers
                     .map(reg => reg.userId)
                     .filter(id => mongoose.Types.ObjectId.isValid(id));
-                
+
                 if (userIds.length > 0) {
                     const users = await User.find({ _id: { $in: userIds } }).select("name email");
-                    
+
                     eventObj.registeredUsers = eventObj.registeredUsers.map(reg => {
                         const user = users.find(u => u._id.toString() === reg.userId.toString());
                         return {
@@ -453,26 +586,26 @@ router.get("/enrolled/:userId", async (req, res) => {
                     });
                 }
             }
-            
+
             // Handle createdBy population
             if (eventObj.createdBy) {
                 let creator = null;
-                
+
                 // Try to find by MongoDB ID
                 if (mongoose.Types.ObjectId.isValid(eventObj.createdBy)) {
                     creator = await User.findById(eventObj.createdBy).select("name email");
                 }
-                
+
                 // If not found and it's a string (likely Firebase UID), try to find by Firebase UID
                 if (!creator && typeof eventObj.createdBy === 'string') {
                     creator = await User.findOne({ firebaseUID: eventObj.createdBy }).select("name email");
                 }
-                
+
                 if (creator) {
                     eventObj.createdBy = creator;
                 }
             }
-            
+
             return eventObj;
         }));
 
@@ -514,16 +647,16 @@ router.get("/user/:userId", async (req, res) => {
         // Manually populate the events
         const populateEvent = async (event) => {
             const eventObj = event.toObject();
-            
+
             // Handle registered users population
             if (eventObj.registeredUsers && eventObj.registeredUsers.length > 0) {
                 const userIds = eventObj.registeredUsers
                     .map(reg => reg.userId)
                     .filter(id => mongoose.Types.ObjectId.isValid(id));
-                
+
                 if (userIds.length > 0) {
                     const users = await User.find({ _id: { $in: userIds } }).select("name email");
-                    
+
                     eventObj.registeredUsers = eventObj.registeredUsers.map(reg => {
                         const user = users.find(u => u._id.toString() === reg.userId.toString());
                         return {
@@ -532,26 +665,26 @@ router.get("/user/:userId", async (req, res) => {
                     });
                 }
             }
-            
+
             // Handle createdBy population
             if (eventObj.createdBy) {
                 let creator = null;
-                
+
                 // Try to find by MongoDB ID
                 if (mongoose.Types.ObjectId.isValid(eventObj.createdBy)) {
                     creator = await User.findById(eventObj.createdBy).select("name email");
                 }
-                
+
                 // If not found and it's a string (likely Firebase UID), try to find by Firebase UID
                 if (!creator && typeof eventObj.createdBy === 'string') {
                     creator = await User.findOne({ firebaseUID: eventObj.createdBy }).select("name email");
                 }
-                
+
                 if (creator) {
                     eventObj.createdBy = creator;
                 }
             }
-            
+
             return eventObj;
         };
 
@@ -560,7 +693,7 @@ router.get("/user/:userId", async (req, res) => {
         const registeredEvents = await Promise.all(registeredEventsRaw.map(populateEvent));
 
         console.log(`📋 Found ${createdEvents.length} created events and ${registeredEvents.length} registered events`);
-        
+
         res.status(200).json({
             createdEvents,
             registeredEvents
@@ -575,10 +708,10 @@ router.get("/user/:userId", async (req, res) => {
 router.get("/firebase", async (req, res) => {
     try {
         console.log("📱 Firebase-specific events endpoint called");
-        
+
         // Simply return raw events with minimal processing
         const events = await Event.find().lean();
-        
+
         // Add placeholder data for frontend compatibility
         const safeEvents = events.map(event => ({
             ...event,
@@ -587,14 +720,14 @@ router.get("/firebase", async (req, res) => {
             createdBy: event.createdBy || null,
             organizer: event.organizer || "Unknown"
         }));
-        
+
         console.log(`📋 Found ${safeEvents.length} events for Firebase endpoint`);
         res.status(200).json(safeEvents);
     } catch (error) {
         console.error("❌ Error in Firebase events endpoint:", error);
-        res.status(500).json({ 
-            message: "Server error in Firebase events endpoint", 
-            error: error.message 
+        res.status(500).json({
+            message: "Server error in Firebase events endpoint",
+            error: error.message
         });
     }
 });
@@ -640,10 +773,10 @@ router.delete("/:eventId", async (req, res) => {
 
         // Check if user created this event or is an admin
         const isAdmin = role?.toLowerCase() === "admin";
-        const isCreator = event.createdBy && 
-                         ((user._id.toString() === event.createdBy.toString()) || 
+        const isCreator = event.createdBy &&
+                         ((user._id.toString() === event.createdBy.toString()) ||
                           (user.firebaseUID === event.createdBy));
-                          
+
         if (!isCreator && !isAdmin) {
             console.error("❌ User did not create this event:", { userId: user._id, eventCreator: event.createdBy });
             return res.status(403).json({ message: "Unauthorized: You can only delete events you created" });
@@ -652,7 +785,7 @@ router.delete("/:eventId", async (req, res) => {
         // Delete the event
         await Event.findByIdAndDelete(eventId);
         console.log("✅ Event deleted successfully:", eventId);
-        
+
         res.status(200).json({ message: "Event deleted successfully" });
     } catch (error) {
         console.error("❌ Error deleting event:", error);
@@ -702,10 +835,10 @@ router.put("/:eventId", async (req, res) => {
 
         // Check if user created this event or is an admin
         const isAdmin = role?.toLowerCase() === "admin";
-        const isCreator = event.createdBy && 
-                         ((user._id.toString() === event.createdBy.toString()) || 
+        const isCreator = event.createdBy &&
+                         ((user._id.toString() === event.createdBy.toString()) ||
                           (user.firebaseUID === event.createdBy));
-                          
+
         if (!isCreator && !isAdmin) {
             console.error("❌ User did not create this event:", { userId: user._id, eventCreator: event.createdBy });
             return res.status(403).json({ message: "Unauthorized: You can only update events you created" });
@@ -722,14 +855,14 @@ router.put("/:eventId", async (req, res) => {
 
         // Update the event
         const updatedEvent = await Event.findByIdAndUpdate(
-            eventId, 
-            updateObject, 
+            eventId,
+            updateObject,
             { new: true }
         );
 
         console.log("✅ Event updated successfully:", updatedEvent.title);
-        
-        res.status(200).json({ 
+
+        res.status(200).json({
             message: "Event updated successfully",
             event: updatedEvent
         });
@@ -760,7 +893,7 @@ router.post("/:id/register", auth, async (req, res) => {
         if (!event.registeredUsers) {
             event.registeredUsers = [];
         }
-        
+
         event.registeredUsers.push({ userId: userId });
         await event.save();
 
