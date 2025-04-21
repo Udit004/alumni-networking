@@ -62,7 +62,7 @@ const Navbar = () => {
   const toggleDarkMode = () => {
     const newDarkMode = !isDarkMode;
     setIsDarkMode(newDarkMode);
-    
+
     if (newDarkMode) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('darkMode', 'enabled');
@@ -128,9 +128,9 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-8">
             <NavLink
               to="/"
-              className={({ isActive }) => 
-                isActive 
-                  ? "text-primary dark:text-primary nav-link active" 
+              className={({ isActive }) =>
+                isActive
+                  ? "text-primary dark:text-primary nav-link active"
                   : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
               }
             >
@@ -138,9 +138,9 @@ const Navbar = () => {
             </NavLink>
             <NavLink
               to="/events"
-              className={({ isActive }) => 
-                isActive 
-                  ? "text-primary dark:text-primary nav-link active" 
+              className={({ isActive }) =>
+                isActive
+                  ? "text-primary dark:text-primary nav-link active"
                   : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
               }
             >
@@ -148,9 +148,9 @@ const Navbar = () => {
             </NavLink>
             <NavLink
               to="/jobs"
-              className={({ isActive }) => 
-                isActive 
-                  ? "text-primary dark:text-primary nav-link active" 
+              className={({ isActive }) =>
+                isActive
+                  ? "text-primary dark:text-primary nav-link active"
                   : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
               }
             >
@@ -158,9 +158,9 @@ const Navbar = () => {
             </NavLink>
             <NavLink
               to="/mentorship"
-              className={({ isActive }) => 
-                isActive 
-                  ? "text-primary dark:text-primary nav-link active" 
+              className={({ isActive }) =>
+                isActive
+                  ? "text-primary dark:text-primary nav-link active"
                   : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
               }
             >
@@ -168,22 +168,22 @@ const Navbar = () => {
             </NavLink>
             <NavLink
               to="/directory"
-              className={({ isActive }) => 
-                isActive 
-                  ? "text-primary dark:text-primary nav-link active" 
+              className={({ isActive }) =>
+                isActive
+                  ? "text-primary dark:text-primary nav-link active"
                   : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
               }
             >
               Directory
             </NavLink>
-            
+
             {/* Dashboard link outside of dropdown menu for logged-in users */}
             {currentUser && role && (
               <NavLink
                 to={`/${role.toLowerCase()}-dashboard`}
-                className={({ isActive }) => 
-                  isActive 
-                    ? "text-primary dark:text-primary nav-link active" 
+                className={({ isActive }) =>
+                  isActive
+                    ? "text-primary dark:text-primary nav-link active"
                     : "text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline nav-link"
                 }
               >
@@ -195,7 +195,7 @@ const Navbar = () => {
                 )}
               </NavLink>
             )}
-            
+
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
@@ -248,6 +248,24 @@ const Navbar = () => {
                     >
                       Profile
                     </Link>
+                    {role === 'student' && (
+                      <Link
+                        to="/student-chat"
+                        className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
+                        onClick={handleNavClick}
+                      >
+                        Chat with Teachers
+                      </Link>
+                    )}
+                    {role === 'teacher' && (
+                      <Link
+                        to="/teacher-chat"
+                        className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
+                        onClick={handleNavClick}
+                      >
+                        Chat with Students
+                      </Link>
+                    )}
                     <Link
                       to="/about"
                       className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
@@ -306,7 +324,7 @@ const Navbar = () => {
                 </svg>
               )}
             </button>
-            
+
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none"
@@ -348,13 +366,13 @@ const Navbar = () => {
       </div>
 
       {/* Mobile menu */}
-      <div 
+      <div
         className={`${
           isOpen ? 'block' : 'hidden'
         } md:hidden fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm`}
         onClick={() => setIsOpen(false)}
       >
-        <div 
+        <div
           ref={mobileMenuRef}
           className={`fixed inset-y-0 right-0 max-w-[300px] w-full bg-white dark:bg-gray-900 shadow-xl transform transition-transform duration-300 ease-in-out ${
             isOpen ? 'translate-x-0' : 'translate-x-full'
@@ -372,7 +390,7 @@ const Navbar = () => {
               </svg>
             </button>
           </div>
-          
+
           <div className="py-4 px-5">
             {currentUser && (
               <div className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
@@ -385,9 +403,9 @@ const Navbar = () => {
                     <p className="text-sm text-gray-500 dark:text-gray-400">{currentUser.email}</p>
                   </div>
                 </div>
-                
-                <Link 
-                  to="/profile" 
+
+                <Link
+                  to="/profile"
                   className="block py-2 text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary no-underline"
                   onClick={handleNavClick}
                 >
@@ -395,13 +413,13 @@ const Navbar = () => {
                 </Link>
               </div>
             )}
-            
+
             <nav className="space-y-2">
               <NavLink
                 to="/"
-                className={({ isActive }) => 
-                  isActive 
-                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                className={({ isActive }) =>
+                  isActive
+                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline"
                     : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
                 }
                 onClick={handleNavClick}
@@ -410,9 +428,9 @@ const Navbar = () => {
               </NavLink>
               <NavLink
                 to="/events"
-                className={({ isActive }) => 
-                  isActive 
-                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                className={({ isActive }) =>
+                  isActive
+                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline"
                     : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
                 }
                 onClick={handleNavClick}
@@ -421,9 +439,9 @@ const Navbar = () => {
               </NavLink>
               <NavLink
                 to="/jobs"
-                className={({ isActive }) => 
-                  isActive 
-                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                className={({ isActive }) =>
+                  isActive
+                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline"
                     : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
                 }
                 onClick={handleNavClick}
@@ -432,9 +450,9 @@ const Navbar = () => {
               </NavLink>
               <NavLink
                 to="/mentorship"
-                className={({ isActive }) => 
-                  isActive 
-                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                className={({ isActive }) =>
+                  isActive
+                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline"
                     : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
                 }
                 onClick={handleNavClick}
@@ -443,23 +461,23 @@ const Navbar = () => {
               </NavLink>
               <NavLink
                 to="/directory"
-                className={({ isActive }) => 
-                  isActive 
-                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                className={({ isActive }) =>
+                  isActive
+                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline"
                     : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
                 }
                 onClick={handleNavClick}
               >
                 Directory
               </NavLink>
-              
+
               {/* Dashboard link in mobile menu for logged-in users */}
               {currentUser && role && (
                 <NavLink
                   to={`/${role.toLowerCase()}-dashboard`}
-                  className={({ isActive }) => 
-                    isActive 
-                      ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                  className={({ isActive }) =>
+                    isActive
+                      ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline"
                       : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
                   }
                   onClick={handleNavClick}
@@ -472,24 +490,52 @@ const Navbar = () => {
                   )}
                 </NavLink>
               )}
-              
+
+              {/* Chat links in mobile menu */}
+              {role === 'student' && (
+                <NavLink
+                  to="/student-chat"
+                  className={({ isActive }) =>
+                    isActive
+                      ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline"
+                      : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
+                  }
+                  onClick={handleNavClick}
+                >
+                  Chat with Teachers
+                </NavLink>
+              )}
+              {role === 'teacher' && (
+                <NavLink
+                  to="/teacher-chat"
+                  className={({ isActive }) =>
+                    isActive
+                      ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline"
+                      : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
+                  }
+                  onClick={handleNavClick}
+                >
+                  Chat with Students
+                </NavLink>
+              )}
+
               <NavLink
                 to="/about"
-                className={({ isActive }) => 
-                  isActive 
-                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                className={({ isActive }) =>
+                  isActive
+                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline"
                     : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
                 }
                 onClick={handleNavClick}
               >
                 About
               </NavLink>
-              
+
               <NavLink
                 to="/contact"
-                className={({ isActive }) => 
-                  isActive 
-                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline" 
+                className={({ isActive }) =>
+                  isActive
+                    ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline"
                     : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
                 }
                 onClick={handleNavClick}
@@ -497,7 +543,7 @@ const Navbar = () => {
                 Contact Us
               </NavLink>
             </nav>
-            
+
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
               {currentUser ? (
                 <button

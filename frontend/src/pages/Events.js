@@ -273,7 +273,7 @@ const Events = () => {
       }
 
       // Use the regular registration endpoint since the form endpoint is not working
-      const registerEndpoint = `${config.apiUrl}/api/events/${selectedEvent._id}/register`;
+      const registerEndpoint = `${config.endpoints.events}/${selectedEvent._id}/register`;
       console.log('Using registration endpoint:', registerEndpoint);
 
       // Store the form data in localStorage for future reference

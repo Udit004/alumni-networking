@@ -6,6 +6,7 @@ import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { Overview, Profile, Notifications, Courses, Events, Resources, Students, Settings } from './components';
 import TeacherNetwork from './components/Network';
+import TeacherChat from './TeacherChat';
 import { getConnectionRequests, sendConnectionRequest } from '../../services/connectionService';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
 
@@ -138,6 +139,7 @@ const TeacherDashboard = () => {
     { id: 'notifications', label: 'Notifications', icon: '🔔' },
     { id: 'courses', label: 'My Courses', icon: '📚' },
     { id: 'events', label: 'Events', icon: '📅' },
+    { id: 'chat', label: 'Chat', icon: '💬' },
     { id: 'resources', label: 'Teaching Resources', icon: '📋' },
     { id: 'students', label: 'My Students', icon: '👨‍🎓' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
@@ -816,6 +818,10 @@ const TeacherDashboard = () => {
               user={user}
               role={role}
             />
+          )}
+
+          {activeSection === 'chat' && (
+            <TeacherChat />
           )}
 
           {activeSection === 'resources' && (

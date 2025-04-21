@@ -8,7 +8,7 @@ const getApiBaseUrl = () => {
     return 'https://alumni-networking.onrender.com';
   }
   // For development
-  return 'http://localhost:5000';
+  return 'http://localhost:5001';
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -36,14 +36,14 @@ const config = {
     profiles: `${API_BASE_URL}/api/profiles`,
     health: `${API_BASE_URL}/api/health`
   },
-  
+
   // Function to check if the backend is available
   checkBackendAvailability: async () => {
     try {
       if (process.env.NODE_ENV === 'development') {
         console.log('Checking backend availability at:', config.endpoints.health);
       }
-      const response = await axios.get(config.endpoints.health, { 
+      const response = await axios.get(config.endpoints.health, {
         timeout: 5000,
         headers: {
           'Content-Type': 'application/json',
@@ -71,10 +71,10 @@ const config = {
       return false;
     }
   },
-  
+
   // Default timeout for API requests
   requestTimeout: 10000,
-  
+
   // Default image placeholder
   defaultProfileImage: '/images/default-profile.png',
   defaultEventImage: '/images/default-event.png',
@@ -85,4 +85,4 @@ if (process.env.NODE_ENV === 'development') {
   console.log('🔧 API Endpoints:', config.endpoints);
 }
 
-export default config; 
+export default config;
