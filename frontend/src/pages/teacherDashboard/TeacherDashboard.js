@@ -784,7 +784,16 @@ const TeacherDashboard = () => {
           )}
 
           {activeSection === 'notifications' && (
-            <Notifications />
+            <Notifications
+              notifications={notifications}
+              unreadCount={unreadCount}
+              markAsRead={markAsRead}
+              markAllAsRead={markAllAsRead}
+              handleNotificationClick={handleNotificationClick}
+              getNotificationIcon={getNotificationIcon}
+              formatNotificationTime={formatNotificationTime}
+              isDarkMode={isDarkMode}
+            />
           )}
 
           {activeSection === 'courses' && (

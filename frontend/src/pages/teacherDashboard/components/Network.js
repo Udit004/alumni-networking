@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../../context/AuthContext';
-import { 
-  getConnectionRequests, 
-  getUserConnections, 
-  sendConnectionRequest, 
-  acceptConnectionRequest, 
-  rejectConnectionRequest 
+import {
+  getConnectionRequests,
+  getUserConnections,
+  sendConnectionRequest,
+  acceptConnectionRequest,
+  rejectConnectionRequest
 } from '../../../services/connectionService';
 
 const TeacherNetwork = ({ currentUser, isDarkMode }) => {
@@ -19,7 +19,7 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { currentUser: authUser } = useAuth();
-  
+
   useEffect(() => {
     if (authUser?.uid) {
       fetchNetworkData();
@@ -30,70 +30,70 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get user's connections
       const userConnections = await getUserConnections(authUser.uid);
       setConnections(userConnections);
-      
+
       // Get connection requests
       const requests = await getConnectionRequests(authUser.uid);
       setPendingRequests(requests);
-      
+
       // Fetch recommendations - teachers might be interested in connecting with other teachers
       // and students in their department
       const recommendationsQuery = query(
         collection(db, 'users'),
         where('role', 'in', ['student', 'teacher', 'alumni'])
       );
-      
+
       const recommendationsSnapshot = await getDocs(recommendationsQuery);
       const recommendationsData = [];
-      
+
       const currentUserDoc = await getDoc(doc(db, 'users', authUser.uid));
       const userData = currentUserDoc.data();
-      
+
       recommendationsSnapshot.forEach((doc) => {
         const user = { id: doc.id, ...doc.data() };
-        
+
         // Skip if it's the current user, already connected, or has pending request
         const isCurrentUser = doc.id === authUser.uid;
         const isConnected = userConnections.some(conn => conn.id === doc.id);
-        const hasPendingRequest = requests.incoming.some(req => req.sender.id === doc.id) || 
+        const hasPendingRequest = requests.incoming.some(req => req.sender.id === doc.id) ||
                                 requests.outgoing.some(req => req.recipient.id === doc.id);
-        
+
         if (!isCurrentUser && !isConnected && !hasPendingRequest) {
           // Calculate relevance score based on various factors relevant to teachers
           let relevanceScore = 0;
-          
+
           // Same department
           if (user.department === userData.department) {
             relevanceScore += 5;
           }
-          
+
           // Same institution
           if (user.institution === userData.institution) {
             relevanceScore += 3;
           }
-          
+
           // Teachers might be interested in students in their department
           if (user.role === 'student' && user.department === userData.department) {
             relevanceScore += 4;
           }
-          
+
           // Teachers might be interested in connecting with alumni from their department
           if (user.role === 'alumni' && user.department === userData.department) {
             relevanceScore += 4;
           }
-          
+
           // Shared subjects/expertise
           const userExpertise = Array.isArray(user.expertise) ? user.expertise : [];
           const currentUserExpertise = Array.isArray(userData.expertise) ? userData.expertise : [];
-          const sharedExpertise = userExpertise.filter(exp => 
+          const sharedExpertise = userExpertise.filter(exp =>
             currentUserExpertise.includes(exp)
           ).length;
-          
+
           relevanceScore += sharedExpertise * 2;
-          
+
           recommendationsData.push({
             ...user,
             relevanceScore,
@@ -101,11 +101,11 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
           });
         }
       });
-      
+
       // Sort recommendations by relevance score
       recommendationsData.sort((a, b) => b.relevanceScore - a.relevanceScore);
       setRecommendations(recommendationsData);
-      
+
     } catch (err) {
       console.error('Error fetching network data:', err);
       setError('Failed to load network data. Please try again.');
@@ -123,15 +123,15 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
 
       setLoading(true);
       console.log(`Sending connection request from ${authUser.uid} to ${userId}`);
-      
+
       const result = await sendConnectionRequest(authUser.uid, userId);
-      
+
       if (result.success) {
         console.log('Connection request sent successfully:', result);
-        
+
         // Show success message to user
         alert('Connection request sent successfully!');
-        
+
         // Refresh network data to show updated status
         await fetchNetworkData();
       } else {
@@ -183,24 +183,24 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
   // Render a person card for connections, recommendations, or requests
   const renderPersonCard = (person, context = 'connection', requestId = null) => {
     if (!person) return null;
-    
+
     // Use a unique key for each card to avoid React warnings
     const cardKey = generateUniqueId(person, context);
-    
+
     // Determine the status of this person in relation to the current user
     const isIncomingRequest = context === 'incoming';
     const isOutgoingRequest = context === 'outgoing';
     const isConnection = context === 'connection';
-    
+
     // Format expertise/skills for display
-    const expertise = Array.isArray(person.expertise) 
-      ? person.expertise 
-      : (Array.isArray(person.skills) 
-        ? person.skills 
-        : (typeof person.expertise === 'string' 
-          ? person.expertise.split(',').map(e => e.trim()) 
+    const expertise = Array.isArray(person.expertise)
+      ? person.expertise
+      : (Array.isArray(person.skills)
+        ? person.skills
+        : (typeof person.expertise === 'string'
+          ? person.expertise.split(',').map(e => e.trim())
           : []));
-    
+
     return (
       <div key={cardKey} className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 dark:border-gray-700">
         <div className="p-5">
@@ -216,7 +216,7 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
                 {(person.name?.charAt(0) || person.displayName?.charAt(0) || '?').toUpperCase()}
               </div>
             )}
-            
+
             <div className="flex-1 min-w-0">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
                 {person.name || person.displayName || "Unknown User"}
@@ -226,7 +226,7 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
                 {person.department && ` • ${person.department}`}
                 {person.institution && ` (${person.institution})`}
               </p>
-              
+
               {expertise.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {expertise.slice(0, 3).map((skill, index) => (
@@ -246,7 +246,7 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
               )}
             </div>
           </div>
-          
+
           <div className="mt-4 flex justify-end">
             {isIncomingRequest && (
               <div className="flex gap-2">
@@ -264,7 +264,7 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
                 </button>
               </div>
             )}
-            
+
             {isOutgoingRequest && (
               <span className="px-4 py-2 text-sm font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -273,7 +273,7 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
                 Request Pending
               </span>
             )}
-            
+
             {!isIncomingRequest && !isOutgoingRequest && !isConnection && (
               <button
                 onClick={() => handleConnect(person.id)}
@@ -285,7 +285,7 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
                 Connect
               </button>
             )}
-            
+
             {isConnection && (
               <span className="px-4 py-2 text-sm font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -395,7 +395,7 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
                   {connections.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                       {connections
-                        .filter(person => 
+                        .filter(person =>
                           (person.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                           (person.role?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                           (person.department?.toLowerCase() || '').includes(searchTerm.toLowerCase())
@@ -428,7 +428,7 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
                   {recommendations.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                       {recommendations
-                        .filter(person => 
+                        .filter(person =>
                           (person.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                           (person.role?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                           (person.department?.toLowerCase() || '').includes(searchTerm.toLowerCase())
@@ -458,7 +458,7 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 px-1">Incoming Requests</h3>
                       <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                         {pendingRequests.incoming
-                          .filter(request => 
+                          .filter(request =>
                             (request.sender.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                             (request.sender.role?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                             (request.sender.department?.toLowerCase() || '').includes(searchTerm.toLowerCase())
@@ -474,7 +474,7 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 px-1">Outgoing Requests</h3>
                       <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                         {pendingRequests.outgoing
-                          .filter(request => 
+                          .filter(request =>
                             (request.recipient.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                             (request.recipient.role?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                             (request.recipient.department?.toLowerCase() || '').includes(searchTerm.toLowerCase())
