@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const CourseApplication = require('../models/CourseApplication');
 const Course = require('../models/Course');
-const authenticateToken = require('../middleware/auth');
+const { auth: authenticateToken } = require('../middleware/auth');
 
 // Submit a new course application
 router.post('/:courseId', authenticateToken, async (req, res) => {

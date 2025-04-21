@@ -12,6 +12,7 @@ import EnrolledEvents from "./EnrolledEvents";
 import Mentorship from "./components/Mentorship";
 import Jobs from "./components/Jobs";
 import Overview from "./components/Overview";
+import StudentChat from "./StudentChat";
 import Courses from "./components/Courses";
 import axios from 'axios';
 
@@ -248,6 +249,7 @@ const StudentDashboard = () => {
     { id: 'courses', label: 'Course Materials', icon: '📚' },
     { id: 'mentorship', label: 'Mentorship', icon: '🎓' },
     { id: 'jobs', label: 'Jobs & Internships', icon: '💼' },
+    { id: 'chat', label: 'Chat', icon: '💬' },
     { id: 'network', label: 'Network', icon: '👥' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];
@@ -472,30 +474,34 @@ const StudentDashboard = () => {
     const diff = now - timestamp;
 
     // Less than a minute
-    if (diff < 60 * 1000) {
-      return 'just now';
+    if (diff < 60000) {
+      return 'Just now';
     }
 
     // Less than an hour
-    if (diff < 60 * 60 * 1000) {
-      const minutes = Math.floor(diff / (60 * 1000));
-      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+    if (diff < 3600000) {
+      return `${Math.floor(diff / 60000)}m ago`;
     }
 
     // Less than a day
-    if (diff < 24 * 60 * 60 * 1000) {
-      const hours = Math.floor(diff / (60 * 60 * 1000));
-      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    if (diff < 86400000) {
+      return `${Math.floor(diff / 3600000)}h ago`;
     }
 
     // Less than a week
-    if (diff < 7 * 24 * 60 * 60 * 1000) {
-      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-      return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+    if (diff < 604800000) {
+      return `${Math.floor(diff / 86400000)}d ago`;
     }
-
     // Otherwise, return the date
     return timestamp.toLocaleDateString();
+  };
+
+  // Render active section
+  // This function is used to render the active section
+  const renderActiveSection = () => {
+    // We're now using conditional rendering directly in the JSX
+    // This function is kept for compatibility but returns null
+    return null;
   };
 
   return (
@@ -630,6 +636,7 @@ const StudentDashboard = () => {
         </header>
 
         <main className="p-6">
+          {renderActiveSection()}
           {activeSection === 'profile' && (
             <Profile isDarkMode={isDarkMode} />
           )}
@@ -1084,6 +1091,10 @@ const StudentDashboard = () => {
             <div className="network-section">
               <Network currentUser={currentUser} isDarkMode={isDarkMode} />
             </div>
+          )}
+
+          {activeSection === 'chat' && (
+            <StudentChat />
           )}
         </main>
       </div>
