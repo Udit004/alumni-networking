@@ -788,7 +788,7 @@ const TeacherDashboard = () => {
           )}
 
           {activeSection === 'courses' && (
-            <Courses />
+            <Courses isDarkMode={isDarkMode} profileData={profileData} />
           )}
 
           {activeSection === 'events' && (

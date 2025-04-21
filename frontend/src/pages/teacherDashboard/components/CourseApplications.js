@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../../context/AuthContext';
 
-const CourseApplications = ({ isDarkMode }) => {
+const CourseApplications = ({ isDarkMode, profileData }) => {
   const { currentUser } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,13 +27,13 @@ const CourseApplications = ({ isDarkMode }) => {
 
   const fetchApplications = async () => {
     if (!currentUser) return;
-    
+
     setLoading(true);
     try {
       const token = await currentUser.getIdToken();
       let success = false;
       let responseData = null;
-      
+
       for (const baseUrl of baseUrls) {
         try {
           console.log(`Trying to fetch applications from ${baseUrl}...`);
@@ -57,7 +57,7 @@ const CourseApplications = ({ isDarkMode }) => {
           }
         }
       }
-      
+
       if (success && responseData.success) {
         setApplications(responseData.applications || []);
         setError(null);
@@ -87,13 +87,13 @@ const CourseApplications = ({ isDarkMode }) => {
 
   const handleUpdateStatus = async (applicationId, newStatus) => {
     if (!currentUser) return;
-    
+
     setProcessingId(applicationId);
     try {
       const token = await currentUser.getIdToken();
       let success = false;
       let responseData = null;
-      
+
       for (const baseUrl of baseUrls) {
         try {
           console.log(`Trying to update application status on ${baseUrl}...`);
@@ -121,20 +121,20 @@ const CourseApplications = ({ isDarkMode }) => {
           }
         }
       }
-      
+
       if (success && responseData.success) {
         // Update the local state
-        setApplications(prevApplications => 
-          prevApplications.map(app => 
-            app._id === applicationId 
-              ? { ...app, status: newStatus, reviewNotes, reviewedAt: new Date() } 
+        setApplications(prevApplications =>
+          prevApplications.map(app =>
+            app._id === applicationId
+              ? { ...app, status: newStatus, reviewNotes, reviewedAt: new Date() }
               : app
           )
         );
-        
+
         setSelectedApplication(null);
         setReviewNotes('');
-        
+
         // Show success message
         alert(`Application ${newStatus === 'approved' ? 'approved' : 'rejected'} successfully!`);
       } else {
@@ -345,7 +345,7 @@ const CourseApplications = ({ isDarkMode }) => {
                   <p className="text-gray-700 dark:text-gray-300"><span className="font-medium">Email:</span> {selectedApplication.studentEmail}</p>
                   <p className="text-gray-700 dark:text-gray-300"><span className="font-medium">Applied On:</span> {formatDate(selectedApplication.appliedAt)}</p>
                   <p className="text-gray-700 dark:text-gray-300">
-                    <span className="font-medium">Status:</span> 
+                    <span className="font-medium">Status:</span>
                     <span className={`ml-2 px-2 py-1 text-xs font-semibold rounded-full ${
                       selectedApplication.status === 'pending'
                         ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
@@ -365,22 +365,22 @@ const CourseApplications = ({ isDarkMode }) => {
 
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Application Details</h3>
-                
+
                 <div className="mb-4">
                   <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-1">Why do you want to take this course?</h4>
                   <p className="text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">{selectedApplication.reason}</p>
                 </div>
-                
+
                 <div className="mb-4">
                   <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-1">Prior experience in this subject:</h4>
                   <p className="text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">{selectedApplication.experience}</p>
                 </div>
-                
+
                 <div className="mb-4">
                   <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-1">What do you hope to learn from this course?</h4>
                   <p className="text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">{selectedApplication.expectations}</p>
                 </div>
-                
+
                 <div className="mb-4">
                   <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-1">Commitment to attending sessions:</h4>
                   <p className="text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">{selectedApplication.commitment}</p>
@@ -417,7 +417,7 @@ const CourseApplications = ({ isDarkMode }) => {
                 >
                   Close
                 </button>
-                
+
                 {selectedApplication.status === 'pending' && (
                   <>
                     <button

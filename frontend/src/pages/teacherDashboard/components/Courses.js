@@ -3,7 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import axios from 'axios';
 import CourseApplications from './CourseApplications';
 
-const Courses = ({ isDarkMode }) => {
+const Courses = ({ isDarkMode, profileData }) => {
   const { currentUser } = useAuth();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -107,8 +107,11 @@ const Courses = ({ isDarkMode }) => {
       const token = await currentUser.getIdToken();
       const courseData = {
         ...formData,
-        teacherName: currentUser.displayName || 'Teacher'
+        teacherName: profileData?.name || currentUser.displayName || 'Teacher',
+        teacherId: currentUser.uid
       };
+
+      console.log('Using teacher name:', profileData?.name || currentUser.displayName || 'Teacher');
 
       console.log('Sending course data:', courseData);
 
@@ -166,6 +169,13 @@ const Courses = ({ isDarkMode }) => {
 
       const token = await currentUser.getIdToken();
 
+      // Ensure the teacher name is preserved when updating
+      const updateData = {
+        ...formData,
+        teacherName: editingCourse.teacherName || profileData?.name || currentUser.displayName || 'Teacher',
+        teacherId: currentUser.uid
+      };
+
       let success = false;
       let responseData = null;
 
@@ -174,7 +184,7 @@ const Courses = ({ isDarkMode }) => {
           console.log(`Trying to update course on ${baseUrl}...`);
           const response = await axios.put(
             `${baseUrl}/api/courses/${editingCourse._id}`,
-            formData,
+            updateData,
             {
               headers: {
                 'Authorization': `Bearer ${token}`,
@@ -457,7 +467,7 @@ const Courses = ({ isDarkMode }) => {
 
       {/* Course cards */}
       {activeTab === 'applications' ? (
-        <CourseApplications isDarkMode={isDarkMode} />
+        <CourseApplications isDarkMode={isDarkMode} profileData={profileData} />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
              style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
