@@ -1,10 +1,10 @@
 import React from 'react';
 
-const Overview = ({ connections, courseCount, isDarkMode, navigate, jobApplicationsCount = 0, mentorshipsCount = 0 }) => {
+const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobApplicationsCount = 0, mentorshipsCount = 0 }) => {
   // Filter connections by role
-  const alumniConnections = connections.filter(conn => conn.role === "alumni");
-  const teacherConnections = connections.filter(conn => conn.role === "teacher");
-  const studentConnections = connections.filter(conn => conn.role === "student");
+  const alumniConnections = connections?.filter(conn => conn.role === "alumni") || [];
+  const teacherConnections = connections?.filter(conn => conn.role === "teacher") || [];
+  const studentConnections = connections?.filter(conn => conn.role === "student") || [];
   
   return (
     <div>

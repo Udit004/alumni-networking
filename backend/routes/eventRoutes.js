@@ -3,7 +3,7 @@ const router = express.Router();
 const Event = require("../models/Event");
 const User = require("../models/user");
 const mongoose = require("mongoose");
-const auth = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 
 // Verify User model is loaded correctly
 console.log("📋 User model loaded:", {
@@ -869,38 +869,6 @@ router.put("/:eventId", async (req, res) => {
     } catch (error) {
         console.error("❌ Error updating event:", error);
         res.status(500).json({ message: "Server error", error: error.message });
-    }
-});
-
-// 📌 Register for an event
-router.post("/:id/register", auth, async (req, res) => {
-    try {
-        const eventId = req.params.id;
-        const userId = req.user.id;
-
-        // Find the event
-        const event = await Event.findById(eventId);
-        if (!event) {
-            return res.status(404).json({ message: "Event not found" });
-        }
-
-        // Check if user is already registered
-        if (event.registeredUsers && event.registeredUsers.some(reg => reg.userId.toString() === userId)) {
-            return res.status(400).json({ message: "You are already registered for this event" });
-        }
-
-        // Add user to registeredUsers array
-        if (!event.registeredUsers) {
-            event.registeredUsers = [];
-        }
-
-        event.registeredUsers.push({ userId: userId });
-        await event.save();
-
-        return res.status(200).json({ message: "Successfully registered for the event" });
-    } catch (error) {
-        console.error("Error registering for event:", error);
-        return res.status(500).json({ message: "Server error" });
     }
 });
 

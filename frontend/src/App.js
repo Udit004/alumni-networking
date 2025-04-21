@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
@@ -25,14 +25,36 @@ import CreateJob from './pages/CreateJob';
 import CreateMentorship from './pages/CreateMentorship';
 import MentorshipApplication from './pages/MentorshipApplication';
 import JobApplication from './pages/JobApplication';
+import StudentChat from './pages/studentDashboard/StudentChat';
+import TeacherChat from './pages/teacherDashboard/TeacherChat';
+import TestChat from './pages/TestChat';
 import './App.css';
+import { initializeFirestoreCollections } from './utils/firestoreInit';
 
 function App() {
+  const [firestoreInitialized, setFirestoreInitialized] = useState(false);
+
+  // Initialize Firestore collections when app starts
+  useEffect(() => {
+    const initFirestore = async () => {
+      try {
+        const result = await initializeFirestoreCollections();
+        setFirestoreInitialized(result);
+        console.log('Firestore collections initialization:', result ? 'successful' : 'failed');
+      } catch (error) {
+        console.error('Error initializing Firestore collections:', error);
+        setFirestoreInitialized(false);
+      }
+    };
+
+    initFirestore();
+  }, []);
+
   // Check for user's dark mode preference
   useEffect(() => {
     // Check localStorage first
     const savedDarkMode = localStorage.getItem('darkMode');
-    
+
     if (savedDarkMode === 'enabled') {
       document.documentElement.classList.add('dark');
     } else if (savedDarkMode === 'disabled') {
@@ -177,6 +199,21 @@ function App() {
               <Route path="/create-mentorship" element={
                 <PrivateRoute allowedRoles={['alumni', 'teacher']}>
                   <CreateMentorship />
+                </PrivateRoute>
+              } />
+              <Route path="/student-chat" element={
+                <PrivateRoute allowedRoles={['student']}>
+                  <StudentChat />
+                </PrivateRoute>
+              } />
+              <Route path="/teacher-chat" element={
+                <PrivateRoute allowedRoles={['teacher']}>
+                  <TeacherChat />
+                </PrivateRoute>
+              } />
+              <Route path="/test-chat" element={
+                <PrivateRoute>
+                  <TestChat />
                 </PrivateRoute>
               } />
             </Routes>

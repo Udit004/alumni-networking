@@ -1,0 +1,99 @@
+.student-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 15px;
+}
+
+.chat-page-header {
+  margin-bottom: 20px;
+}
+
+.chat-page-header h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--text-primary);
+}
+
+.chat-page-header p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.error-banner {
+  margin-top: 15px;
+  padding: 10px 15px;
+  background-color: rgba(231, 76, 60, 0.1);
+  border-left: 4px solid #e74c3c;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error-banner p {
+  color: #e74c3c;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.error-banner button {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.error-banner button:hover {
+  background-color: #c0392b;
+}
+
+.chat-interface {
+  display: flex;
+  height: calc(100vh - 220px);
+  gap: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+}
+
+/* Dark mode adjustments */
+html.dark .student-chat-container {
+  color: #e0e0e0;
+}
+
+html.dark .chat-interface {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  border: 1px solid #2d3748;
+  background-color: var(--bg-primary);
+}
+
+html.dark .error-banner {
+  background-color: rgba(248, 113, 113, 0.1);
+  border-left-color: #f87171;
+}
+
+html.dark .error-banner p {
+  color: #f87171;
+}
+
+html.dark .error-banner button {
+  background-color: #f87171;
+}
+
+html.dark .error-banner button:hover {
+  background-color: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .chat-interface {
+    flex-direction: column;
+    height: auto;
+  }
+} 

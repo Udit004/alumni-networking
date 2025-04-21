@@ -11,6 +11,7 @@ require("./models/Mentorship");
 require("./models/JobApplication");
 require("./models/MentorshipApplication");
 require("./models/EventRegistration");
+require("./models/Message");
 
 const eventRoutes = require("./routes/eventRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -20,6 +21,9 @@ const jobRoutes = require('./routes/jobs');
 const mentorshipRoutes = require('./routes/mentorships');
 const jobApplicationRoutes = require('./routes/jobApplicationRoutes');
 const mentorshipApplicationRoutes = require('./routes/mentorshipApplicationRoutes');
+const messagesRoutes = require('./routes/messages');
+const messageRoutesDB = require('./routes/messageRoutes');
+const testMessagesRoutes = require('./routes/testMessages');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -71,6 +75,9 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/mentorships', mentorshipRoutes);
 app.use('/api/job-applications', jobApplicationRoutes);
 app.use('/api/mentorship-applications', mentorshipApplicationRoutes);
+app.use('/api/messages', messagesRoutes);
+app.use('/api/messages-db', messageRoutesDB);
+app.use('/api/test-messages', testMessagesRoutes);
 
 // Direct test endpoint for mentorship applications
 app.post('/api/test-mentorship-application/:mentorshipId', async (req, res) => {

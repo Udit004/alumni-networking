@@ -2,11 +2,36 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /students/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Allow read/write access to all users for all documents during development
+    match /{document=**} {
+      allow read, write: if true;
     }
+
+    // Messages collection - more specific rules for production
+    match /messages/{messageId} {
+      // Allow read if the user is the sender or receiver
+      allow read: if request.auth != null &&
+                  (request.auth.uid == resource.data.senderId ||
+                   request.auth.uid == resource.data.receiverId);
+
+      // Allow create if the user is the sender
+      allow create: if request.auth != null &&
+                    request.auth.uid == request.resource.data.senderId;
+
+      // Allow update if the user is the sender or receiver
+      allow update: if request.auth != null &&
+                    (request.auth.uid == resource.data.senderId ||
+                     request.auth.uid == resource.data.receiverId);
+
+      // Allow delete if the user is the sender
+      allow delete: if request.auth != null &&
+                    request.auth.uid == resource.data.senderId;
+    }
+
+    // Users collection
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
-} 
+}
