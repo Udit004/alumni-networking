@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Course = require('../models/Course');
 const admin = require('firebase-admin');
+const notificationService = require('../services/notificationService');
 
 // Authentication middleware - DEVELOPMENT VERSION (more permissive)
 const authenticateToken = async (req, res, next) => {
@@ -153,6 +154,22 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const course = new Course(courseData);
     await course.save();
+
+    // Send notification to all students about the new course
+    try {
+      await notificationService.notifyAllStudents(
+        'New Course Available',
+        `A new course "${course.title}" has been created by ${course.teacherName}. Check it out!`,
+        'course',
+        course._id.toString(),
+        course.teacherId
+      );
+      console.log(`Notifications sent to all students about the new course: ${course.title}`);
+    } catch (notificationError) {
+      console.error('Error sending notifications:', notificationError);
+      // Continue even if notification fails
+    }
+
     res.status(201).json({ success: true, course });
   } catch (error) {
     console.error('Error creating course:', error);

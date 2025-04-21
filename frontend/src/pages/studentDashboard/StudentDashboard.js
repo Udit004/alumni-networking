@@ -457,11 +457,17 @@ const StudentDashboard = () => {
   const getNotificationIcon = (type) => {
     switch(type) {
       case 'connection': return '🤝';
+      case 'connection_request': return '🤝';
+      case 'connection_accepted': return '🤝';
       case 'message': return '✉️';
       case 'event': return '📅';
+      case 'job': return '💼';
+      case 'course': return '📚';
+      case 'mentorship': return '🧠';
       case 'assignment': return '📝';
       case 'deadline': return '⏰';
       case 'grade': return '🎓';
+      case 'system': return '🔔';
       default: return '🔔';
     }
   };
@@ -857,8 +863,14 @@ const StudentDashboard = () => {
                       <option value="deadline">Deadlines</option>
                       <option value="grade">Grades</option>
                       <option value="connection">Connections</option>
+                      <option value="connection_request">Connection Requests</option>
+                      <option value="connection_accepted">Connection Accepted</option>
                       <option value="message">Messages</option>
                       <option value="event">Events</option>
+                      <option value="job">Jobs</option>
+                      <option value="course">Courses</option>
+                      <option value="mentorship">Mentorships</option>
+                      <option value="system">System</option>
                     </select>
                     <select
                       className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -905,8 +917,13 @@ const StudentDashboard = () => {
                               notification.type === 'assignment' ? 'bg-green-100 dark:bg-green-900/30 text-green-500' :
                               notification.type === 'deadline' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-500' :
                               notification.type === 'grade' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-500' :
-                              notification.type === 'connection' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-500' :
+                              notification.type === 'connection' || notification.type === 'connection_request' || notification.type === 'connection_accepted' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-500' :
                               notification.type === 'message' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-500' :
+                              notification.type === 'event' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-500' :
+                              notification.type === 'job' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-500' :
+                              notification.type === 'course' ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-500' :
+                              notification.type === 'mentorship' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500' :
+                              notification.type === 'system' ? 'bg-gray-100 dark:bg-gray-700/50 text-gray-500' :
                               'bg-red-100 dark:bg-red-900/30 text-red-500'
                             }`}>
                               <span className="text-xl">{getNotificationIcon(notification.type)}</span>
@@ -924,8 +941,15 @@ const StudentDashboard = () => {
                                 {notification.type === 'assignment' ? 'Course Assignment' :
                                  notification.type === 'deadline' ? 'Assignment Deadline' :
                                  notification.type === 'grade' ? 'Grade Update' :
-                                 notification.type === 'connection' ? 'Connection Request' :
-                                 notification.type === 'message' ? 'New Message' : 'Event Update'}
+                                 notification.type === 'connection' ? 'Connection' :
+                                 notification.type === 'connection_request' ? 'Connection Request' :
+                                 notification.type === 'connection_accepted' ? 'Connection Accepted' :
+                                 notification.type === 'message' ? 'New Message' :
+                                 notification.type === 'event' ? 'Event Update' :
+                                 notification.type === 'job' ? 'Job Opportunity' :
+                                 notification.type === 'course' ? 'Course Update' :
+                                 notification.type === 'mentorship' ? 'Mentorship Update' :
+                                 notification.type === 'system' ? 'System Notification' : 'Notification'}
                               </p>
                             </div>
                             {!notification.read && (
@@ -958,8 +982,13 @@ const StudentDashboard = () => {
                               notification.type === 'assignment' ? 'bg-green-100 dark:bg-green-900/30 text-green-500' :
                               notification.type === 'deadline' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-500' :
                               notification.type === 'grade' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-500' :
-                              notification.type === 'connection' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-500' :
+                              notification.type === 'connection' || notification.type === 'connection_request' || notification.type === 'connection_accepted' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-500' :
                               notification.type === 'message' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-500' :
+                              notification.type === 'event' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-500' :
+                              notification.type === 'job' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-500' :
+                              notification.type === 'course' ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-500' :
+                              notification.type === 'mentorship' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500' :
+                              notification.type === 'system' ? 'bg-gray-100 dark:bg-gray-700/50 text-gray-500' :
                               'bg-red-100 dark:bg-red-900/30 text-red-500'
                             }`}>
                               <span className="text-xl">{getNotificationIcon(notification.type)}</span>
@@ -977,8 +1006,15 @@ const StudentDashboard = () => {
                                 {notification.type === 'assignment' ? 'Course Assignment' :
                                  notification.type === 'deadline' ? 'Assignment Deadline' :
                                  notification.type === 'grade' ? 'Grade Update' :
-                                 notification.type === 'connection' ? 'Connection Request' :
-                                 notification.type === 'message' ? 'New Message' : 'Event Update'}
+                                 notification.type === 'connection' ? 'Connection' :
+                                 notification.type === 'connection_request' ? 'Connection Request' :
+                                 notification.type === 'connection_accepted' ? 'Connection Accepted' :
+                                 notification.type === 'message' ? 'New Message' :
+                                 notification.type === 'event' ? 'Event Update' :
+                                 notification.type === 'job' ? 'Job Opportunity' :
+                                 notification.type === 'course' ? 'Course Update' :
+                                 notification.type === 'mentorship' ? 'Mentorship Update' :
+                                 notification.type === 'system' ? 'System Notification' : 'Notification'}
                               </p>
                             </div>
                             {!notification.read && (

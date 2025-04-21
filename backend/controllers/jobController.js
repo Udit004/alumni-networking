@@ -1,4 +1,5 @@
 const Job = require('../models/Job');
+const notificationService = require('../services/notificationService');
 
 // Get all jobs
 exports.getAllJobs = async (req, res) => {
@@ -26,6 +27,22 @@ exports.createJob = async (req, res) => {
   try {
     const newJob = new Job(req.body);
     await newJob.save();
+
+    // Send notification to all students about the new job
+    try {
+      await notificationService.notifyAllStudents(
+        'New Job Opportunity',
+        `A new job "${newJob.title}" has been posted. Check it out!`,
+        'job',
+        newJob._id.toString(),
+        newJob.creatorId || 'system'
+      );
+      console.log(`Notifications sent to all students about the new job: ${newJob.title}`);
+    } catch (notificationError) {
+      console.error('Error sending notifications:', notificationError);
+      // Continue even if notification fails
+    }
+
     res.status(201).json(newJob);
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -52,12 +69,12 @@ exports.updateJob = async (req, res) => {
     if (!job) {
       return res.status(404).json({ success: false, message: 'Job not found' });
     }
-    
+
     // Check if user is creator
     if (job.creatorId !== req.query.firebaseUID) {
       return res.status(403).json({ success: false, message: 'Not authorized to update this job' });
     }
-    
+
     const updatedJob = await Job.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.status(200).json(updatedJob);
   } catch (error) {
@@ -72,15 +89,15 @@ exports.deleteJob = async (req, res) => {
     if (!job) {
       return res.status(404).json({ success: false, message: 'Job not found' });
     }
-    
+
     // Check if user is creator
     if (job.creatorId !== req.query.firebaseUID) {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this job' });
     }
-    
+
     await Job.findByIdAndDelete(req.params.id);
     res.status(200).json({ success: true, message: 'Job deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
-}; 
+};

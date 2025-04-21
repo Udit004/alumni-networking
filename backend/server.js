@@ -24,6 +24,8 @@ const jobApplicationRoutes = require('./routes/jobApplicationRoutes');
 const mentorshipApplicationRoutes = require('./routes/mentorshipApplicationRoutes');
 const courseRoutes = require('./routes/courses');
 const courseApplicationRoutes = require('./routes/courseApplications');
+const notificationRoutes = require('./routes/notifications');
+const testNotificationRoutes = require('./routes/testNotifications');
 
 const app = express();
 const PORT = process.env.PORT || 5001; // Changed to 5001 to avoid conflict
@@ -77,6 +79,8 @@ app.use('/api/job-applications', jobApplicationRoutes);
 app.use('/api/mentorship-applications', mentorshipApplicationRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/course-applications', courseApplicationRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/test-notifications', testNotificationRoutes);
 
 // Direct test endpoint for mentorship applications
 app.post('/api/test-mentorship-application/:mentorshipId', async (req, res) => {

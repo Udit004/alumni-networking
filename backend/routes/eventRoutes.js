@@ -4,6 +4,7 @@ const Event = require("../models/Event");
 const User = require("../models/user");
 const mongoose = require("mongoose");
 const auth = require('../middleware/auth');
+const notificationService = require('../services/notificationService');
 
 // Verify User model is loaded correctly
 console.log("📋 User model loaded:", {
@@ -274,6 +275,21 @@ router.post("/", async (req, res) => {
         const populatedEvent = await Event.findById(newEvent._id)
             .populate("registeredUsers.userId", "name email")
             .populate("createdBy", "name email");
+
+        // 📣 Step 5: Send notification to all students
+        try {
+            await notificationService.notifyAllStudents(
+                'New Event Available',
+                `A new event "${title}" has been created. Check it out!`,
+                'event',
+                newEvent._id.toString(),
+                createdById ? createdById.toString() : 'system'
+            );
+            console.log("✅ Notifications sent to all students about the new event");
+        } catch (notificationError) {
+            console.error("❌ Error sending notifications:", notificationError);
+            // Continue even if notification fails
+        }
 
         res.status(201).json({
             message: "Event created successfully",
