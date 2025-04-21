@@ -17,6 +17,7 @@ import axios from 'axios';
 
 const StudentDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
+  const [enrolledCoursesCount, setEnrolledCoursesCount] = useState(0);
   const [activeSection, setActiveSection] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -335,12 +336,19 @@ const StudentDashboard = () => {
     }
   };
 
-  // Function to fetch job applications and mentorships counts
+  // Function to fetch job applications, mentorships, and courses counts
   useEffect(() => {
     const fetchCounts = async () => {
       if (!currentUser) return;
 
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const baseUrls = [
+        process.env.REACT_APP_API_URL || 'http://localhost:5001',
+        'http://localhost:5002',
+        'http://localhost:5003',
+        'http://localhost:5004',
+        'http://localhost:5000'
+      ];
 
       try {
         // Fetch job applications count
@@ -379,8 +387,40 @@ const StudentDashboard = () => {
           []) : [];
 
         setMentorshipsCount(Array.isArray(userMentorships) ? userMentorships.length : 0);
+
+        // Fetch enrolled courses count
+        let success = false;
+        let enrolledCourses = [];
+
+        for (const baseUrl of baseUrls) {
+          try {
+            console.log(`Trying to fetch enrolled courses from ${baseUrl}...`);
+            const response = await axios.get(
+              `${baseUrl}/api/courses/student/${currentUser.uid}`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+
+            if (response.data && response.data.success) {
+              enrolledCourses = response.data.courses || [];
+              success = true;
+              console.log(`Found ${enrolledCourses.length} enrolled courses from ${baseUrl}`);
+              break; // Exit the loop if successful
+            }
+          } catch (err) {
+            console.log(`Failed to connect to ${baseUrl}:`, err.message);
+          }
+        }
+
+        if (success) {
+          setEnrolledCoursesCount(enrolledCourses.length);
+        }
       } catch (error) {
-        console.error("Error fetching application and mentorship counts:", error);
+        console.error("Error fetching application, mentorship, and course counts:", error);
       }
     };
 
@@ -597,7 +637,7 @@ const StudentDashboard = () => {
           {activeSection === 'overview' && (
             <Overview
               connections={connections}
-              courseCount={profileData.courses.length}
+              courseCount={enrolledCoursesCount}
               isDarkMode={isDarkMode}
               navigate={navigate}
               jobApplicationsCount={jobApplicationsCount}
