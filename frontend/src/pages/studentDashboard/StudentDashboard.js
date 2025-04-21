@@ -40,7 +40,17 @@ const StudentDashboard = () => {
     projects: [],
     courses: [],
     bio: "",
-    connections: [] // Add connections array to track connected profiles
+    connections: [], // Add connections array to track connected profiles
+    // Additional fields from main Profile.js
+    institution: "",
+    currentYear: "",
+    graduationYear: "",
+    location: "",
+    linkedIn: "",
+    github: "",
+    interests: [],
+    education: [],
+    studentId: ""
   });
   const [connections, setConnections] = useState([]);
   const [connectionLoading, setConnectionLoading] = useState(true);
@@ -58,7 +68,7 @@ const StudentDashboard = () => {
   useEffect(() => {
     // Check initial dark mode state
     setIsDarkMode(document.documentElement.classList.contains('dark'));
-    
+
     // Monitor for dark mode changes
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -67,24 +77,24 @@ const StudentDashboard = () => {
         }
       });
     });
-    
+
     observer.observe(document.documentElement, { attributes: true });
-    
+
     return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
     const fetchStudentProfile = async () => {
       if (!currentUser) return;
-      
+
       try {
         setLoading(true);
         const userDocRef = doc(db, "users", currentUser.uid);
         const userDoc = await getDoc(userDocRef);
-        
+
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          
+
           // Fetch academic records if they exist in a separate collection
           let academicData = {};
           if (userData.academicRecordId) {
@@ -94,7 +104,21 @@ const StudentDashboard = () => {
               academicData = academicDoc.data();
             }
           }
-          
+
+          // Process skills data to handle both string and array formats
+          const skillsData = userData.skills ?
+            (typeof userData.skills === 'string' ?
+              userData.skills.split(',').map(skill => skill.trim()) :
+              userData.skills) :
+            [];
+
+          // Process interests data similarly
+          const interestsData = userData.interests ?
+            (typeof userData.interests === 'string' ?
+              userData.interests.split(',').map(interest => interest.trim()) :
+              userData.interests) :
+            [];
+
           setProfileData({
             name: userData.name || currentUser.displayName || "",
             email: userData.email || currentUser.email || "",
@@ -107,14 +131,24 @@ const StudentDashboard = () => {
             batch: userData.batch || academicData.batch || "",
             currentSemester: userData.currentSemester || academicData.currentSemester || "",
             cgpa: userData.cgpa || academicData.cgpa || "",
-            skills: userData.skills || [],
+            skills: skillsData,
             achievements: userData.achievements || [],
             projects: userData.projects || [],
             courses: userData.courses || academicData.courses || [],
             bio: userData.bio || "",
-            connections: userData.connections || []
+            connections: userData.connections || [],
+            // Additional fields from main Profile.js
+            institution: userData.institution || userData.college || "",
+            currentYear: userData.currentYear || "",
+            graduationYear: userData.graduationYear || "",
+            location: userData.location || userData.address || "",
+            linkedIn: userData.linkedIn || "",
+            github: userData.github || "",
+            interests: interestsData,
+            education: userData.education || [],
+            studentId: userData.studentId || userData.enrollmentNumber || ""
           });
-          
+
           // After setting profile data, fetch connected profiles
           if (userData.connections && userData.connections.length > 0) {
             fetchConnections(userData.connections);
@@ -128,7 +162,7 @@ const StudentDashboard = () => {
         setLoading(false);
       }
     };
-    
+
     fetchStudentProfile();
   }, [currentUser]);
 
@@ -154,12 +188,12 @@ const StudentDashboard = () => {
     try {
       setConnectionLoading(true);
       const connectionProfiles = [];
-      
+
       // Process each connection in batches
       for (const connectionId of connectionIds) {
         const userDocRef = doc(db, "users", connectionId);
         const userDoc = await getDoc(userDocRef);
-        
+
         if (userDoc.exists()) {
           const userData = userDoc.data();
           connectionProfiles.push({
@@ -175,7 +209,7 @@ const StudentDashboard = () => {
           });
         }
       }
-      
+
       setConnections(connectionProfiles);
     } catch (error) {
       console.error("Error fetching connections:", error);
@@ -183,23 +217,23 @@ const StudentDashboard = () => {
       setConnectionLoading(false);
     }
   };
-  
+
   // Function to handle requesting a connection
   const handleRequestConnection = async (userId) => {
     if (!currentUser) return;
-    
+
     try {
       // In a real app, this would send a connection request to the backend
       // For now, we'll just show an alert
       alert(`Connection request sent to ${userId}`);
-      
+
       // Here we would typically update a "connectionRequests" collection in Firestore
       // And add a notification for the other user
     } catch (error) {
       console.error("Error sending connection request:", error);
     }
   };
-  
+
   // Filter connections by role
   const alumniConnections = connections.filter(conn => conn.role === "alumni");
   const teacherConnections = connections.filter(conn => conn.role === "teacher");
@@ -227,7 +261,7 @@ const StudentDashboard = () => {
         setShowNotifications(false);
       }
     }
-    
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -239,26 +273,26 @@ const StudentDashboard = () => {
     // Set up real-time listener for notifications
     const fetchNotifications = async () => {
       if (!currentUser) return;
-      
+
       try {
         // Initial fetch of notifications
         const notificationsData = await getUserNotifications(currentUser.uid);
         setNotifications(notificationsData);
         setUnreadCount(notificationsData.filter(n => !n.read).length);
-        
+
         // Set up subscription for real-time updates
         const unsubscribe = subscribeToUserNotifications(currentUser.uid, (updatedNotifications) => {
           setNotifications(updatedNotifications);
           setUnreadCount(updatedNotifications.filter(n => !n.read).length);
         });
-        
+
         // Return cleanup function
         return unsubscribe;
       } catch (error) {
         console.error('Error setting up notifications:', error);
       }
     };
-    
+
     const unsubscribe = fetchNotifications();
     return () => {
       if (typeof unsubscribe === 'function') {
@@ -271,12 +305,12 @@ const StudentDashboard = () => {
   const markAsRead = async (notificationId) => {
     try {
       await markNotificationAsRead(notificationId);
-      
+
       // Update local state
-      const updatedNotifications = notifications.map(notification => 
+      const updatedNotifications = notifications.map(notification =>
         notification.id === notificationId ? { ...notification, read: true } : notification
       );
-      
+
       setNotifications(updatedNotifications);
       setUnreadCount(updatedNotifications.filter(n => !n.read).length);
     } catch (error) {
@@ -288,9 +322,9 @@ const StudentDashboard = () => {
   const markAllAsRead = async () => {
     try {
       if (!currentUser) return;
-      
+
       await markAllNotificationsAsRead(currentUser.uid);
-      
+
       // Update local state
       const updatedNotifications = notifications.map(notification => ({ ...notification, read: true }));
       setNotifications(updatedNotifications);
@@ -304,9 +338,9 @@ const StudentDashboard = () => {
   useEffect(() => {
     const fetchCounts = async () => {
       if (!currentUser) return;
-      
+
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      
+
       try {
         // Fetch job applications count
         const token = await currentUser.getIdToken();
@@ -319,7 +353,7 @@ const StudentDashboard = () => {
             }
           }
         );
-        
+
         let applicationData = [];
         if (jobAppResponse.data && jobAppResponse.data.success) {
           if (Array.isArray(jobAppResponse.data.data)) {
@@ -330,25 +364,25 @@ const StudentDashboard = () => {
         } else if (Array.isArray(jobAppResponse.data)) {
           applicationData = jobAppResponse.data;
         }
-        
+
         // Filter for current user's applications
         const userApplications = applicationData.filter(app => app.userId === currentUser.uid);
         setJobApplicationsCount(userApplications.length);
-        
+
         // Fetch mentorships count
         const mentorshipResponse = await axios.get(`${API_URL}/api/mentorships/user/${currentUser.uid}`);
-        
+
         const userMentorships = mentorshipResponse.data.success ?
           (mentorshipResponse.data.mentorships ||
           mentorshipResponse.data.enrolledMentorships ||
           []) : [];
-          
+
         setMentorshipsCount(Array.isArray(userMentorships) ? userMentorships.length : 0);
       } catch (error) {
         console.error("Error fetching application and mentorship counts:", error);
       }
     };
-    
+
     fetchCounts();
   }, [currentUser]);
 
@@ -358,20 +392,20 @@ const StudentDashboard = () => {
       // Mark as read when clicked
       if (!notification.read) {
         await markNotificationAsRead(notification.id);
-        
+
         // Update local state to reflect the change
-        const updatedNotifications = notifications.map(n => 
+        const updatedNotifications = notifications.map(n =>
           n.id === notification.id ? { ...n, read: true } : n
         );
         setNotifications(updatedNotifications);
         setUnreadCount(updatedNotifications.filter(n => !n.read).length);
       }
-      
+
       // Navigate to the link if available
       if (notification.linkTo) {
         navigate(notification.linkTo);
       }
-      
+
       setShowNotifications(false);
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -395,30 +429,30 @@ const StudentDashboard = () => {
   const formatNotificationTime = (timestamp) => {
     const now = new Date();
     const diff = now - timestamp;
-    
+
     // Less than a minute
     if (diff < 60 * 1000) {
       return 'just now';
     }
-    
+
     // Less than an hour
     if (diff < 60 * 60 * 1000) {
       const minutes = Math.floor(diff / (60 * 1000));
       return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
     }
-    
+
     // Less than a day
     if (diff < 24 * 60 * 60 * 1000) {
       const hours = Math.floor(diff / (60 * 60 * 1000));
       return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
     }
-    
+
     // Less than a week
     if (diff < 7 * 24 * 60 * 60 * 1000) {
       const days = Math.floor(diff / (24 * 60 * 60 * 1000));
       return `${days} ${days === 1 ? 'day' : 'days'} ago`;
     }
-    
+
     // Otherwise, return the date
     return timestamp.toLocaleDateString();
   };
@@ -426,7 +460,7 @@ const StudentDashboard = () => {
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
       {/* Sidebar */}
-      <div 
+      <div
         className={`h-full transition-all duration-300 bg-white dark:bg-gray-800 shadow-lg
                   ${isNavExpanded ? 'w-64' : 'w-20'}`}
         style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
@@ -435,7 +469,7 @@ const StudentDashboard = () => {
           {isNavExpanded && (
             <h3 className="text-xl font-bold text-blue-600 dark:text-blue-400">Student Dashboard</h3>
           )}
-          <button 
+          <button
             className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
             onClick={() => setIsNavExpanded(!isNavExpanded)}
           >
@@ -447,8 +481,8 @@ const StudentDashboard = () => {
             <button
               key={item.id}
               className={`w-full flex items-center p-3 my-1 text-left rounded-lg transition-colors ${
-                activeSection === item.id 
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400' 
+                activeSection === item.id
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
                   : 'hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
               onClick={() => handleSectionClick(item.id)}
@@ -472,7 +506,7 @@ const StudentDashboard = () => {
             </h1>
             <div className="flex items-center gap-4">
               <div className="relative" ref={notificationRef}>
-                <button 
+                <button
                   className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                   onClick={() => setShowNotifications(!showNotifications)}
                 >
@@ -488,7 +522,7 @@ const StudentDashboard = () => {
                     <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                       <h3 className="font-semibold text-gray-800 dark:text-white">Notifications</h3>
                       {unreadCount > 0 && (
-                        <button 
+                        <button
                           className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                           onClick={() => markAllAsRead()}
                         >
@@ -496,7 +530,7 @@ const StudentDashboard = () => {
                         </button>
                       )}
                     </div>
-                    
+
                     <div className="max-h-96 overflow-y-auto">
                       {notifications.length === 0 ? (
                         <div className="p-4 text-center text-gray-500 dark:text-gray-400">
@@ -504,7 +538,7 @@ const StudentDashboard = () => {
                         </div>
                       ) : (
                         notifications.map(notification => (
-                          <div 
+                          <div
                             key={notification.id}
                             className={`p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
                               !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
@@ -531,9 +565,9 @@ const StudentDashboard = () => {
                         ))
                       )}
                     </div>
-                    
+
                     <div className="p-2 border-t border-gray-200 dark:border-gray-700 text-center">
-                      <button 
+                      <button
                         className="text-sm text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                         onClick={() => setActiveSection('notifications')}
                       >
@@ -556,11 +590,11 @@ const StudentDashboard = () => {
 
         <main className="p-6">
           {activeSection === 'profile' && (
-            <Profile user={currentUser} isDarkMode={isDarkMode} />
+            <Profile isDarkMode={isDarkMode} />
           )}
 
           {activeSection === 'overview' && (
-            <Overview 
+            <Overview
               connections={connections}
               courseCount={profileData.courses.length}
               isDarkMode={isDarkMode}
@@ -691,15 +725,15 @@ const StudentDashboard = () => {
                   <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
                        style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
                     <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Social Profiles</h3>
-                    
+
                     <div className="space-y-4">
                       <div className="flex items-center">
                         <div className="w-12 text-center text-xl mr-3 text-blue-500">
                           <i className="fab fa-linkedin"></i>
                         </div>
                         <div className="flex-1">
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
                             placeholder="LinkedIn URL"
                             defaultValue="https://linkedin.com/in/johndoe"
@@ -711,8 +745,8 @@ const StudentDashboard = () => {
                           <i className="fab fa-github"></i>
                         </div>
                         <div className="flex-1">
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
                             placeholder="GitHub URL"
                             defaultValue="https://github.com/johndoe"
@@ -724,8 +758,8 @@ const StudentDashboard = () => {
                           <i className="fas fa-globe"></i>
                         </div>
                         <div className="flex-1">
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
                             placeholder="Portfolio Website"
                             defaultValue="https://johndoe.dev"
@@ -737,7 +771,7 @@ const StudentDashboard = () => {
 
                   <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
                     <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Display Preferences</h3>
-                    
+
                     <div className="space-y-6">
                       <div className="flex justify-between items-center">
                         <div>
@@ -816,7 +850,7 @@ const StudentDashboard = () => {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                   <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 md:mb-0">My Notifications</h2>
                   <div className="flex gap-2">
-                    <select 
+                    <select
                       className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       onChange={(e) => {
                         // Here we would filter notifications by type
@@ -831,7 +865,7 @@ const StudentDashboard = () => {
                       <option value="message">Messages</option>
                       <option value="event">Events</option>
                     </select>
-                    <select 
+                    <select
                       className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       onChange={(e) => {
                         // Here we would filter notifications by time
@@ -843,7 +877,7 @@ const StudentDashboard = () => {
                       <option value="week">This Week</option>
                       <option value="month">This Month</option>
                     </select>
-                    <button 
+                    <button
                       className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                       onClick={markAllAsRead}
                     >
@@ -865,7 +899,7 @@ const StudentDashboard = () => {
                           return notification.timestamp >= today;
                         })
                         .map(notification => (
-                          <div 
+                          <div
                             key={notification.id}
                             className={`p-4 rounded-lg flex items-start hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors ${
                               !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-gray-800'
@@ -918,7 +952,7 @@ const StudentDashboard = () => {
                           return notification.timestamp < today;
                         })
                         .map(notification => (
-                          <div 
+                          <div
                             key={notification.id}
                             className={`p-4 rounded-lg flex items-start hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors ${
                               !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-gray-800'
@@ -989,7 +1023,7 @@ const StudentDashboard = () => {
                       <label htmlFor="assignment-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-800 dark:text-white font-medium">Deadline Reminders</p>
@@ -1000,7 +1034,7 @@ const StudentDashboard = () => {
                       <label htmlFor="deadline-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-800 dark:text-white font-medium">Grade Updates</p>
@@ -1011,7 +1045,7 @@ const StudentDashboard = () => {
                       <label htmlFor="grade-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-800 dark:text-white font-medium">Connection Requests</p>
@@ -1022,7 +1056,7 @@ const StudentDashboard = () => {
                       <label htmlFor="connection-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-800 dark:text-white font-medium">Message Notifications</p>
@@ -1033,7 +1067,7 @@ const StudentDashboard = () => {
                       <label htmlFor="message-toggle" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-800 dark:text-white font-medium">Email Notifications</p>
@@ -1050,7 +1084,7 @@ const StudentDashboard = () => {
           )}
 
           {/* Other dashboard sections remain here */}
-          
+
           {activeSection === 'network' && (
             <div className="network-section">
               <Network currentUser={currentUser} isDarkMode={isDarkMode} />

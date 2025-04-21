@@ -25,6 +25,7 @@ import CreateJob from './pages/CreateJob';
 import CreateMentorship from './pages/CreateMentorship';
 import MentorshipApplication from './pages/MentorshipApplication';
 import JobApplication from './pages/JobApplication';
+import CourseDetail from './pages/CourseDetail';
 import './App.css';
 
 function App() {
@@ -32,7 +33,7 @@ function App() {
   useEffect(() => {
     // Check localStorage first
     const savedDarkMode = localStorage.getItem('darkMode');
-    
+
     if (savedDarkMode === 'enabled') {
       document.documentElement.classList.add('dark');
     } else if (savedDarkMode === 'disabled') {
@@ -177,6 +178,11 @@ function App() {
               <Route path="/create-mentorship" element={
                 <PrivateRoute allowedRoles={['alumni', 'teacher']}>
                   <CreateMentorship />
+                </PrivateRoute>
+              } />
+              <Route path="/course/:id" element={
+                <PrivateRoute>
+                  <CourseDetail />
                 </PrivateRoute>
               } />
             </Routes>

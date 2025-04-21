@@ -105,7 +105,20 @@ const TeacherDashboard = () => {
     achievements: [],
     publications: [],
     bio: "",
-    connections: []
+    connections: [],
+    // Additional fields from main Profile.js
+    college: "",
+    jobTitle: "",
+    location: "",
+    linkedIn: "",
+    github: "",
+    workExperience: [],
+    education: [],
+    officeHours: [],
+    officeLocation: "",
+    researchInterests: "",
+    coursesTaught: "",
+    certifications: []
   });
   // Notification state
   const [notifications, setNotifications] = useState([]);
@@ -116,9 +129,9 @@ const TeacherDashboard = () => {
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'profile', label: 'Profile', icon: '👤' },
-    { 
-      id: 'network', 
-      label: 'Network', 
+    {
+      id: 'network',
+      label: 'Network',
       icon: '🔗',
       badge: pendingRequests.incoming.length || null
     },
@@ -133,7 +146,7 @@ const TeacherDashboard = () => {
   useEffect(() => {
     // Check initial dark mode state
     setIsDarkMode(document.documentElement.classList.contains('dark'));
-    
+
     // Monitor for dark mode changes
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -142,9 +155,9 @@ const TeacherDashboard = () => {
         }
       });
     });
-    
+
     observer.observe(document.documentElement, { attributes: true });
-    
+
     return () => observer.disconnect();
   }, []);
 
@@ -157,14 +170,45 @@ const TeacherDashboard = () => {
   useEffect(() => {
     const fetchTeacherProfile = async () => {
       if (!user) return;
-      
+
       try {
         setLoading(true);
         const userDocRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
-        
+
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          // Process expertise data to handle both string and array formats
+          const expertiseData = userData.expertise ?
+            (typeof userData.expertise === 'string' ?
+              userData.expertise.split(',').map(item => item.trim()) :
+              userData.expertise) :
+            [];
+
+          // Process skills data similarly if it exists
+          const skillsData = userData.skills ?
+            (typeof userData.skills === 'string' ?
+              userData.skills.split(',').map(skill => skill.trim()) :
+              userData.skills) :
+            [];
+
+          // Format office hours data if it's a string
+          let officeHoursData = userData.officeHours || [];
+          if (typeof officeHoursData === 'string') {
+            // Try to convert string to structured data
+            try {
+              // Simple parsing for format like "Monday: 10AM-12PM, Wednesday: 2PM-4PM"
+              officeHoursData = officeHoursData.split(',').map(slot => {
+                const [day, time] = slot.split(':').map(s => s.trim());
+                return { day, time };
+              });
+            } catch (e) {
+              // If parsing fails, keep as empty array
+              console.error('Error parsing office hours:', e);
+              officeHoursData = [];
+            }
+          }
+
           setProfileData({
             name: userData.name || user.displayName || "",
             email: userData.email || user.email || "",
@@ -174,13 +218,26 @@ const TeacherDashboard = () => {
             department: userData.department || "",
             institution: userData.institution || "",
             designation: userData.designation || "",
-            expertise: userData.expertise || [],
+            expertise: expertiseData,
             achievements: userData.achievements || [],
             publications: userData.publications || [],
             bio: userData.bio || "",
-            connections: userData.connections || []
+            connections: userData.connections || [],
+            // Additional fields from main Profile.js
+            college: userData.college || userData.institution || "",
+            jobTitle: userData.jobTitle || userData.designation || "",
+            location: userData.location || userData.address || "",
+            linkedIn: userData.linkedIn || "",
+            github: userData.github || "",
+            workExperience: userData.workExperience || [],
+            education: userData.education || [],
+            officeHours: officeHoursData,
+            officeLocation: userData.officeLocation || "",
+            researchInterests: userData.researchInterests || "",
+            coursesTaught: userData.coursesTaught || "",
+            certifications: userData.certifications || []
           });
-          
+
           // After setting profile data, fetch connected profiles
           if (userData.connections && userData.connections.length > 0) {
             fetchConnections(userData.connections);
@@ -194,7 +251,7 @@ const TeacherDashboard = () => {
         setLoading(false);
       }
     };
-    
+
     fetchTeacherProfile();
   }, [user]);
 
@@ -220,12 +277,12 @@ const TeacherDashboard = () => {
     try {
       setConnectionLoading(true);
       const connectionProfiles = [];
-      
+
       // Process each connection in batches
       for (const connectionId of connectionIds) {
         const userDocRef = doc(db, "users", connectionId);
         const userDoc = await getDoc(userDocRef);
-        
+
         if (userDoc.exists()) {
           const userData = userDoc.data();
           connectionProfiles.push({
@@ -241,7 +298,7 @@ const TeacherDashboard = () => {
           });
         }
       }
-      
+
       setConnections(connectionProfiles);
     } catch (error) {
       console.error("Error fetching connections:", error);
@@ -249,11 +306,11 @@ const TeacherDashboard = () => {
       setConnectionLoading(false);
     }
   };
-  
+
   // Function to handle requesting a connection
   const handleRequestConnection = async (userId) => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
       const result = await sendConnectionRequest(user.uid, userId);
@@ -269,7 +326,7 @@ const TeacherDashboard = () => {
       setLoading(false);
     }
   };
-  
+
   // Filter connections by role
   const studentConnections = connections.filter(conn => conn.role === "student");
   const alumniConnections = connections.filter(conn => conn.role === "alumni");
@@ -278,14 +335,14 @@ const TeacherDashboard = () => {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      
+
       console.log('Fetching events for teacher:', {
         userUid: user?.uid,
         role: role,
         apiUrl: API_URL,
         endpoint: `${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`
       });
-      
+
       // Use the user-specific endpoint to get events created by this user, including role
       const response = await fetch(`${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
         method: 'GET',
@@ -297,7 +354,7 @@ const TeacherDashboard = () => {
       }
 
       const data = await response.json();
-      
+
       // Use the createdEvents array directly from the API response
       console.log('Teacher events received from API:', {
         response: 'success',
@@ -307,7 +364,7 @@ const TeacherDashboard = () => {
         registeredEvents: data.registeredEvents?.length || 0,
         data: data
       });
-      
+
       // Check if createdEvents exists in the response
       if (!data.createdEvents) {
         console.warn('No createdEvents found in API response:', data);
@@ -366,7 +423,7 @@ const TeacherDashboard = () => {
       // Call API to delete material
       const response = await fetch(`${API_URL}/api/materials/${materialId}?firebaseUID=${user.uid}&role=teacher`, {
         method: 'DELETE',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${await user.getIdToken()}`
         }
@@ -379,7 +436,7 @@ const TeacherDashboard = () => {
 
       // Remove material from local state
       setMaterials(prevMaterials => prevMaterials.filter(material => material.id !== materialId));
-      
+
       // Show success message
       alert('Material deleted successfully');
     } catch (err) {
@@ -397,7 +454,7 @@ const TeacherDashboard = () => {
         setShowNotifications(false);
       }
     }
-    
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -409,13 +466,13 @@ const TeacherDashboard = () => {
     // Set up real-time listener for notifications
     const fetchNotifications = async () => {
       if (!user) return;
-      
+
       try {
         console.log('Fetching notifications for user:', user.uid);
-        
+
         // Initial fetch of notifications
         const notificationsData = await getUserNotifications(user.uid);
-        
+
         // Check if notificationsData is valid
         if (Array.isArray(notificationsData)) {
           console.log('Initial notifications loaded:', notificationsData.length);
@@ -426,7 +483,7 @@ const TeacherDashboard = () => {
           setNotifications([]);
           setUnreadCount(0);
         }
-        
+
         console.log('Setting up real-time notifications subscription');
         // Set up subscription for real-time updates
         const unsubscribe = subscribeToUserNotifications(user.uid, (updatedNotifications) => {
@@ -440,7 +497,7 @@ const TeacherDashboard = () => {
             setUnreadCount(0);
           }
         });
-        
+
         // Return cleanup function
         return unsubscribe;
       } catch (error) {
@@ -450,7 +507,7 @@ const TeacherDashboard = () => {
         setUnreadCount(0);
       }
     };
-    
+
     const unsubscribe = fetchNotifications();
     return () => {
       if (typeof unsubscribe === 'function') {
@@ -464,12 +521,12 @@ const TeacherDashboard = () => {
   const markAsRead = async (notificationId) => {
     try {
       await markNotificationAsRead(notificationId);
-      
+
       // Update local state
-      const updatedNotifications = notifications.map(notification => 
+      const updatedNotifications = notifications.map(notification =>
         notification.id === notificationId ? { ...notification, read: true } : notification
       );
-      
+
       setNotifications(updatedNotifications);
       setUnreadCount(updatedNotifications.filter(n => !n.read).length);
     } catch (error) {
@@ -481,9 +538,9 @@ const TeacherDashboard = () => {
   const markAllAsRead = async () => {
     try {
       if (!user) return;
-      
+
       await markAllNotificationsAsRead(user.uid);
-      
+
       // Update local state
       const updatedNotifications = notifications.map(notification => ({ ...notification, read: true }));
       setNotifications(updatedNotifications);
@@ -499,20 +556,20 @@ const TeacherDashboard = () => {
       // Mark as read when clicked
       if (!notification.read) {
         await markNotificationAsRead(notification.id);
-        
+
         // Update local state to reflect the change
-        const updatedNotifications = notifications.map(n => 
+        const updatedNotifications = notifications.map(n =>
           n.id === notification.id ? { ...n, read: true } : n
         );
         setNotifications(updatedNotifications);
         setUnreadCount(updatedNotifications.filter(n => !n.read).length);
       }
-      
+
       // Navigate to the link if available
       if (notification.linkTo) {
     navigate(notification.linkTo);
       }
-      
+
     setShowNotifications(false);
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -535,30 +592,30 @@ const TeacherDashboard = () => {
   const formatNotificationTime = (timestamp) => {
     const now = new Date();
     const diff = now - timestamp;
-    
+
     // Less than a minute
     if (diff < 60 * 1000) {
       return 'just now';
     }
-    
+
     // Less than an hour
     if (diff < 60 * 60 * 1000) {
       const minutes = Math.floor(diff / (60 * 1000));
       return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
     }
-    
+
     // Less than a day
     if (diff < 24 * 60 * 60 * 1000) {
       const hours = Math.floor(diff / (60 * 60 * 1000));
       return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
     }
-    
+
     // Less than a week
     if (diff < 7 * 24 * 60 * 60 * 1000) {
       const days = Math.floor(diff / (24 * 60 * 60 * 1000));
       return `${days} ${days === 1 ? 'day' : 'days'} ago`;
     }
-    
+
     // Otherwise, return the date
     return timestamp.toLocaleDateString();
   };
@@ -566,7 +623,7 @@ const TeacherDashboard = () => {
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
       {/* Sidebar */}
-      <div 
+      <div
         className={`h-full transition-all duration-300 bg-white dark:bg-gray-800 shadow-lg
                    ${isNavExpanded ? 'w-64' : 'w-20'}`}
         style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
@@ -575,7 +632,7 @@ const TeacherDashboard = () => {
           {isNavExpanded && (
             <h3 className="text-xl font-bold text-blue-600 dark:text-blue-400">Teacher Dashboard</h3>
           )}
-          <button 
+          <button
             className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
             onClick={() => setIsNavExpanded(!isNavExpanded)}
           >
@@ -588,8 +645,8 @@ const TeacherDashboard = () => {
             <button
               key={item.id}
               className={`w-full flex items-center p-3 my-1 text-left rounded-lg transition-colors ${
-                activeSection === item.id 
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400' 
+                activeSection === item.id
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
                   : 'hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
               onClick={() => handleSectionClick(item.id)}
@@ -618,7 +675,7 @@ const TeacherDashboard = () => {
             </h1>
             <div className="flex items-center gap-4">
               <div className="relative" ref={notificationRef}>
-                <button 
+                <button
                   className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                   onClick={() => setShowNotifications(!showNotifications)}
                 >
@@ -634,7 +691,7 @@ const TeacherDashboard = () => {
                     <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                       <h3 className="font-semibold text-gray-800 dark:text-white">Notifications</h3>
                       {unreadCount > 0 && (
-                        <button 
+                        <button
                           className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                           onClick={() => markAllAsRead()}
                         >
@@ -642,7 +699,7 @@ const TeacherDashboard = () => {
                         </button>
                       )}
                     </div>
-                    
+
                     <div className="max-h-96 overflow-y-auto">
                       {notifications.length === 0 ? (
                         <div className="p-4 text-center text-gray-500 dark:text-gray-400">
@@ -651,7 +708,7 @@ const TeacherDashboard = () => {
                       ) : (
                         <div>
                           {notifications.map(notification => (
-                            <div 
+                            <div
                               key={notification.id}
                               className={`p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors ${
                                 !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
@@ -687,9 +744,9 @@ const TeacherDashboard = () => {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="p-2 border-t border-gray-200 dark:border-gray-700 text-center">
-                      <button 
+                      <button
                         className="text-sm text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                         onClick={() => setActiveSection('notifications')}
                       >
@@ -708,7 +765,7 @@ const TeacherDashboard = () => {
 
         <main className="p-6">
           {activeSection === 'overview' && (
-            <Overview 
+            <Overview
               connections={connections}
               studentConnections={studentConnections}
               alumniConnections={alumniConnections}
@@ -719,7 +776,7 @@ const TeacherDashboard = () => {
           )}
 
           {activeSection === 'profile' && (
-            <Profile 
+            <Profile
               profileData={profileData}
               isDarkMode={isDarkMode}
               navigate={navigate}
@@ -735,9 +792,9 @@ const TeacherDashboard = () => {
           )}
 
           {activeSection === 'events' && (
-            <Events 
-              events={filteredEvents} 
-              loading={loading} 
+            <Events
+              events={filteredEvents}
+              loading={loading}
               error={error}
               search={search}
               setSearch={setSearch}
@@ -766,8 +823,8 @@ const TeacherDashboard = () => {
 
           {activeSection === 'network' && (
             <div className="network-section">
-              <TeacherNetwork 
-                pendingRequests={pendingRequests} 
+              <TeacherNetwork
+                pendingRequests={pendingRequests}
                 connections={connections}
                 handleRequestConnection={handleRequestConnection}
                 loading={connectionLoading}
@@ -782,4 +839,4 @@ const TeacherDashboard = () => {
   );
 };
 
-export default TeacherDashboard; 
+export default TeacherDashboard;
