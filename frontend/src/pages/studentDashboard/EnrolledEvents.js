@@ -16,7 +16,7 @@ const EnrolledEvents = () => {
   useEffect(() => {
     // Check initial dark mode state
     setIsDarkMode(document.documentElement.classList.contains('dark'));
-    
+
     // Monitor for dark mode changes
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -25,9 +25,9 @@ const EnrolledEvents = () => {
         }
       });
     });
-    
+
     observer.observe(document.documentElement, { attributes: true });
-    
+
     return () => observer.disconnect();
   }, []);
 
@@ -41,7 +41,7 @@ const EnrolledEvents = () => {
         }
 
         // First get the MongoDB user ID
-        const userRes = await axios.get(`${process.env.REACT_APP_API_URL}/api/users/firebase/${user.uid}`);
+        const userRes = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/users/firebase/${user.uid}`);
         const mongoUser = userRes.data;
 
         if (!mongoUser || !mongoUser._id) {
@@ -51,19 +51,19 @@ const EnrolledEvents = () => {
         }
 
         // Then fetch enrolled events
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/events`);
+        const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/events`);
         const allEvents = response.data;
-        
+
         // Filter events where user is registered
         const userEvents = allEvents.filter(event => {
           if (!event.registeredUsers || !Array.isArray(event.registeredUsers)) {
             return false;
           }
-          return event.registeredUsers.some(ru => 
+          return event.registeredUsers.some(ru =>
             ru && ru.userId && ru.userId._id === mongoUser._id
           );
         });
-        
+
         setEnrolledEvents(userEvents);
       } catch (err) {
         console.error('Error fetching enrolled events:', err);
@@ -166,21 +166,21 @@ const EnrolledEvents = () => {
       ) : (
         <div className="events-grid">
           {filteredEvents.map((event) => (
-            <div 
-              key={event._id} 
+            <div
+              key={event._id}
               className={`event-card bg-white dark:bg-gray-800 rounded-xl shadow-md transition-all overflow-hidden border border-gray-200 dark:border-gray-700`}
               style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
             >
-              <div 
+              <div
                 className={`event-status text-xs font-semibold px-3 py-1 inline-block absolute right-0 top-0 rounded-bl-lg ${
                   new Date(event.date) >= new Date().setHours(0, 0, 0, 0)
-                    ? "bg-green-500 text-white" 
+                    ? "bg-green-500 text-white"
                     : "bg-gray-500 text-white"
                 }`}
               >
                 {new Date(event.date) >= new Date().setHours(0, 0, 0, 0) ? "Upcoming" : "Past"}
               </div>
-              
+
               <div className="event-content p-5">
                 <h3 className="event-title text-xl font-bold text-gray-900 dark:text-white mb-2">
                   {event.title}
@@ -210,7 +210,7 @@ const EnrolledEvents = () => {
                 <div className="event-actions mt-4">
                   {new Date(event.date) >= new Date().setHours(0, 0, 0, 0) ? (
                     <div className="flex space-x-2">
-                      <button 
+                      <button
                         className="view-details-btn flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                         onClick={() => handleViewDetails(event)}
                       >
@@ -240,7 +240,7 @@ const EnrolledEvents = () => {
               <h2>{selectedEvent.title}</h2>
               <button className="close-modal-btn" onClick={handleCloseModal}>×</button>
             </div>
-            
+
             <div className="event-modal-body">
               <div className="event-modal-section">
                 <h3>📝 Description</h3>
