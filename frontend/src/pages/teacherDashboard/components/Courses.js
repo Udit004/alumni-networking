@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import axios from 'axios';
+import CourseApplications from './CourseApplications';
 
 const Courses = ({ isDarkMode }) => {
   const { currentUser } = useAuth();
@@ -8,7 +9,7 @@ const Courses = ({ isDarkMode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('active');
+  const [activeTab, setActiveTab] = useState('active'); // 'active', 'past', 'applications'
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [formData, setFormData] = useState({
@@ -421,6 +422,12 @@ const Courses = ({ isDarkMode }) => {
             >
               Past
             </button>
+            <button
+              className={`px-4 py-2 rounded-md transition ${activeTab === 'applications' ? 'bg-white dark:bg-gray-800 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+              onClick={() => setActiveTab('applications')}
+            >
+              Applications
+            </button>
           </div>
           <button
             onClick={handleCreateCourse}
@@ -449,9 +456,12 @@ const Courses = ({ isDarkMode }) => {
       )}
 
       {/* Course cards */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
-           style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-        {activeTab === 'active' ? (
+      {activeTab === 'applications' ? (
+        <CourseApplications isDarkMode={isDarkMode} />
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+             style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+          {activeTab === 'active' ? (
           <>
             <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Active Courses</h2>
 
@@ -622,6 +632,7 @@ const Courses = ({ isDarkMode }) => {
           </>
         )}
       </div>
+      )}
 
       {/* Course Analytics */}
       {activeTab === 'active' && filteredActiveCourses.length > 0 && !loading && (

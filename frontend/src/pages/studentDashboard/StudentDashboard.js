@@ -12,6 +12,7 @@ import EnrolledEvents from "./EnrolledEvents";
 import Mentorship from "./components/Mentorship";
 import Jobs from "./components/Jobs";
 import Overview from "./components/Overview";
+import Courses from "./components/Courses";
 import axios from 'axios';
 
 const StudentDashboard = () => {
@@ -607,53 +608,7 @@ const StudentDashboard = () => {
           {activeSection === 'events' && <EnrolledEvents />}
 
           {activeSection === 'courses' && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
-                 style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Course Materials</h2>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search courses..."
-                    className="py-2 px-10 bg-white dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style={{ backgroundColor: isDarkMode ? '#374151' : 'white' }}
-                  />
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-300">
-                    🔍
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-white">Web Development</h3>
-                    <span className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm">75% Complete</span>
-                  </div>
-                  <p className="text-gray-700 dark:text-gray-300 mb-4">Learn modern web development with React and Node.js</p>
-                  <div className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden mb-4">
-                    <div className="h-full bg-green-500 rounded-full" style={{ width: '75%' }}></div>
-                  </div>
-                  <button className="w-full py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors">
-                    Continue Learning
-                  </button>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-white">Data Structures</h3>
-                    <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">40% Complete</span>
-                  </div>
-                  <p className="text-gray-700 dark:text-gray-300 mb-4">Master fundamental data structures and algorithms</p>
-                  <div className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden mb-4">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: '40%' }}></div>
-                  </div>
-                  <button className="w-full py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors">
-                    Continue Learning
-                  </button>
-                </div>
-              </div>
-            </div>
+            <Courses isDarkMode={isDarkMode} />
           )}
 
           {activeSection === 'mentorship' && (

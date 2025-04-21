@@ -12,6 +12,7 @@ require("./models/JobApplication");
 require("./models/MentorshipApplication");
 require("./models/EventRegistration");
 require("./models/Course");
+require("./models/CourseApplication");
 
 const eventRoutes = require("./routes/eventRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -22,6 +23,7 @@ const mentorshipRoutes = require('./routes/mentorships');
 const jobApplicationRoutes = require('./routes/jobApplicationRoutes');
 const mentorshipApplicationRoutes = require('./routes/mentorshipApplicationRoutes');
 const courseRoutes = require('./routes/courses');
+const courseApplicationRoutes = require('./routes/courseApplications');
 
 const app = express();
 const PORT = process.env.PORT || 5001; // Changed to 5001 to avoid conflict
@@ -74,6 +76,7 @@ app.use('/api/mentorships', mentorshipRoutes);
 app.use('/api/job-applications', jobApplicationRoutes);
 app.use('/api/mentorship-applications', mentorshipApplicationRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/api/course-applications', courseApplicationRoutes);
 
 // Direct test endpoint for mentorship applications
 app.post('/api/test-mentorship-application/:mentorshipId', async (req, res) => {

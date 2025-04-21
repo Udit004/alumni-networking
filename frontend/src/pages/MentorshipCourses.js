@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import CourseEnrollmentForm from '../components/CourseEnrollmentForm';
 
 const MentorshipCourses = () => {
   const [courses, setCourses] = useState([]);
@@ -10,6 +11,9 @@ const MentorshipCourses = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [term, setTerm] = useState('all');
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [showEnrollmentForm, setShowEnrollmentForm] = useState(false);
+  // Removed viewMode state since it's now handled in student dashboard
   const { currentUser, userData, role } = useAuth();
   const navigate = useNavigate();
 
@@ -24,7 +28,7 @@ const MentorshipCourses = () => {
 
   useEffect(() => {
     fetchCourses();
-  }, []);
+  }, [currentUser, role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCourses = async () => {
     try {
@@ -69,60 +73,33 @@ const MentorshipCourses = () => {
     }
   };
 
+  // Removed fetchEnrolledCourses function since it's now handled in student dashboard
+
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  const enrollInCourse = async (courseId) => {
+  const enrollInCourse = (course) => {
     if (!currentUser) {
       alert('Please log in to enroll in a course');
       return;
     }
 
-    try {
-      const token = await currentUser.getIdToken();
-      const studentData = {
-        studentId: currentUser.uid,
-        studentName: currentUser.displayName || userData?.name || 'Student'
-      };
-
-      let success = false;
-      let responseData = null;
-
-      for (const baseUrl of baseUrls) {
-        try {
-          console.log(`Trying to enroll in course on ${baseUrl}...`);
-          const response = await axios.post(
-            `${baseUrl}/api/courses/${courseId}/enroll`,
-            studentData,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            }
-          );
-
-          console.log(`Response from ${baseUrl}:`, response.data);
-          responseData = response.data;
-          success = true;
-          break; // Exit the loop if successful
-        } catch (err) {
-          console.log(`Failed to connect to ${baseUrl}:`, err.message);
-        }
-      }
-
-      if (success && responseData.success) {
-        alert('Successfully enrolled in the course!');
-        fetchCourses(); // Refresh the courses list
-      } else {
-        alert(responseData?.message || 'Failed to enroll in the course. Please try again.');
-      }
-    } catch (err) {
-      console.error('Error enrolling in course:', err);
-      alert('Failed to enroll in the course. Please try again.');
+    if (role !== 'student') {
+      alert('Only students can enroll in courses');
+      return;
     }
+
+    // Show the enrollment form instead of directly enrolling
+    setSelectedCourse(course);
+    setShowEnrollmentForm(true);
+  };
+
+  const handleEnrollmentSuccess = () => {
+    setShowEnrollmentForm(false);
+    setSelectedCourse(null);
+    fetchCourses(); // Refresh the courses list
   };
 
   const isEnrolled = (course) => {
@@ -133,7 +110,10 @@ const MentorshipCourses = () => {
     return course.students?.length >= course.maxStudents;
   };
 
-  const filteredCourses = courses.filter((course) => {
+  // Use the courses list directly
+  const courseList = courses;
+
+  const filteredCourses = courseList.filter((course) => {
     // Search filter
     const matchesSearch =
       course.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -189,7 +169,16 @@ const MentorshipCourses = () => {
 
       <div className="container mx-auto py-12 px-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-4 md:mb-0">Available Courses</h2>
+          <div>
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-4 md:mb-0">
+              Available Courses
+            </h2>
+            {currentUser && role === 'student' && (
+              <p className="text-gray-600 dark:text-gray-400 mt-2">
+                View your enrolled courses in the <a href="/student-dashboard" className="text-blue-500 hover:underline">Student Dashboard</a>
+              </p>
+            )}
+          </div>
 
           {currentUser && (
             <div className="flex gap-2">
@@ -332,9 +321,13 @@ const MentorshipCourses = () => {
             ) : filteredCourses.length === 0 ? (
               <div className="text-center py-10 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
                 <div className="text-5xl mb-4">🔍</div>
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">No courses found</h3>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">
+                  No courses found
+                </h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  {search || term !== 'all' || filter !== 'all' ? "Try adjusting your search criteria" : "No courses have been posted yet"}
+                  {search || term !== 'all' || filter !== 'all'
+                    ? "Try adjusting your search criteria"
+                    : "No courses have been posted yet"}
                 </p>
               </div>
             ) : (
@@ -444,9 +437,9 @@ const MentorshipCourses = () => {
                           ) : (
                             <button
                               className="inline-block ml-3 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
-                              onClick={() => enrollInCourse(course._id)}
+                              onClick={() => enrollInCourse(course)}
                             >
-                              Enroll Now
+                              Apply for Course
                             </button>
                           )
                         )}
@@ -457,14 +450,26 @@ const MentorshipCourses = () => {
               </div>
             )}
 
-            {filteredCourses.length > 0 && filteredCourses.length < courses.length && (
+            {filteredCourses.length > 0 && filteredCourses.length < courseList.length && (
               <div className="mt-6 text-center text-gray-600 dark:text-gray-400">
-                Showing {filteredCourses.length} of {courses.length} courses
+                Showing {filteredCourses.length} of {courseList.length} courses
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Course Enrollment Application Form */}
+      {showEnrollmentForm && selectedCourse && (
+        <CourseEnrollmentForm
+          course={selectedCourse}
+          onClose={() => {
+            setShowEnrollmentForm(false);
+            setSelectedCourse(null);
+          }}
+          onSuccess={handleEnrollmentSuccess}
+        />
+      )}
     </div>
   );
 };

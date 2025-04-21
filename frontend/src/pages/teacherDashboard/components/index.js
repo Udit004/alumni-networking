@@ -7,6 +7,7 @@ import Resources from './Resources';
 import Students from './Students';
 import Settings from './Settings';
 import Network from './Network';
+import CourseApplications from './CourseApplications';
 
 export {
   Overview,
@@ -17,5 +18,6 @@ export {
   Resources,
   Students,
   Settings,
-  Network
-}; 
+  Network,
+  CourseApplications
+};
