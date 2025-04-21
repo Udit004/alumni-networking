@@ -4,14 +4,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import './AlumniDashboard.css';
 import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { 
-  Overview, 
-  Profile, 
-  Connections, 
-  Notifications, 
-  Mentorship, 
-  Jobs, 
-  Events, 
+import {
+  Overview,
+  Profile,
+  Connections,
+  Notifications,
+  Mentorship,
+  Jobs,
+  Events,
   Settings,
   Resources
 } from './components';
@@ -39,17 +39,17 @@ const AlumniDashboard = () => {
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
   const { currentUser, role } = useAuth();
   const navigate = useNavigate();
-  
+
   // Job and mentorship stats
   const [mentoringCount, setMentoringCount] = useState(0);
   const [jobPostingsCount, setJobPostingsCount] = useState(0);
   const [activeJobsCount, setActiveJobsCount] = useState(0);
   const [filledJobsCount, setFilledJobsCount] = useState(0);
   const [eventsCount, setEventsCount] = useState(0);
-  
+
   // Get API_URL from environment with fallback
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-  
+
   // Debug output to check API_URL
   console.log('**** ALUMNI DASHBOARD DEBUG ****');
   console.log('NODE_ENV:', process.env.NODE_ENV);
@@ -57,7 +57,7 @@ const AlumniDashboard = () => {
   console.log('Alumni Dashboard - Final API_URL:', API_URL);
   console.log('Alumni Dashboard - User state:', currentUser ? { uid: currentUser.uid, authenticated: true } : 'Not authenticated');
   console.log('Alumni Dashboard - Role:', role);
-  
+
   const [connections, setConnections] = useState([]);
   const [connectionLoading, setConnectionLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
@@ -78,7 +78,16 @@ const AlumniDashboard = () => {
     achievements: [],
     projects: [],
     bio: "",
-    connections: []
+    connections: [],
+    // Additional fields from main Profile.js
+    college: "",
+    jobTitle: "",
+    location: "",
+    linkedIn: "",
+    github: "",
+    workExperience: [],
+    education: [],
+    institution: ""
   });
 
   const menuItems = [
@@ -96,15 +105,15 @@ const AlumniDashboard = () => {
   useEffect(() => {
     const fetchDashboardStats = async () => {
       if (!currentUser) return;
-      
+
       try {
         console.log('Fetching real mentorship, job, and event data for user:', currentUser.uid);
         const token = await currentUser.getIdToken();
-        
+
         // Fetch mentoring relationships where alumni is the mentor - using the endpoint that works in Mentorship.js
         const mentorshipEndpoint = `${API_URL}/api/mentorships/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=${role}`;
         console.log('Fetching mentorships from:', mentorshipEndpoint);
-        
+
         const mentorshipResponse = await axios.get(
           mentorshipEndpoint,
           {
@@ -114,9 +123,9 @@ const AlumniDashboard = () => {
             }
           }
         );
-        
+
         console.log('Mentorship API response:', mentorshipResponse);
-        
+
         // Process mentorship data using the same approach as in Mentorship.js
         let mentorships = [];
         if (mentorshipResponse.data && mentorshipResponse.data.success) {
@@ -127,14 +136,14 @@ const AlumniDashboard = () => {
           // Some APIs might wrap the data in a data property
           mentorships = mentorshipResponse.data.data;
         }
-        
+
         console.log('Processed mentorships:', mentorships);
         setMentoringCount(mentorships.length);
-        
+
         // Fetch job postings created by the alumni - using the endpoint that works in Jobs.js
         const jobsEndpoint = `${API_URL}/api/jobs/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=${role}`;
         console.log('Fetching jobs from:', jobsEndpoint);
-        
+
         const jobsResponse = await axios.get(
           jobsEndpoint,
           {
@@ -144,9 +153,9 @@ const AlumniDashboard = () => {
             }
           }
         );
-        
+
         console.log('Jobs API response:', jobsResponse);
-        
+
         // Process job data using the same approach as in Jobs.js
         let jobPostings = [];
         if (jobsResponse.data && jobsResponse.data.success) {
@@ -157,26 +166,26 @@ const AlumniDashboard = () => {
           // Some APIs might wrap the data in a data property
           jobPostings = jobsResponse.data.data;
         }
-        
+
         console.log('Processed job postings:', jobPostings);
         setJobPostingsCount(jobPostings.length);
-        
+
         // Count active and filled jobs based on status
-        const activeJobs = jobPostings.filter(job => 
+        const activeJobs = jobPostings.filter(job =>
           job.status === 'open' || job.status === 'active' || !job.status
         );
-        const filledJobs = jobPostings.filter(job => 
+        const filledJobs = jobPostings.filter(job =>
           job.status === 'filled' || job.status === 'closed'
         );
-        
+
         console.log('Active jobs:', activeJobs.length, 'Filled jobs:', filledJobs.length);
         setActiveJobsCount(activeJobs.length);
         setFilledJobsCount(filledJobs.length);
-        
+
         // Fetch events created by the alumni - using the endpoint from Events.js
         const eventsEndpoint = `${API_URL}/api/events/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=${role}`;
         console.log('Fetching events from:', eventsEndpoint);
-        
+
         const eventsResponse = await axios.get(
           eventsEndpoint,
           {
@@ -186,9 +195,9 @@ const AlumniDashboard = () => {
             }
           }
         );
-        
+
         console.log('Events API response:', eventsResponse);
-        
+
         // Process events data similar to how we process jobs and mentorships
         let createdEvents = [];
         if (eventsResponse.data && eventsResponse.data.createdEvents) {
@@ -200,16 +209,16 @@ const AlumniDashboard = () => {
         } else if (eventsResponse.data && Array.isArray(eventsResponse.data.data)) {
           createdEvents = eventsResponse.data.data;
         }
-        
+
         console.log('Processed events:', createdEvents);
         setEventsCount(createdEvents.length);
-        
+
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
         console.error("Error details:", error.response || error.message);
       }
     };
-    
+
     if (activeSection === 'overview') {
       fetchDashboardStats();
     }
@@ -218,7 +227,7 @@ const AlumniDashboard = () => {
   useEffect(() => {
     // Check initial dark mode state
     setIsDarkMode(document.documentElement.classList.contains('dark'));
-    
+
     // Monitor for dark mode changes
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -227,9 +236,9 @@ const AlumniDashboard = () => {
         }
       });
     });
-    
+
     observer.observe(document.documentElement, { attributes: true });
-    
+
     return () => observer.disconnect();
   }, []);
 
@@ -242,7 +251,7 @@ const AlumniDashboard = () => {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      
+
       // Check if user is authenticated before making API calls
       if (!currentUser || !currentUser.uid) {
         console.log('User not authenticated, using mock data');
@@ -251,7 +260,7 @@ const AlumniDashboard = () => {
         setLoading(false);
         return;
       }
-      
+
       // Log API info for debugging
       console.log('Fetching events for alumni:', {
         userUid: currentUser.uid,
@@ -259,7 +268,7 @@ const AlumniDashboard = () => {
         apiUrl: API_URL,
         endpoint: `${API_URL}/api/events/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=${role}`
       });
-      
+
       // Use the user-specific endpoint to get events created by this user
       const response = await fetch(`${API_URL}/api/events/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=${role}`, {
         method: 'GET',
@@ -273,7 +282,7 @@ const AlumniDashboard = () => {
       }
 
       const data = await response.json();
-      
+
       // Use the actual API data
       console.log('Alumni events received from API:', {
         response: 'success',
@@ -282,7 +291,7 @@ const AlumniDashboard = () => {
         registeredEvents: data.registeredEvents?.length || 0,
         data: data
       });
-      
+
       // Check if createdEvents exists in the response
       if (!data.createdEvents) {
         console.warn('No createdEvents found in API response:', data);
@@ -299,7 +308,7 @@ const AlumniDashboard = () => {
     } catch (err) {
       setError(`Failed to load events: ${err.message}`);
       console.error('Error fetching events:', err);
-      
+
       // Provide mock data even when errors occur
       console.log('Using mock events data due to API error');
       const mockEvents = generateMockEvents();
@@ -328,15 +337,22 @@ const AlumniDashboard = () => {
   useEffect(() => {
     const fetchAlumniProfile = async () => {
       if (!currentUser) return;
-      
+
       try {
         setLoading(true);
         const userDocRef = doc(db, "users", currentUser.uid);
         const userDoc = await getDoc(userDocRef);
-        
+
         if (userDoc.exists()) {
           const userData = userDoc.data();
           console.log('Alumni profile data loaded:', userData);
+          // Process skills data to handle both string and array formats
+          const skillsData = userData.skills ?
+            (typeof userData.skills === 'string' ?
+              userData.skills.split(',').map(skill => skill.trim()) :
+              userData.skills) :
+            [];
+
           setProfileData({
             name: userData.name || currentUser.displayName || "",
             email: userData.email || currentUser.email || "",
@@ -345,15 +361,24 @@ const AlumniDashboard = () => {
             address: userData.address || "",
             graduationYear: userData.graduationYear || "",
             program: userData.program || "",
-            currentPosition: userData.currentPosition || "",
+            currentPosition: userData.jobTitle || userData.currentPosition || "", // Map jobTitle to currentPosition
             company: userData.company || "",
-            skills: userData.skills || [],
+            skills: skillsData,
             achievements: userData.achievements || [],
             projects: userData.projects || [],
             bio: userData.bio || "",
-            connections: userData.connections || []
+            connections: userData.connections || [],
+            // Additional fields from main Profile.js
+            college: userData.college || "",
+            jobTitle: userData.jobTitle || "",
+            location: userData.location || userData.address || "", // Map location to address if needed
+            linkedIn: userData.linkedIn || "",
+            github: userData.github || "",
+            workExperience: userData.workExperience || [],
+            education: userData.education || [],
+            institution: userData.institution || userData.college || "" // Map institution to college if needed
           });
-          
+
           // After setting profile data, fetch connected profiles
           if (userData.connections && userData.connections.length > 0) {
             console.log('Found connections in user data, fetching details...');
@@ -373,22 +398,22 @@ const AlumniDashboard = () => {
         setLoading(false);
       }
     };
-    
+
     fetchAlumniProfile();
   }, [currentUser]);
-  
+
   // Function to fetch connection profile details
   const fetchConnections = async (connectionIds) => {
     try {
       setConnectionLoading(true);
       console.log('Fetching connections for IDs:', connectionIds);
       const connectionProfiles = [];
-      
+
       // Process each connection in batches
       for (const connectionId of connectionIds) {
         const userDocRef = doc(db, "users", connectionId);
         const userDoc = await getDoc(userDocRef);
-        
+
         if (userDoc.exists()) {
           const userData = userDoc.data();
           console.log('Found connection:', userData);
@@ -407,7 +432,7 @@ const AlumniDashboard = () => {
           console.log('Connection not found for ID:', connectionId);
         }
       }
-      
+
       console.log('Final connection profiles:', connectionProfiles);
       setConnections(connectionProfiles);
     } catch (error) {
@@ -416,7 +441,7 @@ const AlumniDashboard = () => {
       setConnectionLoading(false);
     }
   };
-  
+
   // Handle click outside notifications panel
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -424,7 +449,7 @@ const AlumniDashboard = () => {
         setShowNotifications(false);
       }
     };
-    
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -436,17 +461,17 @@ const AlumniDashboard = () => {
     // Set up real-time listener for notifications
     const fetchNotifications = async () => {
       if (!currentUser) return;
-      
+
       try {
         console.log('Fetching notifications for user:', currentUser.uid);
-        
+
         // Initial fetch of notifications
         const notificationsData = await getUserNotifications(currentUser.uid);
         console.log('Initial notifications loaded:', notificationsData.length);
-        
+
         setNotifications(notificationsData);
         setUnreadCount(notificationsData.filter(n => !n.read).length);
-        
+
         console.log('Setting up real-time notifications subscription');
         // Set up subscription for real-time updates
         const unsubscribe = subscribeToUserNotifications(currentUser.uid, (updatedNotifications) => {
@@ -454,7 +479,7 @@ const AlumniDashboard = () => {
           setNotifications(updatedNotifications);
           setUnreadCount(updatedNotifications.filter(n => !n.read).length);
         });
-        
+
         // Return cleanup function
         return unsubscribe;
       } catch (error) {
@@ -464,7 +489,7 @@ const AlumniDashboard = () => {
         setUnreadCount(0);
       }
     };
-    
+
     const unsubscribe = fetchNotifications();
     return () => {
       if (typeof unsubscribe === 'function') {
@@ -473,27 +498,27 @@ const AlumniDashboard = () => {
       }
     };
   }, [currentUser]);
-  
+
   // Handle notification click - update to use the service
   const handleNotificationClick = async (notification) => {
     try {
       // Mark as read when clicked
       if (!notification.read) {
         await markNotificationAsRead(notification.id);
-        
+
         // Update local state to reflect the change
-        const updatedNotifications = notifications.map(n => 
+        const updatedNotifications = notifications.map(n =>
           n.id === notification.id ? { ...n, read: true } : n
         );
         setNotifications(updatedNotifications);
         setUnreadCount(updatedNotifications.filter(n => !n.read).length);
       }
-      
+
       // Navigate to the link if available
       if (notification.linkTo) {
         navigate(notification.linkTo);
       }
-      
+
       setShowNotifications(false);
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -504,12 +529,12 @@ const AlumniDashboard = () => {
   const markAsRead = async (notificationId) => {
     try {
       await markNotificationAsRead(notificationId);
-      
+
       // Update local state
-      const updatedNotifications = notifications.map(notification => 
+      const updatedNotifications = notifications.map(notification =>
         notification.id === notificationId ? { ...notification, read: true } : notification
       );
-      
+
       setNotifications(updatedNotifications);
       setUnreadCount(updatedNotifications.filter(n => !n.read).length);
     } catch (error) {
@@ -521,9 +546,9 @@ const AlumniDashboard = () => {
   const markAllAsRead = async () => {
     try {
       if (!currentUser) return;
-      
+
       await markAllNotificationsAsRead(currentUser.uid);
-      
+
       // Update local state
       const updatedNotifications = notifications.map(notification => ({ ...notification, read: true }));
       setNotifications(updatedNotifications);
@@ -537,30 +562,30 @@ const AlumniDashboard = () => {
   const formatNotificationTime = (timestamp) => {
     const now = new Date();
     const diff = now - new Date(timestamp);
-    
+
     // Less than a minute
     if (diff < 60 * 1000) {
       return 'Just now';
     }
-    
+
     // Less than an hour
     if (diff < 60 * 60 * 1000) {
       const minutes = Math.floor(diff / (60 * 1000));
       return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
     }
-    
+
     // Less than a day
     if (diff < 24 * 60 * 60 * 1000) {
       const hours = Math.floor(diff / (60 * 60 * 1000));
       return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
     }
-    
+
     // Less than a week
     if (diff < 7 * 24 * 60 * 60 * 1000) {
       const days = Math.floor(diff / (24 * 60 * 60 * 1000));
       return `${days} ${days === 1 ? 'day' : 'days'} ago`;
     }
-    
+
     // Otherwise, return the date
     return timestamp.toLocaleDateString();
   };
@@ -624,15 +649,15 @@ const AlumniDashboard = () => {
         <div className={`fixed inset-0 z-20 transform transition-transform duration-300 ease-in-out md:relative md:flex md:flex-col md:transform-none ${
           isNavExpanded ? 'translate-x-0' : '-translate-x-full'
         } md:w-64 lg:w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto`}>
-          
+
           {/* Mobile sidebar header - only visible on mobile */}
           <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
               <img src="/assets/alumniLogo.png" alt="Logo" className="w-8 h-8" />
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Alumni Dashboard</h1>
             </div>
-            <button 
-              onClick={() => setIsNavExpanded(false)} 
+            <button
+              onClick={() => setIsNavExpanded(false)}
               className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -640,7 +665,7 @@ const AlumniDashboard = () => {
               </svg>
             </button>
           </div>
-          
+
           {/* Sidebar content */}
           <div className="p-4">
             <div className="mb-8 text-center">
@@ -696,8 +721,8 @@ const AlumniDashboard = () => {
           {/* Mobile Header */}
           <header className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
             <div className="flex items-center justify-between">
-              <button 
-                onClick={() => setIsNavExpanded(true)} 
+              <button
+                onClick={() => setIsNavExpanded(true)}
                 className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -709,7 +734,7 @@ const AlumniDashboard = () => {
                 <h1 className="text-lg font-bold text-gray-900 dark:text-white">Alumni Dashboard</h1>
               </div>
               <div className="relative">
-                <button 
+                <button
                   onClick={() => setActiveSection('notifications')}
                   className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 relative"
                 >
@@ -736,11 +761,11 @@ const AlumniDashboard = () => {
               <div className="flex items-center space-x-4">
                 {/* Notification bell on desktop */}
                 <div className="relative">
-                  <button 
+                  <button
                     onClick={() => setActiveSection('notifications')}
                     className={`p-2 rounded-full ${
-                      activeSection === 'notifications' 
-                        ? 'bg-primary-light text-primary' 
+                      activeSection === 'notifications'
+                        ? 'bg-primary-light text-primary'
                         : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                   >
@@ -760,7 +785,7 @@ const AlumniDashboard = () => {
             {/* Section Content */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
               {activeSection === 'overview' && (
-                <Overview 
+                <Overview
                   connections={connections || []}
                   isDarkMode={isDarkMode}
                   mentoringCount={mentoringCount}
@@ -773,7 +798,7 @@ const AlumniDashboard = () => {
               )}
 
               {activeSection === 'profile' && (
-                <Profile 
+                <Profile
                   profileData={profileData || {}}
                   currentUser={currentUser}
                   isDarkMode={isDarkMode}
@@ -781,7 +806,7 @@ const AlumniDashboard = () => {
               )}
 
               {activeSection === 'notifications' && (
-                <Notifications 
+                <Notifications
                   notifications={notifications}
                   getNotificationIcon={getNotificationIcon}
                   formatNotificationTime={formatNotificationTime}
@@ -792,7 +817,7 @@ const AlumniDashboard = () => {
               )}
 
               {activeSection === 'mentorship' && (
-                <Mentorship 
+                <Mentorship
                   isDarkMode={isDarkMode}
                   API_URL={API_URL}
                   user={currentUser}
@@ -801,7 +826,7 @@ const AlumniDashboard = () => {
               )}
 
               {activeSection === 'jobs' && (
-                <Jobs 
+                <Jobs
                   isDarkMode={isDarkMode}
                   API_URL={API_URL}
                   user={currentUser}
@@ -810,7 +835,7 @@ const AlumniDashboard = () => {
               )}
 
               {activeSection === 'events' && (
-                <Events 
+                <Events
                   events={events}
                   loading={loading}
                   error={error}
@@ -828,7 +853,7 @@ const AlumniDashboard = () => {
               )}
 
               {activeSection === 'settings' && (
-                <Settings 
+                <Settings
                   isDarkMode={isDarkMode}
                   setIsDarkMode={setIsDarkMode}
                   handleLogout={() => {
@@ -845,7 +870,7 @@ const AlumniDashboard = () => {
 
       {/* Backdrop for mobile sidebar */}
       {isNavExpanded && (
-        <div 
+        <div
           className="md:hidden fixed inset-0 z-10 bg-black bg-opacity-50"
           onClick={() => setIsNavExpanded(false)}
         ></div>

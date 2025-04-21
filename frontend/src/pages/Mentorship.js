@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import MentorshipCourses from './MentorshipCourses';
 import './Mentorship.css';
 
 const Mentorship = () => {
@@ -8,15 +9,18 @@ const Mentorship = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all');
   const [category, setCategory] = useState('all');
-  const { currentUser, userData, role } = useAuth();
+  const [activeTab, setActiveTab] = useState('mentorship'); // Default to mentorship tab
+  const { currentUser, role } = useAuth();
   const navigate = useNavigate();
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
-    fetchMentorships();
-  }, []);
+    // Only fetch mentorships if the mentorship tab is active
+    if (activeTab === 'mentorship') {
+      fetchMentorships();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchMentorships = async () => {
     try {
@@ -67,11 +71,53 @@ const Mentorship = () => {
     return matchesSearch && matchesCategory;
   });
 
+  // Handle tab switching
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+  };
+
   return (
     <div className="mentorship-page">
-      <div className="hero-section mentorship-hero text-center py-16 px-4">
-        <h1 className="text-4xl font-bold text-white mb-4">Find Your Mentor</h1>
-        <p className="text-xl text-white mb-8">Connect with experienced professionals ready to guide you</p>
+      {/* Tabs for switching between Mentorship and Courses */}
+      <div className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div className="container mx-auto px-4">
+          <ul className="flex flex-wrap -mb-px">
+            <li className="mr-2">
+              <button
+                onClick={() => handleTabClick('mentorship')}
+                className={`inline-block py-4 px-4 text-sm font-medium ${
+                  activeTab === 'mentorship'
+                    ? 'text-primary dark:text-primary-light border-b-2 border-primary dark:border-primary-light'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                Mentorship Programs
+              </button>
+            </li>
+            <li className="mr-2">
+              <button
+                onClick={() => handleTabClick('courses')}
+                className={`inline-block py-4 px-4 text-sm font-medium ${
+                  activeTab === 'courses'
+                    ? 'text-secondary dark:text-secondary-light border-b-2 border-secondary dark:border-secondary-light'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                Courses
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Render content based on active tab */}
+      {activeTab === 'courses' ? (
+        <MentorshipCourses />
+      ) : (
+        <>
+          <div className="hero-section mentorship-hero text-center py-16 px-4">
+            <h1 className="text-4xl font-bold text-white mb-4">Find Your Mentor</h1>
+            <p className="text-xl text-white mb-8">Connect with experienced professionals ready to guide you</p>
 
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-4">
           <div className="flex-1">
@@ -361,6 +407,8 @@ const Mentorship = () => {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

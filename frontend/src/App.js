@@ -28,6 +28,7 @@ import JobApplication from './pages/JobApplication';
 import StudentChat from './pages/studentDashboard/StudentChat';
 import TeacherChat from './pages/teacherDashboard/TeacherChat';
 import TestChat from './pages/TestChat';
+import CourseDetail from './pages/CourseDetail';
 import './App.css';
 import { initializeFirestoreCollections } from './utils/firestoreInit';
 
@@ -214,6 +215,11 @@ function App() {
               <Route path="/test-chat" element={
                 <PrivateRoute>
                   <TestChat />
+                </PrivateRoute>
+              } />
+              <Route path="/course/:id" element={
+                <PrivateRoute>
+                  <CourseDetail />
                 </PrivateRoute>
               } />
             </Routes>

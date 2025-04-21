@@ -7,9 +7,9 @@ import { db } from '../firebaseConfig';
 import { collection, query, where, orderBy, onSnapshot, or, and, getDocs, limit, serverTimestamp, addDoc } from 'firebase/firestore';
 
 // Use hardcoded fallback in case env variable isn't loading
-const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api';
 // MongoDB API endpoint
-const mongoApiBaseUrl = process.env.REACT_APP_MONGO_API_BASE_URL || 'http://localhost:5000/api/messages-db';
+const mongoApiBaseUrl = process.env.REACT_APP_MONGO_API_BASE_URL || 'http://localhost:5001/api/messages-db';
 console.log("Chat Component - API Base URL:", apiBaseUrl);
 console.log("Chat Component - MongoDB API Base URL:", mongoApiBaseUrl);
 

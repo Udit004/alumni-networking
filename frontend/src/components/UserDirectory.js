@@ -6,7 +6,7 @@ import { db } from '../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import './UserDirectory.css';
 
-const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api';
 
 function formatTime(timestamp) {
   if (!timestamp) return '';

@@ -5,8 +5,8 @@ import UserDirectory from '../../components/UserDirectory';
 import ChatComponent from '../../components/ChatComponent';
 import './StudentChat.css';
 
-const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
-const mongoApiBaseUrl = process.env.REACT_APP_MONGO_API_BASE_URL || 'http://localhost:5000/api/messages-db';
+const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api';
+const mongoApiBaseUrl = process.env.REACT_APP_MONGO_API_BASE_URL || 'http://localhost:5001/api/messages-db';
 
 const StudentChat = () => {
   const { currentUser } = useAuth();

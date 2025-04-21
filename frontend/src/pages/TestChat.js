@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
-const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api';
 
 const TestChat = () => {
   const { currentUser } = useAuth();

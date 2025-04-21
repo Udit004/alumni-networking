@@ -24,16 +24,16 @@ const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
   // Function to show truncated bio with read more option
   const renderBio = (bio) => {
     if (!bio) return <p className="text-gray-600 dark:text-gray-300">No bio information provided.</p>;
-    
+
     const maxLength = 150;
     if (bio.length <= maxLength || showFullBio) {
       return <p className="text-gray-600 dark:text-gray-300">{bio}</p>;
     }
-    
+
     return (
       <>
         <p className="text-gray-600 dark:text-gray-300">{bio.substring(0, maxLength)}...</p>
-        <button 
+        <button
           onClick={() => setShowFullBio(true)}
           className="text-blue-500 hover:text-blue-600 dark:text-blue-400 text-sm font-medium mt-1"
         >
@@ -48,24 +48,24 @@ const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
       {/* Cover image/banner */}
       <div className="relative rounded-xl overflow-hidden h-48 mb-16">
         <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600 absolute"></div>
-        
+
         {/* Profile avatar - positioned to overlap the banner */}
         <div className="absolute -bottom-16 left-8">
           <div className="relative">
             <div className="w-32 h-32 rounded-full bg-white dark:bg-gray-800 p-1 shadow-lg">
               {profileData?.photoURL ? (
-                <img 
-                  src={profileData.photoURL} 
-                  alt={`${profileData?.displayName || 'User'}'s avatar`} 
+                <img
+                  src={profileData.photoURL}
+                  alt={`${profileData?.displayName || 'User'}'s avatar`}
                   className="w-full h-full object-cover rounded-full"
                 />
               ) : (
                 <div className="w-full h-full rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-4xl font-bold text-blue-500">
-                  {(profileData?.displayName?.charAt(0) || 'T').toUpperCase()}
+                  {getInitial()}
                 </div>
               )}
             </div>
-            
+
             {/* Edit overlay button for profile picture */}
             <button className="absolute bottom-0 right-0 w-8 h-8 bg-gray-800 dark:bg-gray-700 rounded-full flex items-center justify-center text-white shadow-md hover:bg-gray-700 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -90,13 +90,13 @@ const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
               {profileData?.name || 'Faculty Member'}
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 mt-1">
-              {profileData?.designation || 'Professor'} at {profileData?.department || 'Department'}
+              {profileData?.designation || profileData?.jobTitle || 'Professor'} at {profileData?.department || 'Department'}
             </p>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
               {profileData?.email || 'Email not provided'}
             </p>
           </div>
-          
+
           <button className="mt-4 sm:mt-0 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
               <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
@@ -114,7 +114,7 @@ const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
             <span className="font-medium">Department:</span> {profileData?.department || 'N/A'}
           </div>
           <div className="px-4 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-full text-sm">
-            <span className="font-medium">Institution:</span> {profileData?.institution || 'N/A'}
+            <span className="font-medium">Institution:</span> {profileData?.institution || profileData?.college || 'N/A'}
           </div>
         </div>
 
@@ -155,18 +155,33 @@ const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
                 <p className="text-gray-800 dark:text-gray-200">{profileData?.address || 'Not provided'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Research Profile</p>
-                {profileData?.linkedIn && (
-                  <a 
-                    href={profileData.linkedIn} 
-                    target="_blank" 
+                <p className="text-sm text-gray-500 dark:text-gray-400">LinkedIn</p>
+                {profileData?.linkedIn ? (
+                  <a
+                    href={profileData.linkedIn.startsWith('http') ? profileData.linkedIn : `https://${profileData.linkedIn}`}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-500 hover:text-blue-600 dark:text-blue-400"
                   >
-                    View Research Profile
+                    {profileData.linkedIn}
                   </a>
+                ) : (
+                  <p className="text-gray-800 dark:text-gray-200">Not provided</p>
                 )}
               </div>
+              {profileData?.github && (
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">GitHub</p>
+                  <a
+                    href={profileData.github.startsWith('http') ? profileData.github : `https://${profileData.github}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:text-blue-600 dark:text-blue-400"
+                  >
+                    {profileData.github}
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -240,8 +255,8 @@ const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
             <div className="flex flex-wrap gap-2">
               {formatExpertise(profileData?.expertise).length > 0 ? (
                 formatExpertise(profileData.expertise).map((area, index) => (
-                  <span 
-                    key={index} 
+                  <span
+                    key={index}
                     className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm"
                   >
                     {area}
@@ -276,6 +291,60 @@ const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
           </div>
         </div>
 
+        {/* Work Experience Section */}
+        {profileData?.workExperience && profileData.workExperience.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-6 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
+                <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
+              </svg>
+              Work Experience
+            </h2>
+            <div className="space-y-6">
+              {profileData.workExperience.map((work, index) => (
+                <div key={index} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-0 last:pb-0">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{work.title || 'Position'}</h3>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {work.startYear || 'N/A'} - {work.endYear || 'Present'}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-2">{work.company || 'Company'}</p>
+                  {work.description && (
+                    <p className="text-gray-700 dark:text-gray-300 text-sm">{work.description}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Education History Section */}
+        {profileData?.education && profileData.education.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-6 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
+              </svg>
+              Education History
+            </h2>
+            <div className="space-y-6">
+              {profileData.education.map((edu, index) => (
+                <div key={index} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-0 last:pb-0">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{edu.degree || 'Degree'}</h3>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {edu.startYear || 'N/A'} - {edu.endYear || 'N/A'}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400">{edu.institution || 'Institution'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Connect button at bottom */}
         <div className="flex justify-center mb-8">
           <button className="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center font-medium">
@@ -290,4 +359,4 @@ const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
   );
 };
 
-export default Profile; 
+export default Profile;

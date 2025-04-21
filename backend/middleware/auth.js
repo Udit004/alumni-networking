@@ -13,7 +13,7 @@ const auth = async (req, res, next) => {
 
         // Add user info to request
         req.user = {
-            id: decodedToken.uid,
+            uid: decodedToken.uid, // Changed from id to uid to match what the routes expect
             email: decodedToken.email,
             role: decodedToken.role || 'student' // Default to student if role not set
         };

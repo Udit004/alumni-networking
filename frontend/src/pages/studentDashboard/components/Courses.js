@@ -1,79 +1,120 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import axios from 'axios';
+import { useAuth } from '../../../context/AuthContext';
 
-const Courses = ({ currentUser, isDarkMode }) => {
+const Courses = ({ isDarkMode }) => {
+  const { currentUser } = useAuth();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('current');
-  
+
+  // Define base URLs for API endpoints to handle different ports
+  const baseUrls = [
+    process.env.REACT_APP_API_URL || 'http://localhost:5001',
+    'http://localhost:5002',
+    'http://localhost:5003',
+    'http://localhost:5004',
+    'http://localhost:5000'
+  ];
+
   useEffect(() => {
-    const fetchCourses = async () => {
-      if (!currentUser?.uid) return;
-      
-      setLoading(true);
-      try {
-        const coursesRef = collection(db, 'enrollments');
-        const q = query(
-          coursesRef,
-          where('studentId', '==', currentUser.uid)
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const enrollmentsList = [];
-        
-        querySnapshot.forEach((doc) => {
-          enrollmentsList.push({
-            id: doc.id,
-            ...doc.data(),
-          });
-        });
-        
-        // Fetch course details for each enrollment
-        const coursePromises = enrollmentsList.map(async (enrollment) => {
-          const courseRef = collection(db, 'courses');
-          const courseQuery = query(
-            courseRef,
-            where('courseId', '==', enrollment.courseId)
+    fetchEnrolledCourses();
+  }, [currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchEnrolledCourses = async () => {
+    if (!currentUser) return;
+
+    setLoading(true);
+    try {
+      const token = await currentUser.getIdToken();
+      let success = false;
+      let responseData = null;
+
+      for (const baseUrl of baseUrls) {
+        try {
+          console.log(`Trying to fetch enrolled courses from ${baseUrl}...`);
+          const response = await axios.get(
+            `${baseUrl}/api/courses/student/${currentUser.uid}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
           );
-          
-          const courseSnapshot = await getDocs(courseQuery);
-          if (!courseSnapshot.empty) {
-            const courseData = courseSnapshot.docs[0].data();
-            return {
-              ...courseData,
-              id: courseSnapshot.docs[0].id,
-              enrollmentId: enrollment.id,
-              enrollmentDate: enrollment.enrollmentDate,
-              progress: enrollment.progress || 0,
-              grade: enrollment.grade,
-              status: enrollment.status || 'active',
-            };
-          }
-          return null;
-        });
-        
-        const coursesList = (await Promise.all(coursePromises)).filter(Boolean);
-        setCourses(coursesList);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching courses:', err);
-        setError('Failed to load courses. Please try again later.');
-      } finally {
-        setLoading(false);
+          console.log(`Response from ${baseUrl}:`, response.data);
+          responseData = response.data;
+          success = true;
+          break; // Exit the loop if successful
+        } catch (err) {
+          console.log(`Failed to connect to ${baseUrl}:`, err.message);
+        }
       }
-    };
-    
-    fetchCourses();
-  }, [currentUser]);
-  
+
+      if (success && responseData.success) {
+        // Process the courses data
+        const enrolledCourses = responseData.courses.map(course => ({
+          ...course,
+          // Add default values for fields that might not be in the MongoDB data
+          progress: course.progress || calculateProgress(course),
+          status: determineStatus(course),
+          enrollmentDate: course.students?.find(s => s.studentId === currentUser.uid)?.enrolledAt || new Date(),
+          grade: course.grade || 'N/A'
+        }));
+
+        setCourses(enrolledCourses);
+        setError(null);
+      } else {
+        console.error('Failed to fetch enrolled courses:', responseData?.message);
+        setError('Failed to load courses. Please try again later.');
+        setCourses([]);
+      }
+    } catch (err) {
+      console.error('Error fetching enrolled courses:', err);
+      setError('Failed to load courses. Please try again later.');
+      setCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to calculate progress based on course dates
+  const calculateProgress = (course) => {
+    if (!course.startDate || !course.endDate) return 0;
+
+    const start = new Date(course.startDate);
+    const end = new Date(course.endDate);
+    const now = new Date();
+
+    if (now < start) return 0;
+    if (now > end) return 100;
+
+    const totalDuration = end - start;
+    const elapsed = now - start;
+    return Math.round((elapsed / totalDuration) * 100);
+  };
+
+  // Helper function to determine course status
+  const determineStatus = (course) => {
+    if (!course.startDate || !course.endDate) return 'upcoming';
+
+    const start = new Date(course.startDate);
+    const end = new Date(course.endDate);
+    const now = new Date();
+
+    if (now < start) return 'upcoming';
+    if (now > end) return 'completed';
+    return 'active';
+  };
+
   const filteredCourses = courses.filter(course => {
-    const matchesSearch = course.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          course.courseCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          course.instructor?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const matchesSearch =
+      (course.title?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (course.courseCode?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (course.teacherName?.toLowerCase().includes(searchTerm.toLowerCase()));
+
     if (activeTab === 'current') {
       return matchesSearch && course.status === 'active';
     } else if (activeTab === 'completed') {
@@ -81,10 +122,10 @@ const Courses = ({ currentUser, isDarkMode }) => {
     } else if (activeTab === 'upcoming') {
       return matchesSearch && course.status === 'upcoming';
     }
-    
+
     return matchesSearch;
   });
-  
+
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'active':
@@ -97,7 +138,7 @@ const Courses = ({ currentUser, isDarkMode }) => {
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
     }
   };
-  
+
   const getCourseStatusText = (status) => {
     switch (status) {
       case 'active':
@@ -114,8 +155,17 @@ const Courses = ({ currentUser, isDarkMode }) => {
   return (
     <div className="courses-container">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">My Courses</h2>
-        
+        <div className="flex items-center gap-4 mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">My Courses</h2>
+          <button
+            onClick={fetchEnrolledCourses}
+            className="p-2 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+            title="Refresh courses"
+          >
+            🔄
+          </button>
+        </div>
+
         {/* Filters and Search */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -128,32 +178,32 @@ const Courses = ({ currentUser, isDarkMode }) => {
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             <div className="flex gap-2">
-              <button 
+              <button
                 className={`px-4 py-2 rounded-lg ${
-                  activeTab === 'current' 
-                    ? 'bg-blue-500 text-white' 
+                  activeTab === 'current'
+                    ? 'bg-blue-500 text-white'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                 }`}
                 onClick={() => setActiveTab('current')}
               >
                 Current
               </button>
-              <button 
+              <button
                 className={`px-4 py-2 rounded-lg ${
-                  activeTab === 'completed' 
-                    ? 'bg-blue-500 text-white' 
+                  activeTab === 'completed'
+                    ? 'bg-blue-500 text-white'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                 }`}
                 onClick={() => setActiveTab('completed')}
               >
                 Completed
               </button>
-              <button 
+              <button
                 className={`px-4 py-2 rounded-lg ${
-                  activeTab === 'upcoming' 
-                    ? 'bg-blue-500 text-white' 
+                  activeTab === 'upcoming'
+                    ? 'bg-blue-500 text-white'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                 }`}
                 onClick={() => setActiveTab('upcoming')}
@@ -163,48 +213,57 @@ const Courses = ({ currentUser, isDarkMode }) => {
             </div>
           </div>
         </div>
-        
+
         {/* Courses List */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md">
           {loading ? (
-            <div className="p-8 flex justify-center">
-              <div className="loader">Loading...</div>
+            <div className="p-8 flex flex-col items-center justify-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600 mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading your courses...</p>
             </div>
           ) : error ? (
             <div className="p-8 text-center text-red-500 dark:text-red-400">
               {error}
             </div>
           ) : filteredCourses.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-              {searchTerm 
-                ? "No courses match your search" 
-                : activeTab === 'all' 
-                  ? "You are not enrolled in any courses yet" 
-                  : `You don't have any ${activeTab} courses`
-              }
+            <div className="p-8 text-center">
+              <div className="text-5xl mb-4">📚</div>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">
+                {searchTerm
+                  ? "No courses match your search"
+                  : activeTab === 'all'
+                    ? "You are not enrolled in any courses yet"
+                    : `You don't have any ${activeTab} courses`
+                }
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400">
+                {searchTerm
+                  ? "Try adjusting your search criteria"
+                  : "Enroll in courses from the Courses section in the Mentorship page"}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
               {filteredCourses.map((course) => (
-                <div 
-                  key={course.id} 
+                <div
+                  key={course._id}
                   className="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <div 
+                  <div
                     className="h-32 bg-blue-500 flex items-center justify-center"
-                    style={{ 
-                      backgroundImage: course.imageUrl ? `url(${course.imageUrl})` : 'none',
+                    style={{
+                      backgroundImage: course.thumbnail ? `url(${course.thumbnail})` : 'none',
                       backgroundSize: 'cover',
                       backgroundPosition: 'center'
                     }}
                   >
-                    {!course.imageUrl && (
+                    {!course.thumbnail && (
                       <span className="text-white text-xl font-bold">
                         {course.courseCode || course.title?.substring(0, 2).toUpperCase()}
                       </span>
                     )}
                   </div>
-                  
+
                   <div className="p-4">
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="text-lg font-bold text-gray-800 dark:text-white">{course.title}</h3>
@@ -212,11 +271,15 @@ const Courses = ({ currentUser, isDarkMode }) => {
                         {getCourseStatusText(course.status)}
                       </span>
                     </div>
-                    
+
                     <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-                      {course.courseCode} • {course.instructor}
+                      {course.courseCode || 'No Code'} • {course.teacherName || 'Instructor'}
                     </p>
-                    
+
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      {new Date(course.startDate).toLocaleDateString()} - {new Date(course.endDate).toLocaleDateString()}
+                    </p>
+
                     {course.status === 'active' && (
                       <div className="mt-3">
                         <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex justify-between">
@@ -224,29 +287,38 @@ const Courses = ({ currentUser, isDarkMode }) => {
                           <span>{course.progress}%</span>
                         </div>
                         <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                          <div 
-                            className="bg-green-500 h-2 rounded-full" 
+                          <div
+                            className="bg-green-500 h-2 rounded-full"
                             style={{ width: `${course.progress}%` }}
                           ></div>
                         </div>
                       </div>
                     )}
-                    
-                    {course.status === 'completed' && course.grade && (
+
+                    {course.status === 'completed' && (
                       <div className="mt-3 flex items-center">
                         <span className="text-gray-600 dark:text-gray-300 text-sm mr-2">Final Grade:</span>
                         <span className="font-bold text-gray-800 dark:text-white">{course.grade}</span>
                       </div>
                     )}
-                    
-                    <div className="mt-4">
+
+                    <div className="mt-4 flex gap-2">
                       <button
-                        className="w-full py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                        onClick={() => window.location.href = `/course/${course._id}`}
+                        className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                       >
-                        {course.status === 'active' ? 'Go to Course' : 
+                        {course.status === 'active' ? 'Go to Course' :
                          course.status === 'completed' ? 'View Details' :
                          'View Syllabus'}
                       </button>
+
+                      {course.materials && course.materials.length > 0 && (
+                        <button
+                          className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                        >
+                          Materials ({course.materials.length})
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -259,4 +331,4 @@ const Courses = ({ currentUser, isDarkMode }) => {
   );
 };
 
-export default Courses; 
+export default Courses;
