@@ -8,7 +8,8 @@ import Network from "./components/Network";
 import { getConnectionRequests } from "../../services/connectionService";
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
 import Profile from "./components/Profile";
-import EnrolledEvents from "./EnrolledEvents";
+import EnrolledEvents, { getUpcomingEventsCount } from "./EnrolledEvents";
+import { fetchEnrolledEventsData } from "./services/eventService";
 import Mentorship from "./components/Mentorship";
 import Jobs from "./components/Jobs";
 import Overview from "./components/Overview";
@@ -25,6 +26,7 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [events, setEvents] = useState([]);
+  const [upcomingEventsCount, setUpcomingEventsCount] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
   const [jobApplicationsCount, setJobApplicationsCount] = useState(0);
   const [mentorshipsCount, setMentorshipsCount] = useState(0);
@@ -339,6 +341,22 @@ const StudentDashboard = () => {
       console.error('Error marking all notifications as read:', error);
     }
   };
+
+  // Fetch enrolled events data for the overview counter
+  useEffect(() => {
+    const fetchEnrolledEvents = async () => {
+      if (!currentUser) return;
+
+      try {
+        const eventsData = await fetchEnrolledEventsData(currentUser.uid);
+        setUpcomingEventsCount(getUpcomingEventsCount(eventsData));
+      } catch (err) {
+        console.error('Error fetching enrolled events for counter:', err);
+      }
+    };
+
+    fetchEnrolledEvents();
+  }, [currentUser]);
 
   // Function to fetch job applications, mentorships, and courses counts
   useEffect(() => {
@@ -668,10 +686,16 @@ const StudentDashboard = () => {
               navigate={navigate}
               jobApplicationsCount={jobApplicationsCount}
               mentorshipsCount={mentorshipsCount}
+              upcomingEventsCount={upcomingEventsCount}
             />
           )}
 
-          {activeSection === 'events' && <EnrolledEvents />}
+          {activeSection === 'events' &&
+            <EnrolledEvents
+              onEventsLoaded={(events) => {
+                setUpcomingEventsCount(getUpcomingEventsCount(events));
+              }}
+            />}
 
           {activeSection === 'courses' && (
             <Courses isDarkMode={isDarkMode} />

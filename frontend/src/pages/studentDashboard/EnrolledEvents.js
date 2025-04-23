@@ -3,14 +3,27 @@ import axios from 'axios';
 import { useAuth } from '../../AuthContext';
 import "./EnrolledEvents.css";
 
-const EnrolledEvents = () => {
+// Helper function to get upcoming events count
+export const getUpcomingEventsCount = (events) => {
+  if (!events || !Array.isArray(events)) return 0;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+
+  return events.filter(event => {
+    const eventDate = new Date(event.date);
+    return eventDate >= today;
+  }).length;
+};
+
+const EnrolledEvents = ({ onEventsLoaded }) => {
   const [enrolledEvents, setEnrolledEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('upcoming');
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
 
   useEffect(() => {
@@ -77,6 +90,11 @@ const EnrolledEvents = () => {
           setEnrolledEvents(processedEvents);
           console.log(`Found ${processedEvents.length} enrolled events from MongoDB.`);
           setError(null);
+
+          // Call the callback with the events data if provided
+          if (typeof onEventsLoaded === 'function') {
+            onEventsLoaded(processedEvents);
+          }
         } catch (err) {
           console.error('Error fetching enrolled events from MongoDB:', err);
           setError('Failed to load enrolled events. Please try again later.');
@@ -90,7 +108,7 @@ const EnrolledEvents = () => {
     };
 
     fetchEnrolledEvents();
-  }, [user]);
+  }, [user, onEventsLoaded]);
 
   const handleViewDetails = (event) => {
     setSelectedEvent(event);

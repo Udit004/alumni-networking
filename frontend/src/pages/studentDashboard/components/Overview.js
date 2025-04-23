@@ -1,11 +1,11 @@
 import React from 'react';
 
-const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobApplicationsCount = 0, mentorshipsCount = 0 }) => {
+const Overview = ({ connections = [], courseCount = 0, isDarkMode, navigate, jobApplicationsCount = 0, mentorshipsCount = 0, upcomingEventsCount = 0 }) => {
   // Filter connections by role
   const alumniConnections = connections?.filter(conn => conn.role === "alumni") || [];
   const teacherConnections = connections?.filter(conn => conn.role === "teacher") || [];
   const studentConnections = connections?.filter(conn => conn.role === "student") || [];
-  
+
   return (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
@@ -15,12 +15,12 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-500 dark:text-blue-300 text-xl mr-4">📅</div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Enrolled Events</h3>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">5</p>
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Upcoming Events</h3>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{upcomingEventsCount}</p>
             </div>
           </div>
         </div>
-        
+
         {/* Connections Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
              style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
@@ -32,7 +32,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
             </div>
           </div>
         </div>
-        
+
         {/* Mentorship Courses Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
              style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
@@ -44,7 +44,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
             </div>
           </div>
         </div>
-        
+
         {/* Jobs Applied Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
              style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
@@ -56,7 +56,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
             </div>
           </div>
         </div>
-        
+
         {/* Courses Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-all hover:shadow-lg"
              style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
@@ -75,7 +75,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
            style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Network</h2>
-          <button 
+          <button
             onClick={() => navigate('/directory')}
             className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2"
           >
@@ -86,7 +86,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
         {connections.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-600 dark:text-gray-400 mb-4">You haven't connected with anyone yet.</p>
-            <button 
+            <button
               onClick={() => navigate('/directory')}
               className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
             >
@@ -103,7 +103,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {alumniConnections.slice(0, 3).map((alumni) => (
-                    <div 
+                    <div
                       key={alumni.id}
                       className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                       onClick={() => navigate(`/directory/alumni/${alumni.id}`)}
@@ -123,7 +123,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
                           </p>
                           <div className="flex flex-wrap gap-1 mt-2">
                             {Array.isArray(alumni.skills) && alumni.skills.slice(0, 2).map((skill, index) => (
-                              <span 
+                              <span
                                 key={index}
                                 className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs"
                               >
@@ -141,7 +141,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
                     </div>
                   ))}
                   {alumniConnections.length > 3 && (
-                    <div 
+                    <div
                       className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 flex items-center justify-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                       onClick={() => navigate('/network')}
                     >
@@ -153,7 +153,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
                 </div>
               </div>
             )}
-            
+
             {/* Teacher Connections */}
             {teacherConnections.length > 0 && (
               <div className="mb-6">
@@ -162,7 +162,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {teacherConnections.slice(0, 3).map((teacher) => (
-                    <div 
+                    <div
                       key={teacher.id}
                       className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                       onClick={() => navigate(`/directory/teacher/${teacher.id}`)}
@@ -182,7 +182,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
                           </p>
                           <div className="flex flex-wrap gap-1 mt-2">
                             {Array.isArray(teacher.skills) && teacher.skills.slice(0, 2).map((skill, index) => (
-                              <span 
+                              <span
                                 key={index}
                                 className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-xs"
                               >
@@ -200,7 +200,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
                     </div>
                   ))}
                   {teacherConnections.length > 3 && (
-                    <div 
+                    <div
                       className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 flex items-center justify-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                       onClick={() => navigate('/network')}
                     >
@@ -221,7 +221,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {studentConnections.slice(0, 3).map((student) => (
-                    <div 
+                    <div
                       key={student.id}
                       className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                       onClick={() => navigate(`/directory/student/${student.id}`)}
@@ -241,7 +241,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
                           </p>
                           <div className="flex flex-wrap gap-1 mt-2">
                             {Array.isArray(student.skills) && student.skills.slice(0, 2).map((skill, index) => (
-                              <span 
+                              <span
                                 key={index}
                                 className="px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs"
                               >
@@ -259,7 +259,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
                     </div>
                   ))}
                   {studentConnections.length > 3 && (
-                    <div 
+                    <div
                       className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 flex items-center justify-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                       onClick={() => navigate('/network')}
                     >
@@ -279,7 +279,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
            style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
         <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Recent Activities</h2>
-        
+
         <ul className="space-y-4">
           <li className="border-l-4 border-blue-500 pl-4 py-1">
             <div className="flex justify-between">
@@ -288,7 +288,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-sm">Due in 5 days</p>
           </li>
-          
+
           <li className="border-l-4 border-green-500 pl-4 py-1">
             <div className="flex justify-between">
               <p className="text-gray-800 dark:text-white font-medium">Your assignment was graded</p>
@@ -296,7 +296,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-sm">Data Structures - Score: 92/100</p>
           </li>
-          
+
           <li className="border-l-4 border-purple-500 pl-4 py-1">
             <div className="flex justify-between">
               <p className="text-gray-800 dark:text-white font-medium">New event: Tech Career Fair</p>
@@ -304,7 +304,7 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-sm">April 15, 2023 - Campus Main Hall</p>
           </li>
-          
+
           <li className="border-l-4 border-yellow-500 pl-4 py-1">
             <div className="flex justify-between">
               <p className="text-gray-800 dark:text-white font-medium">Mentor request accepted</p>
@@ -318,4 +318,4 @@ const Overview = ({ connections = [], courseCount, isDarkMode, navigate, jobAppl
   );
 };
 
-export default Overview; 
+export default Overview;
