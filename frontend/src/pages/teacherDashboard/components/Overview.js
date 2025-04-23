@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import axios from 'axios';
+import { API_URLS, DEFAULT_TIMEOUT } from '../../../config/apiConfig';
+import { getTeacherCourses, getUserEvents } from '../../../services/firestoreFallbackService';
 
 const Overview = ({ connections = [], studentConnections = [], alumniConnections = [], teacherConnections = [], isDarkMode, handleRequestConnection }) => {
   const navigate = useNavigate();
@@ -11,12 +13,7 @@ const Overview = ({ connections = [], studentConnections = [], alumniConnections
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Define base URLs for API endpoints
-  const baseUrls = [
-    process.env.REACT_APP_API_URL || 'http://localhost:5001',
-    'http://localhost:5002',
-    'http://localhost:5000'
-  ];
+  // API endpoints are now defined in the apiConfig.js file
 
   useEffect(() => {
     if (currentUser) {
@@ -30,40 +27,49 @@ const Overview = ({ connections = [], studentConnections = [], alumniConnections
     if (!currentUser) return;
 
     try {
+      setLoading(true);
       let success = false;
       let responseData = null;
 
-      for (const baseUrl of baseUrls) {
-        try {
-          console.log(`Trying to fetch courses count from ${baseUrl}...`);
-          const token = await currentUser.getIdToken();
-          const response = await axios.get(
-            `${baseUrl}/api/courses/teacher/${currentUser.uid}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            }
-          );
+      try {
+        console.log(`Trying to fetch courses count from ${API_URLS.courses}...`);
+        const token = await currentUser.getIdToken();
+        const response = await axios.get(
+          `${API_URLS.courses}/teacher/${currentUser.uid}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: DEFAULT_TIMEOUT
+          }
+        );
 
-          console.log(`Response from ${baseUrl}:`, response.data);
-          responseData = response.data;
-          success = true;
-          break; // Exit the loop if successful
-        } catch (err) {
-          console.log(`Failed to connect to ${baseUrl}:`, err.message);
-        }
+        console.log(`Response from API:`, response.data);
+        responseData = response.data;
+        success = true;
+      } catch (err) {
+        console.log(`Failed to connect to API:`, err.message);
+
+        // Try Firestore fallback
+        console.log('Using Firestore fallback for courses...');
+        const courses = await getTeacherCourses(currentUser.uid);
+        console.log('Courses from Firestore:', courses);
+        setCoursesCount(courses.length);
+        success = true;
       }
 
-      if (success && responseData.success) {
+      if (!success) {
+        // If both API and Firestore failed, set a default value
+        console.log('Using default value for courses count');
+        setCoursesCount(0);
+      } else if (success && responseData?.success) {
         setCoursesCount(responseData.courses?.length || 0);
-      } else {
-        console.error('Failed to fetch courses count:', responseData?.message || 'Unknown error');
       }
     } catch (err) {
       console.error('Error fetching courses count:', err);
-      setError('Failed to load courses count');
+      // Don't show error to user, just use 0
+      setCoursesCount(0);
     } finally {
       setLoading(false);
     }
@@ -81,141 +87,76 @@ const Overview = ({ connections = [], studentConnections = [], alumniConnections
     });
 
     try {
+      setLoading(true);
       let success = false;
       let responseData = null;
 
-      for (const baseUrl of baseUrls) {
-        try {
-          console.log(`Trying to fetch events count from ${baseUrl}...`);
-          const token = await currentUser.getIdToken();
+      try {
+        console.log(`Trying to fetch events count from ${API_URLS.events}...`);
+        const token = await currentUser.getIdToken();
 
-          // Use the same endpoint as in TeacherDashboard.js
-          const response = await axios.get(
-            `${baseUrl}/api/events/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=teacher`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            }
-          );
-          console.log(`Response from ${baseUrl}/api/events/user:`, response.data);
-          responseData = response.data;
-          success = true;
-          break; // Exit the loop if successful
-        } catch (err) {
-          console.log(`Failed to connect to ${baseUrl}:`, err.message);
-        }
-      }
+        // Use the same endpoint as in TeacherDashboard.js
+        const response = await axios.get(
+          `${API_URLS.events}/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=teacher`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: DEFAULT_TIMEOUT
+          }
+        );
+        console.log(`Response from API:`, response.data);
+        responseData = response.data;
+        success = true;
+      } catch (err) {
+        console.log(`Failed to connect to API:`, err.message);
 
-      if (success) {
-        console.log('Successfully fetched events data:', responseData);
-
-        // Extract events array from the response - use the same logic as in TeacherDashboard.js
-        let allEvents = [];
-
-        // Check if createdEvents exists in the response
-        if (responseData.createdEvents) {
-          console.log('Using createdEvents from response, count:', responseData.createdEvents.length);
-          allEvents = responseData.createdEvents;
-          // Set the events count directly from createdEvents
-          setEventsCount(responseData.createdEvents.length);
-          return; // Exit early since we have the count
-        } else if (responseData.events) {
-          console.log('Using events from response, count:', responseData.events.length);
-          allEvents = responseData.events;
-          // Set the events count directly from events
-          setEventsCount(responseData.events.length);
-          return; // Exit early since we have the count
-        } else {
-          console.log('Could not extract events from response:', responseData);
-        }
+        // Try Firestore fallback
+        console.log('Using Firestore fallback for events...');
+        const events = await getUserEvents(currentUser.uid, 'teacher');
+        console.log('Events from Firestore:', events);
 
         // Filter events created by the current user
-        const userEvents = allEvents.filter(event => {
-          // Log each event to see its structure
-          console.log('Checking event:', event);
-
-          // Check if the event has a host field that matches the current user's name
-          if (event.host && currentUser.displayName) {
-            const hostLower = event.host.toLowerCase();
-            const displayNameLower = currentUser.displayName.toLowerCase();
-            if (hostLower.includes(displayNameLower)) {
-              console.log('Event matched by host name:', event.title || event.name);
-              return true;
-            }
-          }
-
-          // Check if the event has a createdBy field that matches the current user's ID
-          if (event.createdBy && event.createdBy === currentUser.uid) {
-            console.log('Event matched by createdBy UID:', event.title || event.name);
-            return true;
-          }
-
-          // Check if the event has a creator field that matches the current user's ID
-          if (event.creator && event.creator === currentUser.uid) {
-            console.log('Event matched by creator UID:', event.title || event.name);
-            return true;
-          }
-
-          // Check if the event has a userId field that matches the current user's ID
-          if (event.userId && event.userId === currentUser.uid) {
-            console.log('Event matched by userId:', event.title || event.name);
-            return true;
-          }
-
-          // Check if the event has a teacherId field that matches the current user's ID
-          if (event.teacherId && event.teacherId === currentUser.uid) {
-            console.log('Event matched by teacherId:', event.title || event.name);
-            return true;
-          }
-
-          // Check if the event has a createdBy field that matches the current user's email
-          if (event.createdBy && currentUser.email && typeof event.createdBy === 'string' &&
-              event.createdBy.toLowerCase() === currentUser.email.toLowerCase()) {
-            console.log('Event matched by email:', event.title || event.name);
-            return true;
-          }
-
-          // Check if the event has a user field that contains the current user's ID
-          if (event.user && typeof event.user === 'object' && event.user.id === currentUser.uid) {
-            console.log('Event matched by user.id:', event.title || event.name);
-            return true;
-          }
-
-          // Check if the event has a user field that is the current user's ID
-          if (event.user && event.user === currentUser.uid) {
-            console.log('Event matched by user:', event.title || event.name);
-            return true;
-          }
-
-          // Last resort: If the event is in the teacher's events page, it should be counted
-          // This is a special case for the events shown in the screenshot
-          const eventTitle = (event.title || event.name || '').toLowerCase();
-          const specialCases = ['operating system', 'computer architecture', 'kolkata', 'howrah'];
-
-          if (specialCases.some(title => eventTitle.includes(title))) {
-            console.log('Event matched by title (special case):', event.title || event.name);
-            return true;
-          }
-
-          // If we've checked everything and still haven't found a match, let's log this event
-          console.log('Event did not match any criteria:', event);
-
-          // For now, let's count all events to ensure the counter matches what's shown in the UI
-          // This is a temporary solution until we can determine the exact relationship between users and events
-          return true;
+        const userEvents = events.filter(event => {
+          return (
+            // Check creator fields
+            event.createdBy === currentUser.uid ||
+            event.creator === currentUser.uid ||
+            event.userId === currentUser.uid ||
+            event.teacherId === currentUser.uid ||
+            // Check by name if available
+            (event.host && currentUser.displayName &&
+             event.host.toLowerCase().includes(currentUser.displayName.toLowerCase()))
+          );
         });
 
-        // Log the events created by the current user
-        console.log('Events created by current user:', userEvents);
+        console.log('Filtered events created by current user:', userEvents);
         setEventsCount(userEvents.length);
-      } else {
-        console.error('Failed to fetch events');
+        success = true;
+      }
+
+      if (!success) {
+        // If both API and Firestore failed, set a default value
+        console.log('Using default value for events count');
+        setEventsCount(0);
+      } else if (success && responseData) {
+        // Extract events array from the response
+        if (responseData.createdEvents) {
+          console.log('Using createdEvents from response, count:', responseData.createdEvents.length);
+          setEventsCount(responseData.createdEvents.length);
+        } else if (responseData.events) {
+          console.log('Using events from response, count:', responseData.events.length);
+          setEventsCount(responseData.events.length);
+        } else {
+          console.log('Could not extract events from response, using default value');
+          setEventsCount(0);
+        }
       }
     } catch (err) {
       console.error('Error fetching events count:', err);
-      setError('Failed to load events count');
+      // Don't show error to user, just use 0
+      setEventsCount(0);
     } finally {
       setLoading(false);
     }

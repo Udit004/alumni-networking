@@ -40,34 +40,50 @@ const EnrolledEvents = () => {
           return;
         }
 
-        // First get the MongoDB user ID
-        const userRes = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/users/firebase/${user.uid}`);
-        const mongoUser = userRes.data;
+        // First try to get the MongoDB user ID
+        try {
+          const userRes = await axios.get(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000'}/api/users/firebase/${user.uid}`);
+          const mongoUser = userRes.data;
 
-        if (!mongoUser || !mongoUser._id) {
-          setError('User data not found');
-          setLoading(false);
-          return;
-        }
-
-        // Then fetch enrolled events
-        const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/events`);
-        const allEvents = response.data;
-
-        // Filter events where user is registered
-        const userEvents = allEvents.filter(event => {
-          if (!event.registeredUsers || !Array.isArray(event.registeredUsers)) {
-            return false;
+          if (!mongoUser || !mongoUser._id) {
+            throw new Error('User data not found');
           }
-          return event.registeredUsers.some(ru =>
-            ru && ru.userId && ru.userId._id === mongoUser._id
-          );
-        });
 
-        setEnrolledEvents(userEvents);
+          // Then fetch enrolled events
+          const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000'}/api/events`);
+          const allEvents = response.data;
+
+          // Filter events where user is registered
+          const userEvents = allEvents.filter(event => {
+            if (!event.registeredUsers || !Array.isArray(event.registeredUsers)) {
+              return false;
+            }
+            return event.registeredUsers.some(ru =>
+              ru && ru.userId && ru.userId._id === mongoUser._id
+            );
+          });
+
+          // Process events for display
+          const processedEvents = userEvents.map(event => ({
+            ...event,
+            id: event._id, // Ensure we have both id and _id for compatibility
+            date: new Date(event.date), // Convert date string to Date object
+            isRegistered: true
+          }));
+
+          // Sort events by date
+          processedEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+          setEnrolledEvents(processedEvents);
+          console.log(`Found ${processedEvents.length} enrolled events from MongoDB.`);
+          setError(null);
+        } catch (err) {
+          console.error('Error fetching enrolled events from MongoDB:', err);
+          setError('Failed to load enrolled events. Please try again later.');
+        }
       } catch (err) {
         console.error('Error fetching enrolled events:', err);
-        setError(err.response?.data?.message || 'Failed to fetch enrolled events');
+        setError('Failed to load enrolled events. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -167,7 +183,7 @@ const EnrolledEvents = () => {
         <div className="events-grid">
           {filteredEvents.map((event) => (
             <div
-              key={event._id}
+              key={event.id}
               className={`event-card bg-white dark:bg-gray-800 rounded-xl shadow-md transition-all overflow-hidden border border-gray-200 dark:border-gray-700`}
               style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
             >

@@ -54,9 +54,13 @@ const ChatComponent = ({ selectedUser, fetchConversations }) => {
         console.log('Checking backend server status...');
         const response = await axios.get(`${apiBaseUrl.replace('/api', '')}/healthcheck`, { timeout: 3000 });
         console.log('Backend server status:', response.status, response.data);
+        // If we get here, backend is available
+        setUseFirestore(false); // Prefer REST API if backend is available
       } catch (error) {
         console.error('Backend server check failed:', error);
-        setError('Cannot connect to the backend server. Please make sure the server is running.');
+        // Don't show error to user, just use Firestore instead
+        console.log('Backend server unavailable, using Firestore for chat functionality');
+        setUseFirestore(true); // Use Firestore when backend is unavailable
       }
     };
 
@@ -108,21 +112,16 @@ const ChatComponent = ({ selectedUser, fetchConversations }) => {
         throw new Error('Cannot access messages collection');
       }
 
-      // Now set up the actual query for the conversation
+      // Create a simpler query that doesn't require a composite index
+      // We'll filter the results in memory instead
       const messagesQuery = query(
         collection(db, 'messages'),
-        or(
-          and(
-            where('senderId', '==', currentUser.uid),
-            where('receiverId', '==', selectedUser.uid)
-          ),
-          and(
-            where('senderId', '==', selectedUser.uid),
-            where('receiverId', '==', currentUser.uid)
-          )
-        ),
-        orderBy('createdAt', 'asc')
+        where('participants', 'array-contains', currentUser.uid),
+        orderBy('createdAt', 'asc'),
+        limit(100)
       );
+
+      // Note: We'll filter for the specific conversation after retrieving the data
 
       // Test retrieving messages once via getDocs before setting up listener
       try {
@@ -149,13 +148,22 @@ const ChatComponent = ({ selectedUser, fetchConversations }) => {
       console.log('Setting up onSnapshot listener...');
       messagesListener.current = onSnapshot(messagesQuery, (snapshot) => {
         console.log(`Firestore snapshot received with ${snapshot.docs.length} messages`);
-        const messageList = snapshot.docs.map(doc => ({
-          _id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date()
-        }));
 
-        setMessages(messageList);
+        // Filter messages to only include those between the current user and selected user
+        const filteredMessages = snapshot.docs
+          .map(doc => ({
+            _id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate() || new Date()
+          }))
+          .filter(msg =>
+            (msg.senderId === currentUser.uid && msg.receiverId === selectedUser.uid) ||
+            (msg.senderId === selectedUser.uid && msg.receiverId === currentUser.uid)
+          );
+
+        console.log(`Filtered to ${filteredMessages.length} messages for this conversation`);
+
+        setMessages(filteredMessages);
         setLoading(false);
 
         // Mark messages as read

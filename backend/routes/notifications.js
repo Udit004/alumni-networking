@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const authenticateToken = require('../middleware/auth');
+const { auth: authenticateToken } = require('../middleware/auth');
 const notificationService = require('../services/notificationService');
 
 // Test route to send notifications to all students

@@ -1,21 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
-const {
-  collection,
-  addDoc,
-  query,
-  where,
-  getDocs,
-  getDoc,
-  doc,
-  updateDoc,
-  orderBy,
-  Timestamp,
-  or,
-  and,
-  serverTimestamp
-} = require('firebase/firestore');
+const admin = require('firebase-admin');
+const { FieldValue } = admin.firestore;
 const { verifyToken } = require('../middleware/auth');
 
 // Route to send a message
@@ -37,15 +24,16 @@ router.post('/send', verifyToken, async (req, res) => {
       content,
       senderRole: senderRole || 'unknown',
       receiverRole: receiverRole || 'unknown',
-      createdAt: serverTimestamp(),
-      read: false
+      createdAt: FieldValue.serverTimestamp(),
+      read: false,
+      participants: [senderId, receiverId] // Add participants array for easier querying
     };
 
-    const messageRef = await addDoc(collection(db, 'messages'), messageData);
-    
+    const messageRef = await db.collection('messages').add(messageData);
+
     // Add the server-generated timestamp
-    const messageDoc = await getDoc(messageRef);
-    
+    const messageDoc = await messageRef.get();
+
     return res.status(201).json({
       success: true,
       message: 'Message sent successfully',
@@ -69,42 +57,51 @@ router.post('/send', verifyToken, async (req, res) => {
 router.get('/:userId1/:userId2', verifyToken, async (req, res) => {
   try {
     const { userId1, userId2 } = req.params;
-    
+
     // Check if both users exist
-    const user1Ref = doc(db, 'users', userId1);
-    const user2Ref = doc(db, 'users', userId2);
-    
-    const user1Doc = await getDoc(user1Ref);
-    const user2Doc = await getDoc(user2Ref);
-    
-    if (!user1Doc.exists() || !user2Doc.exists()) {
+    const user1Ref = db.collection('users').doc(userId1);
+    const user2Ref = db.collection('users').doc(userId2);
+
+    const user1Doc = await user1Ref.get();
+    const user2Doc = await user2Ref.get();
+
+    if (!user1Doc.exists || !user2Doc.exists) {
       return res.status(404).json({
         success: false,
         message: 'One or both users not found'
       });
     }
-    
-    // Query messages where either user is sender and the other is receiver
-    const q = query(
-      collection(db, 'messages'),
-      or(
-        and(where('senderId', '==', userId1), where('receiverId', '==', userId2)),
-        and(where('senderId', '==', userId2), where('receiverId', '==', userId1))
-      ),
-      orderBy('createdAt', 'asc')
-    );
-    
-    const querySnapshot = await getDocs(q);
-    
+
+    // Query messages where both users are in the participants array
+    const querySnapshot = await db.collection('messages')
+      .where('participants', 'array-contains', userId1)
+      .get();
+
+    // Filter in memory for messages between these two specific users
+    const filteredDocs = querySnapshot.docs.filter(doc => {
+      const data = doc.data();
+      return (
+        (data.senderId === userId1 && data.receiverId === userId2) ||
+        (data.senderId === userId2 && data.receiverId === userId1)
+      );
+    });
+
+    // Sort by createdAt
+    filteredDocs.sort((a, b) => {
+      const aTime = a.data().createdAt?.toDate?.() || new Date(0);
+      const bTime = b.data().createdAt?.toDate?.() || new Date(0);
+      return aTime - bTime;
+    });
+
     const messages = [];
-    querySnapshot.forEach((doc) => {
+    filteredDocs.forEach((doc) => {
       messages.push({
         _id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : new Date()
       });
     });
-    
+
     return res.status(200).json({
       success: true,
       data: messages
@@ -123,26 +120,30 @@ router.get('/:userId1/:userId2', verifyToken, async (req, res) => {
 router.put('/mark-read/:senderId/:receiverId', verifyToken, async (req, res) => {
   try {
     const { senderId, receiverId } = req.params;
-    
+
     // Find all unread messages from sender to receiver
-    const q = query(
-      collection(db, 'messages'),
-      where('senderId', '==', senderId),
-      where('receiverId', '==', receiverId),
-      where('read', '==', false)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    
+    // First query for messages with the receiver in participants
+    const querySnapshot = await db.collection('messages')
+      .where('participants', 'array-contains', receiverId)
+      .get();
+
+    // Filter for unread messages from the specific sender
+    const unreadMessages = querySnapshot.docs.filter(doc => {
+      const data = doc.data();
+      return data.senderId === senderId &&
+             data.receiverId === receiverId &&
+             data.read === false;
+    });
+
     // Update each message to mark as read
     const updatePromises = [];
-    querySnapshot.forEach((document) => {
-      const messageRef = doc(db, 'messages', document.id);
-      updatePromises.push(updateDoc(messageRef, { read: true }));
+    unreadMessages.forEach((document) => {
+      const messageRef = db.collection('messages').doc(document.id);
+      updatePromises.push(messageRef.update({ read: true }));
     });
-    
+
     await Promise.all(updatePromises);
-    
+
     return res.status(200).json({
       success: true,
       message: 'Messages marked as read',
@@ -163,29 +164,25 @@ router.get('/conversations/:userId', verifyToken, async (req, res) => {
   try {
     const { userId } = req.params;
     console.log(`Fetching conversations for user: ${userId}`);
-    
-    // Get all messages where the user is either sender or receiver
+
+    // Get all messages where the user is in the participants array
     try {
       console.log('Creating Firestore query...');
-      const q = query(
-        collection(db, 'messages'),
-        or(
-          where('senderId', '==', userId),
-          where('receiverId', '==', userId)
-        ),
-        orderBy('createdAt', 'desc')
-      );
-      
+
       console.log('Executing Firestore query...');
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await db.collection('messages')
+        .where('participants', 'array-contains', userId)
+        .orderBy('createdAt', 'desc')
+        .get();
+
       console.log(`Query returned ${querySnapshot.size} messages`);
-      
+
       // Map to track the latest message with each conversation partner
       const conversationsMap = new Map();
-      
+
       // Track unread count per conversation partner
       const unreadCountMap = new Map();
-      
+
       console.log('Processing message data...');
       querySnapshot.forEach((doc) => {
         try {
@@ -195,15 +192,15 @@ router.get('/conversations/:userId', verifyToken, async (req, res) => {
             ...data,
             createdAt: data.createdAt ? data.createdAt.toDate() : new Date()
           };
-          
+
           // Determine the conversation partner
           const partnerId = message.senderId === userId ? message.receiverId : message.senderId;
-          
+
           // Track unread messages (only count messages received by the user)
           if (message.receiverId === userId && !message.read) {
             unreadCountMap.set(partnerId, (unreadCountMap.get(partnerId) || 0) + 1);
           }
-          
+
           // Only store the most recent message per conversation partner
           if (!conversationsMap.has(partnerId)) {
             conversationsMap.set(partnerId, message);
@@ -212,21 +209,21 @@ router.get('/conversations/:userId', verifyToken, async (req, res) => {
           console.error('Error processing message document:', docError, doc.id);
         }
       });
-      
+
       console.log(`Found ${conversationsMap.size} conversation partners`);
-      
+
       // Fetch user details for each conversation partner
       const conversationsWithUserDetails = [];
-      
+
       for (const [partnerId, latestMessage] of conversationsMap.entries()) {
         try {
           console.log(`Fetching partner details: ${partnerId}`);
-          const partnerRef = doc(db, 'users', partnerId);
-          const partnerDoc = await getDoc(partnerRef);
-          
-          if (partnerDoc.exists()) {
+          const partnerRef = db.collection('users').doc(partnerId);
+          const partnerDoc = await partnerRef.get();
+
+          if (partnerDoc.exists) {
             const partnerData = partnerDoc.data();
-            
+
             conversationsWithUserDetails.push({
               user: {
                 uid: partnerId,
@@ -266,12 +263,12 @@ router.get('/conversations/:userId', verifyToken, async (req, res) => {
           });
         }
       }
-      
+
       // Sort conversations by the timestamp of the latest message (most recent first)
-      conversationsWithUserDetails.sort((a, b) => 
+      conversationsWithUserDetails.sort((a, b) =>
         b.lastMessage.createdAt - a.lastMessage.createdAt
       );
-      
+
       console.log(`Returning ${conversationsWithUserDetails.length} conversations`);
       return res.status(200).json({
         success: true,
@@ -295,4 +292,4 @@ router.get('/conversations/:userId', verifyToken, async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

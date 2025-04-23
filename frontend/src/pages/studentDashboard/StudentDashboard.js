@@ -15,6 +15,8 @@ import Overview from "./components/Overview";
 import StudentChat from "./StudentChat";
 import Courses from "./components/Courses";
 import axios from 'axios';
+import { API_URLS, DEFAULT_TIMEOUT } from '../../config/apiConfig';
+import { getUserEvents, getStudentCourses } from '../../services/firestoreFallbackService';
 
 const StudentDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(true);
@@ -343,83 +345,94 @@ const StudentDashboard = () => {
     const fetchCounts = async () => {
       if (!currentUser) return;
 
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      const baseUrls = [
-        process.env.REACT_APP_API_URL || 'http://localhost:5001',
-        'http://localhost:5002',
-        'http://localhost:5003',
-        'http://localhost:5004',
-        'http://localhost:5000'
-      ];
-
       try {
         // Fetch job applications count
-        const token = await currentUser.getIdToken();
-        const jobAppResponse = await axios.get(
-          `${API_URL}/api/job-applications`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
+        try {
+          const token = await currentUser.getIdToken();
+          const jobAppResponse = await axios.get(
+            `${API_URLS.main}/job-applications`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              timeout: DEFAULT_TIMEOUT
             }
-          }
-        );
+          );
 
-        let applicationData = [];
-        if (jobAppResponse.data && jobAppResponse.data.success) {
-          if (Array.isArray(jobAppResponse.data.data)) {
-            applicationData = jobAppResponse.data.data;
-          } else if (Array.isArray(jobAppResponse.data.applications)) {
-            applicationData = jobAppResponse.data.applications;
+          let applicationData = [];
+          if (jobAppResponse.data && jobAppResponse.data.success) {
+            if (Array.isArray(jobAppResponse.data.data)) {
+              applicationData = jobAppResponse.data.data;
+            } else if (Array.isArray(jobAppResponse.data.applications)) {
+              applicationData = jobAppResponse.data.applications;
+            }
+          } else if (Array.isArray(jobAppResponse.data)) {
+            applicationData = jobAppResponse.data;
           }
-        } else if (Array.isArray(jobAppResponse.data)) {
-          applicationData = jobAppResponse.data;
+
+          // Filter for current user's applications
+          const userApplications = applicationData.filter(app => app.userId === currentUser.uid);
+          setJobApplicationsCount(userApplications.length);
+        } catch (jobError) {
+          console.error("Error fetching job applications:", jobError);
+          // Set default value if API fails
+          setJobApplicationsCount(0);
         }
-
-        // Filter for current user's applications
-        const userApplications = applicationData.filter(app => app.userId === currentUser.uid);
-        setJobApplicationsCount(userApplications.length);
 
         // Fetch mentorships count
-        const mentorshipResponse = await axios.get(`${API_URL}/api/mentorships/user/${currentUser.uid}`);
+        try {
+          const mentorshipResponse = await axios.get(
+            `${API_URLS.main}/mentorships/user/${currentUser.uid}`,
+            { timeout: DEFAULT_TIMEOUT }
+          );
 
-        const userMentorships = mentorshipResponse.data.success ?
-          (mentorshipResponse.data.mentorships ||
-          mentorshipResponse.data.enrolledMentorships ||
-          []) : [];
+          const userMentorships = mentorshipResponse.data.success ?
+            (mentorshipResponse.data.mentorships ||
+            mentorshipResponse.data.enrolledMentorships ||
+            []) : [];
 
-        setMentorshipsCount(Array.isArray(userMentorships) ? userMentorships.length : 0);
-
-        // Fetch enrolled courses count
-        let success = false;
-        let enrolledCourses = [];
-
-        for (const baseUrl of baseUrls) {
-          try {
-            console.log(`Trying to fetch enrolled courses from ${baseUrl}...`);
-            const response = await axios.get(
-              `${baseUrl}/api/courses/student/${currentUser.uid}`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                }
-              }
-            );
-
-            if (response.data && response.data.success) {
-              enrolledCourses = response.data.courses || [];
-              success = true;
-              console.log(`Found ${enrolledCourses.length} enrolled courses from ${baseUrl}`);
-              break; // Exit the loop if successful
-            }
-          } catch (err) {
-            console.log(`Failed to connect to ${baseUrl}:`, err.message);
-          }
+          setMentorshipsCount(Array.isArray(userMentorships) ? userMentorships.length : 0);
+        } catch (mentorshipError) {
+          console.error("Error fetching mentorships:", mentorshipError);
+          // Set default value if API fails
+          setMentorshipsCount(0);
         }
 
-        if (success) {
-          setEnrolledCoursesCount(enrolledCourses.length);
+        // Fetch enrolled courses count
+        try {
+          console.log(`Trying to fetch enrolled courses from API...`);
+          const token = await currentUser.getIdToken();
+          const response = await axios.get(
+            `${API_URLS.courses}/student/${currentUser.uid}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              timeout: DEFAULT_TIMEOUT
+            }
+          );
+
+          if (response.data && response.data.success) {
+            const enrolledCourses = response.data.courses || [];
+            setEnrolledCoursesCount(enrolledCourses.length);
+            console.log(`Found ${enrolledCourses.length} enrolled courses from API`);
+          }
+        } catch (coursesError) {
+          console.error("Error fetching courses from API:", coursesError);
+
+          // Try Firestore fallback
+          try {
+            console.log('Using Firestore fallback for courses...');
+            const courses = await getStudentCourses(currentUser.uid);
+            console.log('Courses from Firestore:', courses);
+            setEnrolledCoursesCount(courses.length);
+          } catch (firestoreError) {
+            console.error("Error fetching courses from Firestore:", firestoreError);
+            // Set default value if both API and Firestore fail
+            setEnrolledCoursesCount(0);
+          }
         }
       } catch (error) {
         console.error("Error fetching application, mentorship, and course counts:", error);

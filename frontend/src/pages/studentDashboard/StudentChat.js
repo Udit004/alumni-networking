@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import UserDirectory from '../../components/UserDirectory';
 import ChatComponent from '../../components/ChatComponent';
 import './StudentChat.css';
+import { db } from '../../firebaseConfig';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 
 const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api';
 const mongoApiBaseUrl = process.env.REACT_APP_MONGO_API_BASE_URL || 'http://localhost:5001/api/messages-db';
@@ -26,13 +28,13 @@ const StudentChat = () => {
       setLoading(true);
       setError(null);
 
-      // Try MongoDB API first
+      // Try MongoDB API first with a shorter timeout
       try {
         console.log('Trying to fetch conversations via MongoDB API...');
         const mongoResponse = await axios.get(
           `${mongoApiBaseUrl}/conversations/${currentUser.uid}`,
           {
-            timeout: 5000 // 5 second timeout
+            timeout: 2000 // 2 second timeout - fail faster
           }
         );
 
@@ -48,40 +50,93 @@ const StudentChat = () => {
         // Continue to Firebase API fallback
       }
 
-      // Firebase API fallback
-      // Get the auth token
-      const token = await currentUser.getIdToken();
-      console.log('Auth token obtained for Firebase API request');
+      // Try to fetch conversations directly from Firestore
+      try {
+        console.log('Trying to fetch conversations directly from Firestore...');
 
-      const response = await axios.get(
-        `${apiBaseUrl}/messages/conversations/${currentUser.uid}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          },
-          timeout: 5000 // 5 second timeout
+        // Get all messages where current user is sender or receiver
+        const messagesRef = collection(db, 'messages');
+        const q = query(
+          messagesRef,
+          where('participants', 'array-contains', currentUser.uid),
+          orderBy('createdAt', 'desc'),
+          limit(100)
+        );
+
+        const querySnapshot = await getDocs(q);
+
+        // Process messages into conversations
+        const conversationsMap = new Map();
+
+        querySnapshot.forEach((doc) => {
+          const message = { id: doc.id, ...doc.data() };
+          const otherUserId = message.senderId === currentUser.uid ? message.receiverId : message.senderId;
+
+          if (!conversationsMap.has(otherUserId)) {
+            conversationsMap.set(otherUserId, {
+              userId: otherUserId,
+              lastMessage: message.content,
+              timestamp: message.createdAt,
+              unreadCount: message.read ? 0 : (message.receiverId === currentUser.uid ? 1 : 0)
+            });
+          }
+        });
+
+        const firestoreConversations = Array.from(conversationsMap.values());
+        console.log('Conversations fetched from Firestore:', firestoreConversations.length);
+
+        if (firestoreConversations.length > 0) {
+          setConversations(firestoreConversations);
+          setLoading(false);
+          return; // Exit if we got conversations from Firestore
         }
-      );
+      } catch (firestoreError) {
+        console.error('Error fetching conversations from Firestore:', firestoreError);
+        // Continue to Firebase REST API fallback
+      }
 
-      if (response.data && response.data.success && response.data.data) {
-        console.log('Conversations fetched successfully via Firebase API');
-        setConversations(response.data.data);
-      } else {
-        console.warn('Unexpected API response format:', response.data);
-        setConversations([]);
+      // Firebase REST API fallback as last resort
+      try {
+        // Get the auth token
+        const token = await currentUser.getIdToken();
+        console.log('Auth token obtained for Firebase API request');
+
+        const response = await axios.get(
+          `${apiBaseUrl}/messages/conversations/${currentUser.uid}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            },
+            timeout: 5000 // 5 second timeout
+          }
+        );
+
+        if (response.data && response.data.success && response.data.data) {
+          console.log('Conversations fetched successfully via Firebase API');
+          setConversations(response.data.data);
+        } else {
+          console.warn('Unexpected API response format:', response.data);
+          setConversations([]);
+        }
+      } catch (restError) {
+        console.error('Error fetching conversations via REST API:', restError);
+        // If we get here, all methods have failed
+        throw restError; // Re-throw to be caught by the outer catch block
       }
     } catch (error) {
       console.error('Error fetching conversations:', error);
 
-      // Provide more specific error messages
+      // Provide more specific error messages but don't block the UI
       if (error.code === 'ECONNABORTED') {
-        setError('Connection timeout. The server is not responding. Please check if the backend server is running.');
+        console.warn('Connection timeout. The server is not responding.');
       } else if (error.message.includes('Network Error')) {
-        setError('Network error. Cannot connect to the server. Please check if the backend server is running.');
+        console.warn('Network error. Cannot connect to the server.');
       } else {
-        setError('Failed to load conversations. Please try refreshing the page.');
+        console.warn(`Failed to load conversations: ${error.message}`);
       }
 
+      // Set empty conversations but don't show error to user
+      // This allows the chat to still function with new conversations
       setConversations([]);
     } finally {
       setLoading(false);

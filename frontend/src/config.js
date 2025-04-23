@@ -8,7 +8,7 @@ const getApiBaseUrl = () => {
     return 'https://alumni-networking.onrender.com';
   }
   // For development
-  return 'http://localhost:5001';
+  return 'http://localhost:5000';
 };
 
 const API_BASE_URL = getApiBaseUrl();
