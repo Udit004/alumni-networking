@@ -277,16 +277,14 @@ const Profile = () => {
         const successMessage = document.getElementById('successMessage');
         successMessage.classList.remove('hidden');
         
-        // Redirect to appropriate dashboard based on user role
+        // Hide success message after 1.5 seconds and redirect based on role
         setTimeout(() => {
           successMessage.classList.add('hidden');
+          
           // Navigate to the appropriate dashboard based on user role
-          if (userData.role === 'student') {
-            navigate('/student-dashboard');
-          } else if (userData.role === 'teacher') {
-            navigate('/teacher-dashboard');
-          } else if (userData.role === 'alumni') {
-            navigate('/alumni-dashboard');
+          if (userData.role === 'teacher') {
+            // For teachers, redirect to profile section in teacher dashboard
+            navigate('/teacher-dashboard', { state: { activeSection: 'profile' } });
           }
         }, 1500);
       } catch (error) {

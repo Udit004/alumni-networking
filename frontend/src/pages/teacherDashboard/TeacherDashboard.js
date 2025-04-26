@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './TeacherDashboard.css';
 import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
@@ -10,8 +10,12 @@ import { getConnectionRequests, sendConnectionRequest } from '../../services/con
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
 
 const TeacherDashboard = () => {
+  const location = useLocation();
   const [isNavExpanded, setIsNavExpanded] = useState(true);
-  const [activeSection, setActiveSection] = useState('overview');
+  const [activeSection, setActiveSection] = useState(
+    // Check if we have a section in the location state, otherwise default to 'overview'
+    location.state?.activeSection || 'overview'
+  );
   const [events, setEvents] = useState([]);
   const [materials, setMaterials] = useState([
     {
@@ -102,6 +106,7 @@ const TeacherDashboard = () => {
     institution: "",
     designation: "",
     expertise: [],
+    skills: [],
     achievements: [],
     publications: [],
     bio: "",
@@ -165,7 +170,80 @@ const TeacherDashboard = () => {
     if (activeSection === 'events') {
       fetchEvents();
     }
-  }, [activeSection]);
+    
+    // Refresh profile data when user navigates to profile section
+    if (activeSection === 'profile') {
+      const refreshProfileData = async () => {
+        if (!user) return;
+        
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            console.log("Refreshing profile data for section view:", userData);
+            
+            // Process expertise data
+            const expertiseData = userData.expertise ?
+              (typeof userData.expertise === 'string' ?
+                userData.expertise.split(',').map(item => item.trim()) :
+                userData.expertise) :
+              [];
+              
+            // Process skills data
+            const skillsData = userData.skills ?
+              (typeof userData.skills === 'string' ?
+                userData.skills.split(',').map(skill => skill.trim()) :
+                userData.skills) :
+              [];
+              
+            // Format office hours data
+            let officeHoursData = userData.officeHours || [];
+            if (typeof officeHoursData === 'string') {
+              try {
+                officeHoursData = officeHoursData.split(',').map(slot => {
+                  const [day, time] = slot.split(':').map(s => s.trim());
+                  return { day, time };
+                });
+              } catch (e) {
+                console.error('Error parsing office hours:', e);
+                officeHoursData = [];
+              }
+            }
+            
+            // Update profile data
+            setProfileData(prev => ({
+              ...prev,
+              name: userData.name || user.displayName || "",
+              email: userData.email || user.email || "",
+              phone: userData.phone || "",
+              skills: skillsData,
+              expertise: expertiseData,
+              bio: userData.bio || "",
+              department: userData.department || "",
+              college: userData.college || userData.institution || "",
+              jobTitle: userData.jobTitle || userData.designation || "",
+              location: userData.location || userData.address || "",
+              linkedIn: userData.linkedIn || "",
+              github: userData.github || "",
+              workExperience: userData.workExperience || [],
+              education: userData.education || [],
+              officeHours: officeHoursData,
+              officeLocation: userData.officeLocation || "",
+              researchInterests: userData.researchInterests || "",
+              coursesTaught: userData.coursesTaught || "",
+              certifications: userData.certifications || []
+            }));
+          }
+        } catch (error) {
+          console.error("Error refreshing profile data:", error);
+        }
+      };
+      
+      refreshProfileData();
+    }
+  }, [activeSection, user]);
 
   useEffect(() => {
     const fetchTeacherProfile = async () => {
@@ -219,6 +297,7 @@ const TeacherDashboard = () => {
             institution: userData.institution || "",
             designation: userData.designation || "",
             expertise: expertiseData,
+            skills: skillsData,
             achievements: userData.achievements || [],
             publications: userData.publications || [],
             bio: userData.bio || "",
@@ -253,6 +332,20 @@ const TeacherDashboard = () => {
     };
 
     fetchTeacherProfile();
+    
+    // Function to refresh profile data when coming back to the dashboard
+    const refreshProfileData = () => {
+      console.log("Refreshing profile data on focus");
+      fetchTeacherProfile();
+    };
+    
+    // Add event listener to refresh profile when window gets focus
+    window.addEventListener('focus', refreshProfileData);
+    
+    // Cleanup function
+    return () => {
+      window.removeEventListener('focus', refreshProfileData);
+    };
   }, [user]);
 
   useEffect(() => {
@@ -619,6 +712,14 @@ const TeacherDashboard = () => {
     // Otherwise, return the date
     return timestamp.toLocaleDateString();
   };
+
+  // Reset location state after we've used it to prevent it from persisting on refresh
+  useEffect(() => {
+    if (location.state?.activeSection) {
+      // Clear the state after using it
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
