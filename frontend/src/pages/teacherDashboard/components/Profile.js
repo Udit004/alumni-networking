@@ -9,16 +9,12 @@ const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
     navigate('/profile');
   };
 
-  // Generate initial for avatar
-  const getInitial = () => {
-    return profileData?.name ? profileData.name.charAt(0).toUpperCase() : 'T';
-  };
-
-  // Format skills/expertise for display
-  const formatExpertise = (expertise) => {
-    if (!expertise) return [];
-    if (Array.isArray(expertise)) return expertise;
-    return expertise.split(',').map(skill => skill.trim());
+  // Format skills/expertise for display - handling both string and array formats
+  const formatSkills = (skills) => {
+    if (!skills) return [];
+    if (Array.isArray(skills)) return skills;
+    // For string format, split by comma and trim each skill
+    return skills.split(',').map(skill => skill.trim()).filter(skill => skill !== '');
   };
 
   // Function to show truncated bio with read more option
@@ -44,47 +40,28 @@ const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
   };
 
   return (
-    <div className="profile-container">
-      {/* Cover image/banner */}
-      <div className="relative rounded-xl overflow-hidden h-48 mb-16">
-        <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600 absolute"></div>
-
-        {/* Profile avatar - positioned to overlap the banner */}
-        <div className="absolute -bottom-16 left-8">
-          <div className="relative">
-            <div className="w-32 h-32 rounded-full bg-white dark:bg-gray-800 p-1 shadow-lg">
-              {profileData?.photoURL ? (
-                <img
-                  src={profileData.photoURL}
-                  alt={`${profileData?.displayName || 'User'}'s avatar`}
-                  className="w-full h-full object-cover rounded-full"
-                />
-              ) : (
-                <div className="w-full h-full rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-4xl font-bold text-blue-500">
-                  {getInitial()}
-                </div>
-              )}
-            </div>
-
-            {/* Edit overlay button for profile picture */}
-            <button className="absolute bottom-0 right-0 w-8 h-8 bg-gray-800 dark:bg-gray-700 rounded-full flex items-center justify-center text-white shadow-md hover:bg-gray-700 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Edit Cover button */}
-        <button className="absolute top-4 right-4 bg-white/30 hover:bg-white/40 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm transition shadow-sm">
-          Edit Cover
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+      {/* Profile Banner */}
+      <div className="h-48 bg-gradient-to-r from-blue-500 to-blue-600 relative">
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/50 to-transparent"></div>
+        <button
+          onClick={handleEditProfile}
+          className="absolute top-4 right-4 bg-white/30 hover:bg-white/40 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm transition shadow-sm flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+          </svg>
+          Edit Profile
         </button>
       </div>
 
       {/* Main profile content */}
-      <div className="pl-8 pr-8">
-        {/* Profile header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mt-6 sm:mt-0 mb-8">
+      <div className="p-6">
+        {/* Profile header with avatar */}
+        <div className="flex flex-col sm:flex-row items-start gap-6 mb-8">
+          <div className="h-24 w-24 rounded-full bg-white dark:bg-gray-700 flex items-center justify-center text-3xl font-bold text-blue-500 -mt-12 border-4 border-white dark:border-gray-800 shadow-lg">
+            {profileData?.name ? profileData.name.charAt(0).toUpperCase() : "T"}
+          </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               {profileData?.name || 'Faculty Member'}
@@ -96,223 +73,162 @@ const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
               {profileData?.email || 'Email not provided'}
             </p>
           </div>
-
-          <button className="mt-4 sm:mt-0 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-            </svg>
-            Edit Profile
-          </button>
         </div>
 
         {/* Quick info pills */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-sm">
-            <span className="font-medium">Designation:</span> {profileData?.designation || 'N/A'}
+        <div className="flex flex-wrap gap-3 mb-8">
+          <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Department</div>
+            <div className="text-gray-900 dark:text-white">{profileData?.department || 'Not specified'}</div>
           </div>
-          <div className="px-4 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full text-sm">
-            <span className="font-medium">Department:</span> {profileData?.department || 'N/A'}
+
+          <div className="px-4 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+            <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">Office Hours</div>
+            <div className="text-gray-900 dark:text-white">
+              {profileData?.officeHours ? 
+                (Array.isArray(profileData.officeHours) ? 
+                  profileData.officeHours.map(oh => `${oh.day}: ${oh.time}`).join(', ') : 
+                  profileData.officeHours) : 
+                'Not specified'}
+            </div>
           </div>
-          <div className="px-4 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-full text-sm">
-            <span className="font-medium">Institution:</span> {profileData?.institution || profileData?.college || 'N/A'}
+
+          <div className="px-4 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+            <div className="text-sm text-green-600 dark:text-green-400 font-medium">Location</div>
+            <div className="text-gray-900 dark:text-white">{profileData?.officeLocation || profileData?.location || 'Not specified'}</div>
+          </div>
+          
+          <div className="px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+            <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">College</div>
+            <div className="text-gray-900 dark:text-white">{profileData?.college || 'Not specified'}</div>
+          </div>
+          
+          <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <div className="text-sm text-red-600 dark:text-red-400 font-medium">Phone</div>
+            <div className="text-gray-900 dark:text-white">{profileData?.phone || 'Not specified'}</div>
           </div>
         </div>
 
-        {/* Profile content in sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* About section */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-              About
-            </h2>
-            <div className="text-gray-600 dark:text-gray-300">
-              {renderBio(profileData?.bio || '')}
-            </div>
-          </div>
-
-          {/* Contact Information */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-              </svg>
-              Contact Information
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                <p className="text-gray-800 dark:text-gray-200 break-all">{profileData?.email || 'Not provided'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Office Phone</p>
-                <p className="text-gray-800 dark:text-gray-200">{profileData?.phone || 'Not provided'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Office Location</p>
-                <p className="text-gray-800 dark:text-gray-200">{profileData?.address || 'Not provided'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">LinkedIn</p>
-                {profileData?.linkedIn ? (
-                  <a
-                    href={profileData.linkedIn.startsWith('http') ? profileData.linkedIn : `https://${profileData.linkedIn}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:text-blue-600 dark:text-blue-400"
-                  >
-                    {profileData.linkedIn}
-                  </a>
-                ) : (
-                  <p className="text-gray-800 dark:text-gray-200">Not provided</p>
-                )}
-              </div>
-              {profileData?.github && (
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">GitHub</p>
-                  <a
-                    href={profileData.github.startsWith('http') ? profileData.github : `https://${profileData.github}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:text-blue-600 dark:text-blue-400"
-                  >
-                    {profileData.github}
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Bio Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">About</h2>
+          {renderBio(profileData?.bio)}
         </div>
 
-        {/* Additional Information */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Professional Information */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
-                <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
-              </svg>
-              Professional Information
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Designation</p>
-                <p className="text-gray-800 dark:text-gray-200 font-medium">{profileData?.designation || 'Not provided'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Department</p>
-                <p className="text-gray-800 dark:text-gray-200">{profileData?.department || 'Not provided'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Experience</p>
-                <p className="text-gray-800 dark:text-gray-200">{profileData?.experience || 'Not provided'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Joined</p>
-                <p className="text-gray-800 dark:text-gray-200">{profileData?.joined || 'Not provided'}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Publications */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
-              </svg>
-              Publications
-            </h2>
-            <div className="space-y-3">
-              {profileData?.publications && profileData.publications.length > 0 ? (
-                profileData.publications.map((publication, index) => (
-                  <div key={index} className="border-l-2 border-blue-500 pl-3 py-1">
-                    <p className="text-gray-800 dark:text-gray-200">{publication.title}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{publication.journal}, {publication.year}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400">No publications listed</p>
-              )}
-              {profileData?.publications && profileData.publications.length > 0 && (
-                <button className="text-blue-500 hover:text-blue-600 dark:text-blue-400 text-sm mt-2">
-                  View all publications
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Areas of Expertise */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-              </svg>
-              Areas of Expertise
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {formatExpertise(profileData?.expertise).length > 0 ? (
-                formatExpertise(profileData.expertise).map((area, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm"
-                  >
-                    {area}
-                  </span>
-                ))
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400">No areas of expertise listed</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Office Hours */}
-        <div className="mb-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-            </svg>
-            Office Hours
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {profileData?.officeHours && profileData.officeHours.length > 0 ? (
-              profileData.officeHours.map((hours, index) => (
-                <div key={index} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                  <p className="font-medium text-gray-800 dark:text-gray-200">{hours.day}</p>
-                  <p className="text-gray-600 dark:text-gray-300">{hours.time}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 col-span-full">No office hours listed</p>
+        {/* Expertise/Skills Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Skills & Expertise</h2>
+          <div className="flex flex-wrap gap-2">
+            {formatSkills(profileData?.skills).map((skill, index) => (
+              <span
+                key={index}
+                className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm"
+              >
+                {skill}
+              </span>
+            ))}
+            {formatSkills(profileData?.skills).length === 0 && (
+              <p className="text-gray-600 dark:text-gray-400">No skills or expertise listed</p>
             )}
           </div>
         </div>
 
+        {/* Social Links */}
+        {(profileData?.linkedIn || profileData?.github) && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Social Profiles</h2>
+            <div className="flex flex-wrap gap-3">
+              {profileData?.linkedIn && (
+                <a 
+                  href={profileData.linkedIn}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                  LinkedIn
+                </a>
+              )}
+              {profileData?.github && (
+                <a 
+                  href={profileData.github}
+                  target="_blank"
+                  rel="noopener noreferrer" 
+                  className="flex items-center px-4 py-2 bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                  </svg>
+                  GitHub
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Courses Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Courses Teaching</h2>
+          <div className="space-y-2">
+            {profileData?.coursesTaught ? (
+              profileData.coursesTaught.split(',').map((course, index) => (
+                <div
+                  key={index}
+                  className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-gray-700 dark:text-gray-300"
+                >
+                  {course.trim()}
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-600 dark:text-gray-400">No courses listed</p>
+            )}
+          </div>
+        </div>
+
+        {/* Research Interests */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Research Interests</h2>
+          <p className="text-gray-700 dark:text-gray-300">
+            {profileData?.researchInterests || 'No research interests specified'}
+          </p>
+        </div>
+
+        {/* Education Section */}
+        {profileData?.education && profileData.education.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Education</h2>
+            <div className="space-y-4">
+              {profileData.education.map((edu, index) => (
+                <div
+                  key={index}
+                  className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                >
+                  <h3 className="font-medium text-gray-900 dark:text-white">{edu.degree}</h3>
+                  <p className="text-gray-600 dark:text-gray-400">{edu.institution}</p>
+                  <p className="text-gray-500 dark:text-gray-500 text-sm">{edu.startYear} - {edu.endYear}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Work Experience Section */}
         {profileData?.workExperience && profileData.workExperience.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-6 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
-                <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
-              </svg>
-              Work Experience
-            </h2>
-            <div className="space-y-6">
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Work Experience</h2>
+            <div className="space-y-4">
               {profileData.workExperience.map((work, index) => (
-                <div key={index} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-0 last:pb-0">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{work.title || 'Position'}</h3>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {work.startYear || 'N/A'} - {work.endYear || 'Present'}
-                    </span>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-400 mb-2">{work.company || 'Company'}</p>
+                <div
+                  key={index}
+                  className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                >
+                  <h3 className="font-medium text-gray-900 dark:text-white">{work.title}</h3>
+                  <p className="text-gray-600 dark:text-gray-400">{work.company}</p>
+                  <p className="text-gray-500 dark:text-gray-500 text-sm">{work.startYear} - {work.endYear || 'Present'}</p>
                   {work.description && (
-                    <p className="text-gray-700 dark:text-gray-300 text-sm">{work.description}</p>
+                    <p className="text-gray-700 dark:text-gray-300 mt-2">{work.description}</p>
                   )}
                 </div>
               ))}
@@ -320,43 +236,62 @@ const Profile = ({ profileData = {}, currentUser, isDarkMode }) => {
           </div>
         )}
 
-        {/* Education History Section */}
-        {profileData?.education && profileData.education.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-6 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
-              </svg>
-              Education History
-            </h2>
-            <div className="space-y-6">
-              {profileData.education.map((edu, index) => (
-                <div key={index} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-0 last:pb-0">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{edu.degree || 'Degree'}</h3>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {edu.startYear || 'N/A'} - {edu.endYear || 'N/A'}
-                    </span>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-400">{edu.institution || 'Institution'}</p>
+        {/* Publications Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Publications</h2>
+          <div className="space-y-4">
+            {profileData?.publications && profileData.publications.length > 0 ? (
+              profileData.publications.map((pub, index) => (
+                <div
+                  key={index}
+                  className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                >
+                  <h3 className="font-medium text-gray-900 dark:text-white">{pub.title}</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">{pub.journal}, {pub.year}</p>
+                  {pub.link && (
+                    <a
+                      href={pub.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:text-blue-600 dark:text-blue-400 text-sm mt-2 inline-block"
+                    >
+                      View Publication →
+                    </a>
+                  )}
                 </div>
-              ))}
-            </div>
+              ))
+            ) : (
+              <p className="text-gray-600 dark:text-gray-400">No publications listed</p>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Connect button at bottom */}
-        <div className="flex justify-center mb-8">
-          <button className="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center font-medium">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-            </svg>
-            Connect
-          </button>
+        {/* Certifications Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Certifications</h2>
+          <div className="space-y-4">
+            {profileData?.certifications && profileData.certifications.length > 0 ? (
+              profileData.certifications.map((cert, index) => (
+                <div
+                  key={index}
+                  className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                >
+                  <h3 className="font-medium text-gray-900 dark:text-white">{cert.name}</h3>
+                  <p className="text-gray-600 dark:text-gray-400">{cert.issuer}</p>
+                  <p className="text-gray-500 dark:text-gray-500 text-sm">{cert.year}</p>
+                  {cert.description && (
+                    <p className="text-gray-700 dark:text-gray-300 mt-2">{cert.description}</p>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-600 dark:text-gray-400">No certifications listed</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default Profile;
+export default Profile; 

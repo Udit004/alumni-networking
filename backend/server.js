@@ -32,7 +32,7 @@ const firestoreNotificationRoutes = require('./routes/firestoreNotifications');
 const announcementRoutes = require('./routes/announcementRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 5000; // Changed to 5001 to avoid conflict
+const PORT = 5000; // Use port 5000 explicitly
 const HOST = "0.0.0.0";
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -202,39 +202,12 @@ app.use((err, req, res, next) => {
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => {
         console.log("✅ Connected to MongoDB Atlas");
-
-        // Try to start the server on the specified port
-        const server = app.listen(PORT, HOST, () => {
+        app.listen(PORT, HOST, () => {
             console.log(`🚀 Server running at http://localhost:${PORT}`);
             // Log available routes
             console.log("\n✅ Available Routes:");
             const expressListRoutes = require("express-list-routes");
             expressListRoutes(app);
-        }).on('error', (err) => {
-            // If the port is in use, try another port
-            if (err.code === 'EADDRINUSE') {
-                console.log(`Port ${PORT} is already in use, trying port 5003...`);
-                app.listen(5003, HOST, () => {
-                    console.log(`🚀 Server running at http://localhost:5003`);
-                    console.log("\n✅ Available Routes:");
-                    const expressListRoutes = require("express-list-routes");
-                    expressListRoutes(app);
-                }).on('error', (err2) => {
-                    if (err2.code === 'EADDRINUSE') {
-                        console.log(`Port 5003 is also in use, trying port 5004...`);
-                        app.listen(5004, HOST, () => {
-                            console.log(`🚀 Server running at http://localhost:5004`);
-                            console.log("\n✅ Available Routes:");
-                            const expressListRoutes = require("express-list-routes");
-                            expressListRoutes(app);
-                        });
-                    } else {
-                        console.error("❌ Server Error:", err2);
-                    }
-                });
-            } else {
-                console.error("❌ Server Error:", err);
-            }
         });
     })
     .catch(err => {

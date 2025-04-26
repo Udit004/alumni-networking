@@ -241,31 +241,7 @@ const Navbar = () => {
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-md shadow-lg py-1 z-50">
-                    <Link
-                      to="/profile"
-                      className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
-                      onClick={handleNavClick}
-                    >
-                      Profile
-                    </Link>
-                    {/* {role === 'student' && (
-                      <Link
-                        to="/student-chat"
-                        className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
-                        onClick={handleNavClick}
-                      >
-                        Chat with Teachers
-                      </Link>
-                    )}
-                    {role === 'teacher' && (
-                      <Link
-                        to="/teacher-chat"
-                        className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
-                        onClick={handleNavClick}
-                      >
-                        Chat with Students
-                      </Link>
-                    )} */}
+                    {/* Dashboard link removed as it's already in the main navigation */}
                     <Link
                       to="/about"
                       className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
