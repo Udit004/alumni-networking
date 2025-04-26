@@ -567,59 +567,22 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
     }
   };
 
-  // For backward compatibility
+  // For backward compatibility - only supports accepted and rejected now
   const handleUpdateApplicationStatus = async (application, newStatus) => {
     if (newStatus === 'accepted') {
       return handleAcceptApplication(application);
     } else if (newStatus === 'rejected') {
       return handleRejectApplication(application);
-    }
-
-    try {
-      setProcessingApplication(application._id);
-
-      const token = await user.getIdToken();
-      const response = await fetch(`${API_URL}/api/job-applications/${application._id}/status?firebaseUID=${user.uid}&role=${role}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update application status to ${newStatus}`);
-      }
-
-      // Update application status in state
-      const updatedApplications = applications.map(app =>
-        app._id === application._id ? { ...app, status: newStatus, updatedAt: new Date().toISOString() } : app
-      );
-
-      setApplications(updatedApplications);
-
-      // If showing details, update the selected application
-      if (selectedApplication && selectedApplication._id === application._id) {
-        setSelectedApplication({ ...selectedApplication, status: newStatus, updatedAt: new Date().toISOString() });
-      }
-
-      // Show success message
-      alert(`Application status updated to ${newStatus}.`);
-
-    } catch (error) {
-      console.error(`Error updating application status to ${newStatus}:`, error);
-      alert(`Failed to update application status: ${error.message}`);
-    } finally {
-      setProcessingApplication(null);
+    } else {
+      console.warn(`Status ${newStatus} is no longer supported. Only 'accepted' and 'rejected' are valid.`);
+      alert(`Status ${newStatus} is no longer supported. Only 'accepted' and 'rejected' are valid.`);
     }
   };
 
   // Application statistics
   const pendingApplications = applications.filter(app => app.status === 'pending');
-  const shortlistedApplications = applications.filter(app => app.status === 'shortlisted');
+  const acceptedApplications = applications.filter(app => app.status === 'accepted');
   const rejectedApplications = applications.filter(app => app.status === 'rejected');
-  const hiredApplications = applications.filter(app => app.status === 'hired');
 
   const filteredJobs = jobs.filter((job) => {
     // Search filter
@@ -1102,14 +1065,11 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                 <div className="px-3 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg text-sm">
                   Pending: {pendingApplications.length}
                 </div>
-                <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-lg text-sm">
-                  Shortlisted: {shortlistedApplications.length}
+                <div className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-sm">
+                  Accepted: {acceptedApplications.length}
                 </div>
                 <div className="px-3 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg text-sm">
                   Rejected: {rejectedApplications.length}
-                </div>
-                <div className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-sm">
-                  Hired: {hiredApplications.length}
                 </div>
               </div>
             </div>
@@ -1156,9 +1116,7 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                         <span className={`px-3 py-1 rounded-full text-xs ${
                           application.status === 'pending'
                             ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
-                            : application.status === 'shortlisted'
-                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
-                            : application.status === 'hired'
+                            : application.status === 'accepted'
                             ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                             : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                         }`}>
@@ -1195,25 +1153,7 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                         </>
                       )}
 
-                      {application.status === 'shortlisted' && (
-                        <>
-                          <button
-                            onClick={() => handleUpdateApplicationStatus(application, 'hired')}
-                            disabled={processingApplication === application._id}
-                            className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {processingApplication === application._id ? 'Processing...' : 'Hire'}
-                          </button>
 
-                          <button
-                            onClick={() => handleRejectApplication(application)}
-                            disabled={processingApplication === application._id}
-                            className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {processingApplication === application._id ? 'Processing...' : 'Reject'}
-                          </button>
-                        </>
-                      )}
                     </div>
                   </div>
                 ))}
@@ -1246,9 +1186,7 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                     <span className={`px-3 py-1 rounded-full text-xs ${
                       selectedApplication.status === 'pending'
                         ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
-                        : selectedApplication.status === 'shortlisted'
-                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
-                        : selectedApplication.status === 'hired'
+                        : selectedApplication.status === 'accepted'
                         ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                         : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                     }`}>
@@ -1372,31 +1310,7 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                     </div>
                   )}
 
-                  {selectedApplication.status === 'shortlisted' && (
-                    <div className="flex gap-3 mt-6">
-                      <button
-                        onClick={() => {
-                          handleUpdateApplicationStatus(selectedApplication, 'hired');
-                          setShowApplicationDetails(false);
-                        }}
-                        disabled={processingApplication === selectedApplication._id}
-                        className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {processingApplication === selectedApplication._id ? 'Processing...' : 'Hire Candidate'}
-                      </button>
 
-                      <button
-                        onClick={() => {
-                          handleRejectApplication(selectedApplication);
-                          setShowApplicationDetails(false);
-                        }}
-                        disabled={processingApplication === selectedApplication._id}
-                        className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {processingApplication === selectedApplication._id ? 'Processing...' : 'Reject Application'}
-                      </button>
-                    </div>
-                  )}
 
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <button

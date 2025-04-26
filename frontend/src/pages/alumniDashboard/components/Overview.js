@@ -35,7 +35,7 @@ const Overview = ({
               onClick={() => navigate('/directory')}
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
-              Browse Alumni Directory
+              Browse Directory
             </button>
           </div>
         </div>

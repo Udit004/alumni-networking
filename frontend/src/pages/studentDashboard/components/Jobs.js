@@ -213,7 +213,7 @@ const Jobs = ({ isDarkMode }) => {
   };
 
   // Check if a job is expired based on application deadline
-  const isJobExpired = (job) => {
+  const isJobExpired = useCallback((job) => {
     if (!job || !job.applicationDeadline) return false;
 
     const deadline = new Date(job.applicationDeadline);
@@ -221,7 +221,7 @@ const Jobs = ({ isDarkMode }) => {
     today.setHours(0, 0, 0, 0);
 
     return deadline < today;
-  };
+  }, []);
 
   // Separate jobs that user has applied for
   const appliedJobs = useMemo(() => {
@@ -247,7 +247,47 @@ const Jobs = ({ isDarkMode }) => {
     });
 
     console.log('Final applied jobs:', applied);
-    return applied;
+
+    // Create a map of existing job IDs for faster lookup
+    const existingJobIdsMap = {};
+    applied.forEach(job => {
+      existingJobIdsMap[job._id.toString()] = true;
+    });
+
+    // Create placeholder jobs for applications that don't have matching jobs
+    // This ensures the count matches between "Applied Jobs" and "My Job Applications"
+    const placeholderJobs = [];
+
+    // Process each application
+    applications.forEach(app => {
+      const appJobId = typeof app.jobId === 'object' ? app.jobId?._id : app.jobId;
+      if (!appJobId) return;
+
+      const appJobIdStr = appJobId.toString();
+
+      // If this job ID isn't in our applied jobs list, create a placeholder
+      if (!existingJobIdsMap[appJobIdStr]) {
+        console.log(`Creating placeholder for job ID: ${appJobIdStr}`);
+        placeholderJobs.push({
+          _id: appJobId,
+          title: app.jobTitle || 'Job Application',
+          company: app.company || 'Unknown Company',
+          location: app.location || 'Not specified',
+          type: 'Not specified',
+          description: 'This job may no longer be available',
+          applicationDeadline: app.appliedAt,
+          status: app.status || 'pending',
+          createdAt: app.appliedAt,
+          isPlaceholder: true,
+          applicationId: app._id // Store the application ID for reference
+        });
+      }
+    });
+
+    console.log(`Created ${placeholderJobs.length} placeholder jobs`);
+    console.log('Total applied jobs (including placeholders):', applied.length + placeholderJobs.length);
+
+    return [...applied, ...placeholderJobs];
   }, [filteredJobs, applications]);
 
   // Suggested jobs (those the user hasn't applied for and aren't expired)
@@ -260,6 +300,10 @@ const Jobs = ({ isDarkMode }) => {
     console.log('Suggested jobs:', suggested);
     return suggested;
   }, [filteredJobs, hasApplied, isJobExpired]);
+
+  // Debug logs for counts
+  console.log('Jobs Component - Applications Count:', applications.length);
+  console.log('Jobs Component - Applied Jobs Count:', appliedJobs.length);
 
   return (
     <div className="jobs-section">
@@ -329,7 +373,7 @@ const Jobs = ({ isDarkMode }) => {
                     const { text: statusText, bgColor, textColor } = getStatusDisplay(status);
 
                     return (
-                      <div key={job._id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-5 hover:shadow-md transition-shadow border-l-4 border-yellow-500">
+                      <div key={job._id} className={`bg-gray-50 dark:bg-gray-700 rounded-lg p-5 hover:shadow-md transition-shadow border-l-4 ${job.isPlaceholder ? 'border-gray-400' : 'border-yellow-500'}`}>
                         <div className="flex justify-between items-start">
                           <div>
                             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">{job.title}</h3>
@@ -341,6 +385,11 @@ const Jobs = ({ isDarkMode }) => {
                               {job.salary && (
                                 <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs">
                                   {job.salary}
+                                </span>
+                              )}
+                              {job.isPlaceholder && (
+                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-full text-xs">
+                                  Archived
                                 </span>
                               )}
                             </div>
