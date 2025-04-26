@@ -5,6 +5,7 @@ const User = require("../models/user");
 const mongoose = require("mongoose");
 const { auth } = require('../middleware/auth');
 const admin = require('firebase-admin');
+const { insertDocument } = require('../utils/directDbInsert');
 
 // Verify User model is loaded correctly
 console.log("📋 User model loaded:", {
@@ -428,6 +429,57 @@ router.post("/:eventId/register-with-form", async (req, res) => {
         event.registeredUsers.push({ userId: user._id });
         await event.save();
 
+        // 📝 Step 6.5: Create activity for the event registration using direct DB insert
+        try {
+            console.log('Creating event registration activity for user:', user._id.toString());
+            console.log('Event details:', {
+                id: event._id,
+                title: event.title,
+                date: event.date
+            });
+
+            // Create activity data
+            const activityData = {
+                userId: user._id.toString(),
+                type: 'event_registration',
+                title: 'Registered for an event',
+                description: `You registered for ${event.title}`,
+                relatedItemId: event._id.toString(),
+                relatedItemType: 'event',
+                relatedItemName: event.title,
+                isRead: false,
+                createdAt: new Date()
+            };
+
+            // Insert directly into the activities collection
+            const result = await insertDocument('activities', activityData);
+
+            if (result.success) {
+                console.log('✅ Event registration activity created successfully via direct insert:', result.id);
+            } else {
+                console.error('❌ Failed to create event registration activity:', result.message);
+
+                // Try a more direct approach as fallback
+                try {
+                    const db = mongoose.connection.db;
+                    const collection = db.collection('activities');
+                    const insertResult = await collection.insertOne(activityData);
+
+                    if (insertResult.acknowledged) {
+                        console.log('✅ Event registration activity created successfully via raw MongoDB:', insertResult.insertedId);
+                    } else {
+                        console.error('❌ Failed to create activity via raw MongoDB');
+                    }
+                } catch (mongoError) {
+                    console.error('❌ Error with raw MongoDB insert:', mongoError);
+                }
+            }
+        } catch (activityError) {
+            console.error('❌ Error creating event registration activity:', activityError);
+            console.error('❌ Error stack:', activityError.stack);
+            // Continue with the response even if activity creation fails
+        }
+
         // 🔄 Step 7: Get updated event and manually populate
         const updatedEvent = await Event.findById(eventId);
         const eventObj = updatedEvent.toObject();
@@ -537,6 +589,57 @@ router.post("/:eventId/register", async (req, res) => {
         // 🎟 Step 5: Register the user
         event.registeredUsers.push({ userId: user._id });
         await event.save();
+
+        // 📝 Step 5.5: Create activity for the event registration using direct DB insert
+        try {
+            console.log('Creating event registration activity for user:', user._id.toString());
+            console.log('Event details:', {
+                id: event._id,
+                title: event.title,
+                date: event.date
+            });
+
+            // Create activity data
+            const activityData = {
+                userId: user._id.toString(),
+                type: 'event_registration',
+                title: 'Registered for an event',
+                description: `You registered for ${event.title}`,
+                relatedItemId: event._id.toString(),
+                relatedItemType: 'event',
+                relatedItemName: event.title,
+                isRead: false,
+                createdAt: new Date()
+            };
+
+            // Insert directly into the activities collection
+            const result = await insertDocument('activities', activityData);
+
+            if (result.success) {
+                console.log('✅ Event registration activity created successfully via direct insert:', result.id);
+            } else {
+                console.error('❌ Failed to create event registration activity:', result.message);
+
+                // Try a more direct approach as fallback
+                try {
+                    const db = mongoose.connection.db;
+                    const collection = db.collection('activities');
+                    const insertResult = await collection.insertOne(activityData);
+
+                    if (insertResult.acknowledged) {
+                        console.log('✅ Event registration activity created successfully via raw MongoDB:', insertResult.insertedId);
+                    } else {
+                        console.error('❌ Failed to create activity via raw MongoDB');
+                    }
+                } catch (mongoError) {
+                    console.error('❌ Error with raw MongoDB insert:', mongoError);
+                }
+            }
+        } catch (activityError) {
+            console.error('❌ Error creating event registration activity:', activityError);
+            console.error('❌ Error stack:', activityError.stack);
+            // Continue with the response even if activity creation fails
+        }
 
         // 🔄 Step 6: Get updated event and manually populate
         const updatedEvent = await Event.findById(eventId);
@@ -748,7 +851,7 @@ router.get("/user/:userId", async (req, res) => {
 });
 
 // 📌 Special endpoint for Firebase users that completely avoids ObjectId casting issues
-router.get("/firebase", async (req, res) => {
+router.get("/firebase", async (_, res) => {
     try {
         console.log("📱 Firebase-specific events endpoint called");
 

@@ -16,6 +16,7 @@ require("./models/EventRegistration");
 require("./models/Course");
 require("./models/CourseApplication");
 require("./models/Announcement");
+require("./models/Activity");
 
 const eventRoutes = require("./routes/eventRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -26,10 +27,11 @@ const mentorshipRoutes = require('./routes/mentorships');
 const jobApplicationRoutes = require('./routes/jobApplicationRoutes');
 const mentorshipApplicationRoutes = require('./routes/mentorshipApplicationRoutes');
 // Chat routes removed
-const courseRoutes = require('./routes/courses');
+const courseRoutes = require('./routes/coursesNew');
 const courseApplicationRoutes = require('./routes/courseApplications');
 const firestoreNotificationRoutes = require('./routes/firestoreNotifications');
 const announcementRoutes = require('./routes/announcementRoutes');
+const activityRoutes = require('./routes/activityRoutes');
 
 const app = express();
 const PORT = 5000; // Use port 5000 explicitly
@@ -85,6 +87,7 @@ app.use('/api/mentorship-applications', mentorshipApplicationRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/course-applications', courseApplicationRoutes);
 app.use('/api/notifications', firestoreNotificationRoutes);
+app.use('/api/activities', activityRoutes);
 // Register announcement routes
 app.use('/', announcementRoutes);
 // Log the registered routes

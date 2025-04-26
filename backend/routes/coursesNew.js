@@ -68,14 +68,30 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-// Get all courses
-router.get('/', async (req, res) => {
+// ===== SPECIAL ROUTES (MUST BE DEFINED BEFORE GENERIC ROUTES) =====
+
+// Get all courses for the authenticated teacher
+router.get('/my-courses', authenticateToken, async (req, res) => {
   try {
-    const courses = await Course.find();
-    res.json({ success: true, courses });
+    const teacherId = req.user.uid;
+    
+    // Verify user is a teacher
+    if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only teachers can access their created courses'
+      });
+    }
+    
+    const courses = await Course.find({ teacherId });
+    res.json({ success: true, data: courses });
   } catch (error) {
-    console.error('Error fetching courses:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch courses', error: error.message });
+    console.error('Error fetching teacher courses:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch teacher courses',
+      error: error.message
+    });
   }
 });
 
@@ -97,31 +113,6 @@ router.get('/teacher/:teacherId', authenticateToken, async (req, res) => {
   }
 });
 
-// Get all courses for the authenticated teacher
-router.get('/teacher-courses', authenticateToken, async (req, res) => {
-  try {
-    const teacherId = req.user.uid;
-
-    // Verify user is a teacher
-    if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only teachers can access their created courses'
-      });
-    }
-
-    const courses = await Course.find({ teacherId });
-    res.json({ success: true, data: courses });
-  } catch (error) {
-    console.error('Error fetching teacher courses:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch teacher courses',
-      error: error.message
-    });
-  }
-});
-
 // Get courses by student ID (enrolled courses)
 router.get('/student/:studentId', authenticateToken, async (req, res) => {
   try {
@@ -139,6 +130,94 @@ router.get('/student/:studentId', authenticateToken, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch student courses', error: error.message });
   }
 });
+
+// Get all courses
+router.get('/', async (req, res) => {
+  try {
+    const courses = await Course.find();
+    res.json({ success: true, courses });
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch courses', error: error.message });
+  }
+});
+
+// Create a new course
+router.post('/', authenticateToken, async (req, res) => {
+  try {
+    console.log('Creating course with user role:', req.user.role);
+
+    // For development purposes, allow any authenticated user to create courses
+    // In production, uncomment the role check below
+    /*
+    if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only teachers can create courses' });
+    }
+    */
+
+    // Set the teacher ID and name from the authenticated user
+    const courseData = {
+      ...req.body,
+      teacherId: req.user.uid,
+      teacherName: req.body.teacherName || req.user.name || 'Teacher'
+    };
+
+    console.log('Course data:', courseData);
+
+    const course = new Course(courseData);
+    await course.save();
+
+    // Send notification to all students about the new course using Firestore
+    try {
+      // Find all students
+      const User = require('../models/user');
+      const students = await User.find({ role: 'student' });
+      console.log(`Found ${students.length} students to notify about the new course`);
+
+      // Send notification to each student
+      for (const student of students) {
+        try {
+          if (!student.firebaseUID) {
+            console.log(`Skipping notification for student ${student._id} - no Firebase UID`);
+            continue;
+          }
+
+          // Create notification data
+          const notificationData = {
+            userId: student.firebaseUID,
+            title: 'New Course Available',
+            message: `A new course "${course.title}" has been created by ${course.teacherName}. Check it out!`,
+            type: 'course',
+            itemId: course._id.toString(),
+            createdBy: course.teacherId,
+            read: false,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: new Date().toISOString()
+          };
+
+          // Add to Firestore
+          const docRef = await admin.firestore().collection('notifications').add(notificationData);
+          console.log(`Notification created for student ${student.firebaseUID} with ID: ${docRef.id}`);
+        } catch (studentError) {
+          console.error(`Error sending notification to student ${student.firebaseUID}:`, studentError);
+          // Continue with next student even if one fails
+        }
+      }
+
+      console.log(`Notifications sent to all students about the new course: ${course.title}`);
+    } catch (notificationError) {
+      console.error('Error sending notifications:', notificationError);
+      // Continue even if notification fails
+    }
+
+    res.status(201).json({ success: true, course });
+  } catch (error) {
+    console.error('Error creating course:', error);
+    res.status(500).json({ success: false, message: 'Failed to create course', error: error.message });
+  }
+});
+
+// ===== COURSE-SPECIFIC ROUTES =====
 
 // Get students enrolled in a specific course (teacher only)
 router.get('/:id/students', authenticateToken, async (req, res) => {
@@ -240,147 +319,6 @@ router.get('/:id/students', authenticateToken, async (req, res) => {
       message: 'Failed to fetch course students',
       error: error.message
     });
-  }
-});
-
-// Get a specific course by ID
-router.get('/:id', async (req, res) => {
-  try {
-    const course = await Course.findById(req.params.id);
-    if (!course) {
-      return res.status(404).json({ success: false, message: 'Course not found' });
-    }
-    res.json({ success: true, course });
-  } catch (error) {
-    console.error('Error fetching course:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch course', error: error.message });
-  }
-});
-
-// Create a new course
-router.post('/', authenticateToken, async (req, res) => {
-  try {
-    console.log('Creating course with user role:', req.user.role);
-
-    // For development purposes, allow any authenticated user to create courses
-    // In production, uncomment the role check below
-    /*
-    if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Only teachers can create courses' });
-    }
-    */
-
-    // Set the teacher ID and name from the authenticated user
-    const courseData = {
-      ...req.body,
-      teacherId: req.user.uid,
-      teacherName: req.body.teacherName || req.user.name || 'Teacher'
-    };
-
-    console.log('Course data:', courseData);
-
-    const course = new Course(courseData);
-    await course.save();
-
-    // Send notification to all students about the new course using Firestore
-    try {
-      // Find all students
-      const User = require('../models/user');
-      const students = await User.find({ role: 'student' });
-      console.log(`Found ${students.length} students to notify about the new course`);
-
-      // Send notification to each student
-      for (const student of students) {
-        try {
-          if (!student.firebaseUID) {
-            console.log(`Skipping notification for student ${student._id} - no Firebase UID`);
-            continue;
-          }
-
-          // Create notification data
-          const notificationData = {
-            userId: student.firebaseUID,
-            title: 'New Course Available',
-            message: `A new course "${course.title}" has been created by ${course.teacherName}. Check it out!`,
-            type: 'course',
-            itemId: course._id.toString(),
-            createdBy: course.teacherId,
-            read: false,
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            createdAt: new Date().toISOString()
-          };
-
-          // Add to Firestore
-          const docRef = await admin.firestore().collection('notifications').add(notificationData);
-          console.log(`Notification created for student ${student.firebaseUID} with ID: ${docRef.id}`);
-        } catch (studentError) {
-          console.error(`Error sending notification to student ${student.firebaseUID}:`, studentError);
-          // Continue with next student even if one fails
-        }
-      }
-
-      console.log(`Notifications sent to all students about the new course: ${course.title}`);
-    } catch (notificationError) {
-      console.error('Error sending notifications:', notificationError);
-      // Continue even if notification fails
-    }
-
-    res.status(201).json({ success: true, course });
-  } catch (error) {
-    console.error('Error creating course:', error);
-    res.status(500).json({ success: false, message: 'Failed to create course', error: error.message });
-  }
-});
-
-// Update a course
-router.put('/:id', authenticateToken, async (req, res) => {
-  try {
-    const course = await Course.findById(req.params.id);
-
-    // Check if course exists
-    if (!course) {
-      return res.status(404).json({ success: false, message: 'Course not found' });
-    }
-
-    // Verify the user is the course teacher or an admin
-    if (req.user.uid !== course.teacherId && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Unauthorized to update this course' });
-    }
-
-    // Update the course
-    const updatedCourse = await Course.findByIdAndUpdate(
-      req.params.id,
-      { ...req.body, updatedAt: Date.now() },
-      { new: true, runValidators: true }
-    );
-
-    res.json({ success: true, course: updatedCourse });
-  } catch (error) {
-    console.error('Error updating course:', error);
-    res.status(500).json({ success: false, message: 'Failed to update course', error: error.message });
-  }
-});
-
-// Delete a course
-router.delete('/:id', authenticateToken, async (req, res) => {
-  try {
-    const course = await Course.findById(req.params.id);
-
-    // Check if course exists
-    if (!course) {
-      return res.status(404).json({ success: false, message: 'Course not found' });
-    }
-
-    // Verify the user is the course teacher or an admin
-    if (req.user.uid !== course.teacherId && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Unauthorized to delete this course' });
-    }
-
-    await Course.findByIdAndDelete(req.params.id);
-    res.json({ success: true, message: 'Course deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting course:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete course', error: error.message });
   }
 });
 
@@ -514,6 +452,72 @@ router.delete('/:id/materials/:materialId', authenticateToken, async (req, res) 
   } catch (error) {
     console.error('Error removing course material:', error);
     res.status(500).json({ success: false, message: 'Failed to remove course material', error: error.message });
+  }
+});
+
+// Update a course
+router.put('/:id', authenticateToken, async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+
+    // Check if course exists
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    // Verify the user is the course teacher or an admin
+    if (req.user.uid !== course.teacherId && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Unauthorized to update this course' });
+    }
+
+    // Update the course
+    const updatedCourse = await Course.findByIdAndUpdate(
+      req.params.id,
+      { ...req.body, updatedAt: Date.now() },
+      { new: true, runValidators: true }
+    );
+
+    res.json({ success: true, course: updatedCourse });
+  } catch (error) {
+    console.error('Error updating course:', error);
+    res.status(500).json({ success: false, message: 'Failed to update course', error: error.message });
+  }
+});
+
+// Delete a course
+router.delete('/:id', authenticateToken, async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+
+    // Check if course exists
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    // Verify the user is the course teacher or an admin
+    if (req.user.uid !== course.teacherId && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Unauthorized to delete this course' });
+    }
+
+    await Course.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Course deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting course:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete course', error: error.message });
+  }
+});
+
+// Get a specific course by ID (THIS MUST BE THE LAST ROUTE)
+router.get('/:id', async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+    res.json({ success: true, course });
+  } catch (error) {
+    console.error('Error fetching course:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch course', error: error.message });
   }
 });
 

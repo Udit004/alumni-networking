@@ -1,6 +1,7 @@
 const JobApplication = require('../models/JobApplication');
 const Job = require('../models/Job');
 const mongoose = require('mongoose');
+const { insertDocument } = require('../utils/directDbInsert');
 
 exports.applyForJob = async (req, res) => {
   try {
@@ -16,7 +17,7 @@ exports.applyForJob = async (req, res) => {
     // Check if user has already applied
     const existingApplication = await JobApplication.findOne({
       jobId,
-      userId: req.user._id
+      userId: req.user.id
     });
 
     if (existingApplication) {
@@ -26,7 +27,7 @@ exports.applyForJob = async (req, res) => {
     // Create new application
     const application = new JobApplication({
       jobId,
-      userId: req.user._id,
+      userId: req.user.id,
       name,
       email,
       phone,
@@ -40,6 +41,59 @@ exports.applyForJob = async (req, res) => {
 
     await application.save();
 
+    // Create activity for the job application using direct DB insert
+    try {
+      console.log('Creating job application activity for user:', req.user.id);
+      console.log('User object:', req.user);
+      console.log('Job details:', {
+        id: job._id,
+        title: job.title,
+        company: job.company
+      });
+
+      // Create activity data
+      const activityData = {
+        userId: req.user.id,
+        type: 'job_application',
+        title: 'Applied for a job',
+        description: `You applied for ${job.title} at ${job.company}`,
+        relatedItemId: job._id.toString(),
+        relatedItemType: 'job',
+        relatedItemName: job.title,
+        status: 'pending',
+        isRead: false,
+        createdAt: new Date()
+      };
+
+      // Insert directly into the activities collection
+      const result = await insertDocument('activities', activityData);
+
+      if (result.success) {
+        console.log('Job application activity created successfully via direct insert:', result.id);
+      } else {
+        console.error('Failed to create job application activity:', result.message);
+
+        // Try a more direct approach as fallback
+        try {
+          const db = mongoose.connection.db;
+          const collection = db.collection('activities');
+          const insertResult = await collection.insertOne(activityData);
+
+          if (insertResult.acknowledged) {
+            console.log('Job application activity created successfully via raw MongoDB:', insertResult.insertedId);
+          } else {
+            console.error('Failed to create activity via raw MongoDB');
+          }
+        } catch (mongoError) {
+          console.error('Error with raw MongoDB insert:', mongoError);
+        }
+      }
+    } catch (activityError) {
+      console.error('Error creating job application activity:', activityError);
+      console.error('Error stack:', activityError.stack);
+      // Continue with the response even if activity creation fails
+    }
+
     res.status(201).json({
       message: 'Application submitted successfully',
       application
@@ -52,7 +106,7 @@ exports.applyForJob = async (req, res) => {
 
 exports.getJobApplications = async (req, res) => {
   try {
-    const applications = await JobApplication.find({ userId: req.user._id })
+    const applications = await JobApplication.find({ userId: req.user.id })
       .populate('jobId')
       .sort({ appliedAt: -1 });
 
@@ -67,7 +121,7 @@ exports.getJobApplication = async (req, res) => {
   try {
     const application = await JobApplication.findOne({
       _id: req.params.id,
-      userId: req.user._id
+      userId: req.user.id
     }).populate('jobId');
 
     if (!application) {

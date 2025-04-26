@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const CourseApplication = require('../models/CourseApplication');
 const Course = require('../models/Course');
 const { auth: authenticateToken } = require('../middleware/auth');
+const { insertDocument } = require('../utils/directDbInsert');
 
 // Submit a new course application
 router.post('/:courseId', authenticateToken, async (req, res) => {
@@ -52,6 +54,61 @@ router.post('/:courseId', authenticateToken, async (req, res) => {
     });
 
     await application.save();
+
+    // Create activity for the course application using direct DB insert
+    try {
+      console.log('Creating course application activity for user:', uid);
+      console.log('Course details:', {
+        id: course._id,
+        title: course.title,
+        createdBy: course.createdBy,
+        createdByName: course.createdByName
+      });
+
+      // Create activity data
+      const activityData = {
+        userId: uid,
+        type: 'course_enrollment',
+        title: 'Applied for a course',
+        description: `You applied for ${course.title}`,
+        relatedItemId: courseId,
+        relatedItemType: 'course',
+        relatedItemName: course.title,
+        relatedUserId: course.createdBy,
+        relatedUserName: course.createdByName || 'Teacher',
+        status: 'pending',
+        isRead: false,
+        createdAt: new Date()
+      };
+
+      // Insert directly into the activities collection
+      const result = await insertDocument('activities', activityData);
+
+      if (result.success) {
+        console.log('Course application activity created successfully via direct insert:', result.id);
+      } else {
+        console.error('Failed to create course application activity:', result.message);
+
+        // Try a more direct approach as fallback
+        try {
+          const db = mongoose.connection.db;
+          const collection = db.collection('activities');
+          const insertResult = await collection.insertOne(activityData);
+
+          if (insertResult.acknowledged) {
+            console.log('Course application activity created successfully via raw MongoDB:', insertResult.insertedId);
+          } else {
+            console.error('Failed to create activity via raw MongoDB');
+          }
+        } catch (mongoError) {
+          console.error('Error with raw MongoDB insert:', mongoError);
+        }
+      }
+    } catch (activityError) {
+      console.error('Error creating course application activity:', activityError);
+      console.error('Error stack:', activityError.stack);
+      // Continue with the response even if activity creation fails
+    }
 
     res.status(201).json({
       success: true,
@@ -147,8 +204,9 @@ router.put('/:applicationId', authenticateToken, async (req, res) => {
     await application.save();
 
     // If approved, add the student to the course
+    let course;
     if (status === 'approved') {
-      const course = await Course.findById(application.courseId);
+      course = await Course.findById(application.courseId);
 
       if (!course) {
         return res.status(404).json({ success: false, message: 'Course not found' });
@@ -168,6 +226,37 @@ router.put('/:applicationId', authenticateToken, async (req, res) => {
 
         await course.save();
       }
+    } else if (!course) {
+      // If not approved, we still need the course for the activity
+      course = await Course.findById(application.courseId);
+    }
+
+    // Create activity for the course application status change
+    try {
+      const Activity = require('../models/Activity');
+      const activityData = {
+        userId: application.studentId,
+        type: 'course_enrollment',
+        title: status === 'approved' ? 'Course application approved' : 'Course application rejected',
+        description: status === 'approved'
+          ? `Your application for ${course?.title || 'the course'} has been approved`
+          : `Your application for ${course?.title || 'the course'} has been rejected`,
+        relatedItemId: application.courseId,
+        relatedItemType: 'course',
+        relatedItemName: course?.title || 'Course',
+        relatedUserId: uid,
+        relatedUserName: 'Teacher',
+        status: status,
+        isRead: false,
+        createdAt: new Date()
+      };
+
+      const activity = new Activity(activityData);
+      await activity.save();
+      console.log('Created course application status change activity:', activity._id);
+    } catch (activityError) {
+      console.error('Error creating course application status change activity:', activityError);
+      // Continue with the response even if activity creation fails
     }
 
     res.json({
