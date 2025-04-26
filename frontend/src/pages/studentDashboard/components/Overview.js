@@ -6,8 +6,11 @@ const Overview = ({ connections = [], courseCount = 0, isDarkMode, navigate, job
   const teacherConnections = connections?.filter(conn => conn.role === "teacher") || [];
   const studentConnections = connections?.filter(conn => conn.role === "student") || [];
 
-  // Debug log for job applications count
+  // Debug logs for all counters
   console.log('Overview - Job Applications Count:', jobApplicationsCount);
+  console.log('Overview - Mentorship Applications Count:', mentorshipsCount);
+  console.log('Overview - Course Count:', courseCount);
+  console.log('Overview - Upcoming Events Count:', upcomingEventsCount);
 
   return (
     <div>
@@ -42,7 +45,7 @@ const Overview = ({ connections = [], courseCount = 0, isDarkMode, navigate, job
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-4">🎓</div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Mentorship Courses</h3>
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Mentorships Applied</h3>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{mentorshipsCount}</p>
             </div>
           </div>

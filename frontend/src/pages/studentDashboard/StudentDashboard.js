@@ -365,9 +365,12 @@ const StudentDashboard = () => {
       try {
         // Fetch job applications count
         try {
+          console.log('Fetching job applications count...');
           const token = await currentUser.getIdToken();
+
+          // Try to get applications from the user-specific endpoint
           const jobAppResponse = await axios.get(
-            `${API_URLS.main}/job-applications`,
+            `${API_URLS.main}/api/job-applications/user/${currentUser.uid}`,
             {
               headers: {
                 'Authorization': `Bearer ${token}`,
@@ -377,56 +380,139 @@ const StudentDashboard = () => {
             }
           );
 
-          let applicationData = [];
+          console.log('Job applications response:', jobAppResponse.data);
+
+          // Extract applications data
+          let userApplications = [];
           if (jobAppResponse.data && jobAppResponse.data.success) {
             if (Array.isArray(jobAppResponse.data.data)) {
-              applicationData = jobAppResponse.data.data;
+              userApplications = jobAppResponse.data.data;
             } else if (Array.isArray(jobAppResponse.data.applications)) {
-              applicationData = jobAppResponse.data.applications;
+              userApplications = jobAppResponse.data.applications;
             }
           } else if (Array.isArray(jobAppResponse.data)) {
-            applicationData = jobAppResponse.data;
+            userApplications = jobAppResponse.data;
           }
 
-          // Filter for current user's applications
-          const userApplications = applicationData.filter(app => app.userId === currentUser.uid);
-
-          // Get unique job IDs from applications to match the "Applied Jobs" count
-          const uniqueJobIds = new Set();
-          userApplications.forEach(app => {
-            const jobId = typeof app.jobId === 'object' ? app.jobId?._id : app.jobId;
-            if (jobId) {
-              uniqueJobIds.add(jobId.toString());
-            }
-          });
-
-          // Set the count to match what will be shown in the "Applied Jobs" section
+          // Set the count to the total number of job applications
           const count = userApplications.length;
-          console.log(`Setting job applications count to ${count}`);
+          console.log(`Setting job applications count to ${count} (total applications)`);
           setJobApplicationsCount(count);
         } catch (jobError) {
           console.error("Error fetching job applications:", jobError);
-          // Set default value if API fails
-          setJobApplicationsCount(0);
+
+          // Try fallback to the general endpoint
+          try {
+            console.log('Using fallback for job applications...');
+            const token = await currentUser.getIdToken();
+            const fallbackResponse = await axios.get(
+              `${API_URLS.main}/api/job-applications`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                timeout: DEFAULT_TIMEOUT
+              }
+            );
+
+            let allApplications = [];
+            if (fallbackResponse.data && fallbackResponse.data.success) {
+              if (Array.isArray(fallbackResponse.data.data)) {
+                allApplications = fallbackResponse.data.data;
+              } else if (Array.isArray(fallbackResponse.data.applications)) {
+                allApplications = fallbackResponse.data.applications;
+              }
+            } else if (Array.isArray(fallbackResponse.data)) {
+              allApplications = fallbackResponse.data;
+            }
+
+            // Filter for current user's applications
+            const userApplications = allApplications.filter(app => app.userId === currentUser.uid);
+            const count = userApplications.length;
+            console.log(`Fallback: Setting job applications count to ${count}`);
+            setJobApplicationsCount(count);
+          } catch (fallbackError) {
+            console.error("Error in fallback for job applications:", fallbackError);
+            // Set default value if both attempts fail
+            setJobApplicationsCount(0);
+          }
         }
 
-        // Fetch mentorships count
+        // Fetch mentorships count - we want to show total applications, not just enrolled
         try {
-          const mentorshipResponse = await axios.get(
-            `${API_URLS.main}/mentorships/user/${currentUser.uid}`,
-            { timeout: DEFAULT_TIMEOUT }
+          console.log('Fetching mentorship applications count...');
+          const token = await currentUser.getIdToken();
+
+          // Fetch mentorship applications for the specific user
+          const mentorshipAppResponse = await axios.get(
+            `${API_URLS.main}/api/mentorship-applications/user/${currentUser.uid}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              timeout: DEFAULT_TIMEOUT
+            }
           );
 
-          const userMentorships = mentorshipResponse.data.success ?
-            (mentorshipResponse.data.mentorships ||
-            mentorshipResponse.data.enrolledMentorships ||
-            []) : [];
+          console.log('Mentorship applications response:', mentorshipAppResponse.data);
 
-          setMentorshipsCount(Array.isArray(userMentorships) ? userMentorships.length : 0);
+          // Extract applications data
+          let userMentorshipApplications = [];
+          if (mentorshipAppResponse.data && mentorshipAppResponse.data.success) {
+            if (Array.isArray(mentorshipAppResponse.data.data)) {
+              userMentorshipApplications = mentorshipAppResponse.data.data;
+            } else if (Array.isArray(mentorshipAppResponse.data.applications)) {
+              userMentorshipApplications = mentorshipAppResponse.data.applications;
+            }
+          } else if (Array.isArray(mentorshipAppResponse.data)) {
+            userMentorshipApplications = mentorshipAppResponse.data;
+          }
+
+          // Set the count to match what will be shown in the "My Applications" section
+          const count = userMentorshipApplications.length;
+          console.log(`Setting mentorship applications count to ${count}`);
+          setMentorshipsCount(count);
         } catch (mentorshipError) {
-          console.error("Error fetching mentorships:", mentorshipError);
-          // Set default value if API fails
-          setMentorshipsCount(0);
+          console.error("Error fetching mentorship applications:", mentorshipError);
+
+          // Try fallback to the general endpoint
+          try {
+            console.log('Using fallback for mentorship applications...');
+            const token = await currentUser.getIdToken();
+            const fallbackResponse = await axios.get(
+              `${API_URLS.main}/api/mentorship-applications`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                timeout: DEFAULT_TIMEOUT
+              }
+            );
+
+            let allApplications = [];
+            if (fallbackResponse.data && fallbackResponse.data.success) {
+              if (Array.isArray(fallbackResponse.data.data)) {
+                allApplications = fallbackResponse.data.data;
+              } else if (Array.isArray(fallbackResponse.data.applications)) {
+                allApplications = fallbackResponse.data.applications;
+              }
+            } else if (Array.isArray(fallbackResponse.data)) {
+              allApplications = fallbackResponse.data;
+            }
+
+            // Filter for current user's applications
+            const userApplications = allApplications.filter(app => app.userId === currentUser.uid);
+            const count = userApplications.length;
+            console.log(`Fallback: Setting mentorship applications count to ${count}`);
+            setMentorshipsCount(count);
+          } catch (fallbackError) {
+            console.error("Error in fallback for mentorship applications:", fallbackError);
+            // Set default value if both attempts fail
+            setMentorshipsCount(0);
+          }
         }
 
         // Fetch enrolled courses count
