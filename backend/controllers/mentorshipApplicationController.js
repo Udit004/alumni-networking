@@ -1,6 +1,7 @@
 const MentorshipApplication = require('../models/MentorshipApplication');
 const Mentorship = require('../models/Mentorship');
 const mongoose = require('mongoose');
+const { insertDocument } = require('../utils/directDbInsert');
 
 // Direct MongoDB insertion function
 async function createMentorshipApplicationDirectly(applicationData) {
@@ -8,11 +9,11 @@ async function createMentorshipApplicationDirectly(applicationData) {
     // Get direct access to the collection using the raw MongoDB driver
     const db = mongoose.connection.db;
     const collection = db.collection('mentorshipapplications');
-    
+
     // Insert document directly
     const result = await collection.insertOne(applicationData);
     console.log('Direct MongoDB insert result:', result);
-    
+
     if (result.acknowledged) {
       return {
         success: true,
@@ -43,7 +44,7 @@ exports.applyForMentorship = async (req, res) => {
     console.log('Request body:', req.body);
     console.log('Request params:', req.params);
     console.log('Request query:', req.query);
-    
+
     // Create application data with guaranteed field values
     const applicationData = {
       mentorshipId: req.body.mentorshipId || req.params.mentorshipId,
@@ -61,13 +62,70 @@ exports.applyForMentorship = async (req, res) => {
       status: "pending",
       appliedAt: new Date()
     };
-    
+
     console.log('Using application data:', applicationData);
-    
+
     // Insert directly into MongoDB
     const result = await createMentorshipApplicationDirectly(applicationData);
-    
+
     if (result.success) {
+      // Create activity for the mentorship application using direct DB insert
+      try {
+        console.log('Creating mentorship application activity for user:', applicationData.userId);
+
+        // Get the mentorship details
+        const mentorship = await Mentorship.findById(applicationData.mentorshipId);
+        console.log('Mentorship details:', mentorship ? {
+          id: mentorship._id,
+          title: mentorship.title,
+          mentor: mentorship.mentor
+        } : 'Mentorship not found');
+
+        // Create activity data
+        const activityData = {
+          userId: applicationData.userId,
+          type: 'mentorship_application',
+          title: 'Applied for mentorship',
+          description: mentorship
+            ? `You applied for ${mentorship.title}`
+            : 'You applied for a mentorship program',
+          relatedItemId: applicationData.mentorshipId,
+          relatedItemType: 'mentorship',
+          relatedItemName: mentorship ? mentorship.title : 'Mentorship Program',
+          status: 'pending',
+          isRead: false,
+          createdAt: new Date()
+        };
+
+        // Insert directly into the activities collection
+        const result = await insertDocument('activities', activityData);
+
+        if (result.success) {
+          console.log('Mentorship application activity created successfully via direct insert:', result.id);
+        } else {
+          console.error('Failed to create mentorship application activity:', result.message);
+
+          // Try a more direct approach as fallback
+          try {
+            const db = mongoose.connection.db;
+            const collection = db.collection('activities');
+            const insertResult = await collection.insertOne(activityData);
+
+            if (insertResult.acknowledged) {
+              console.log('Mentorship application activity created successfully via raw MongoDB:', insertResult.insertedId);
+            } else {
+              console.error('Failed to create activity via raw MongoDB');
+            }
+          } catch (mongoError) {
+            console.error('Error with raw MongoDB insert:', mongoError);
+          }
+        }
+      } catch (activityError) {
+        console.error('Error creating mentorship application activity:', activityError);
+        console.error('Error stack:', activityError.stack);
+        // Continue with the response even if activity creation fails
+      }
+
       return res.status(201).json({
         success: true,
         message: 'Application submitted successfully',
@@ -94,14 +152,14 @@ exports.applyForMentorship = async (req, res) => {
 exports.getMentorshipApplications = async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     const applications = await MentorshipApplication.find({ userId })
       .populate({
         path: 'mentorshipId',
         select: 'title description mentor startDate endDate'
       })
       .sort({ appliedAt: -1 });
-      
+
     res.status(200).json({
       success: true,
       count: applications.length,
@@ -118,22 +176,22 @@ exports.getMentorshipApplication = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    
+
     const application = await MentorshipApplication.findById(id)
       .populate({
         path: 'mentorshipId',
         select: 'title description mentor startDate endDate'
       });
-      
+
     if (!application) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
-    
+
     // Ensure the application belongs to the requesting user
     if (application.userId.toString() !== userId) {
       return res.status(403).json({ success: false, message: 'Unauthorized access to this application' });
     }
-    
+
     res.status(200).json({
       success: true,
       data: application
@@ -148,12 +206,12 @@ exports.getMentorshipApplication = async (req, res) => {
 exports.getMentorshipApplicationsForMentor = async (req, res) => {
   try {
     const mentorId = req.params.mentorId || req.user.id;
-    
+
     console.log(`Fetching mentorship applications for mentor: ${mentorId}`);
-    
+
     // First, find all mentorships created by this mentor
     const mentorships = await Mentorship.find({ mentor: mentorId });
-    
+
     if (!mentorships || mentorships.length === 0) {
       console.log('No mentorships found for this mentor');
       return res.status(200).json({
@@ -162,10 +220,10 @@ exports.getMentorshipApplicationsForMentor = async (req, res) => {
         data: []
       });
     }
-    
+
     console.log(`Found ${mentorships.length} mentorships created by this mentor`);
     const mentorshipIds = mentorships.map(mentorship => mentorship._id);
-    
+
     // Find all applications for these mentorships
     const applications = await MentorshipApplication.find({
       mentorshipId: { $in: mentorshipIds }
@@ -176,21 +234,21 @@ exports.getMentorshipApplicationsForMentor = async (req, res) => {
       path: 'userId',
       select: 'name email institution'
     }).sort({ appliedAt: -1 });
-    
+
     console.log(`Found ${applications.length} applications for mentorships by this mentor`);
-    
+
     res.status(200).json({
       success: true,
       count: applications.length,
       data: applications
     });
-    
+
   } catch (error) {
     console.error('Error fetching mentorship applications for mentor:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to retrieve applications for mentor', 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve applications for mentor',
+      error: error.message
     });
   }
 };
@@ -201,7 +259,7 @@ exports.getMentorshipApplicationsForUser = async (req, res) => {
     const userId = req.params.userId;
     const firebaseUID = req.query.firebaseUID || userId;
     const excludeTestData = req.query.excludeTestData === 'true';
-    
+
     console.log(`Looking for mentorship applications with:
     - Params userId: ${userId}
     - Query firebaseUID: ${req.query.firebaseUID}
@@ -209,10 +267,10 @@ exports.getMentorshipApplicationsForUser = async (req, res) => {
     - User object id: ${req.user?.id}
     - Exclude test data: ${excludeTestData}
     `);
-    
+
     // MongoDB query tailored to find applications by userId
     console.log('Performing MongoDB query for applications');
-    
+
     // The main query - use an $or to try multiple possible user ID formats
     const query = {
       $or: [
@@ -220,23 +278,23 @@ exports.getMentorshipApplicationsForUser = async (req, res) => {
         { userId: firebaseUID }
       ]
     };
-    
+
     // Special case handling for the known user with specific ID
     if (userId === 'e9AMLzvvdjhL28f534BsWqCixnN2') {
       // Add the specific ID we know exists in the database to our query
       query.$or.push({ userId: "4EOWySj0hHfLOCWFxi3JeJYsqTj2" });
       console.log('Adding special case query for known user ID: 4EOWySj0hHfLOCWFxi3JeJYsqTj2');
     }
-    
+
     console.log('Final query:', JSON.stringify(query));
-    
+
     const applications = await MentorshipApplication.find(query)
     .populate({
       path: 'mentorshipId',
       select: 'title description mentor startDate endDate expectations duration commitment'
     })
     .sort({ appliedAt: -1 });
-      
+
     console.log(`MongoDB query found ${applications.length} applications`);
     if (applications.length > 0) {
       console.log('Sample application found:', {
@@ -246,21 +304,21 @@ exports.getMentorshipApplicationsForUser = async (req, res) => {
         mentorshipId: applications[0].mentorshipId
       });
     }
-    
+
     // Enhance application data with more details if needed
     const enhancedApplications = await Promise.all(applications.map(async (app) => {
       const appData = app.toObject();
-      
+
       // If mentorshipId is a string but hasn't been populated, try to fetch it directly
       if (typeof appData.mentorshipId === 'string') {
         try {
           // First check if the mentorshipId is a valid MongoDB ObjectId
           const isValidObjectId = mongoose.isValidObjectId(appData.mentorshipId);
-          
+
           if (isValidObjectId) {
             const mentorship = await Mentorship.findById(appData.mentorshipId)
               .select('title description mentor startDate endDate expectations duration commitment');
-            
+
             if (mentorship) {
               appData.mentorshipId = mentorship.toObject();
               console.log(`Manually populated mentorship: ${mentorship.title}`);
@@ -271,8 +329,8 @@ exports.getMentorshipApplicationsForUser = async (req, res) => {
           } else {
             // Not a valid ObjectId, just use the string as title
             console.log(`Mentorship ID "${appData.mentorshipId}" is not a valid ObjectId, using as title`);
-            appData.mentorshipTitle = appData.mentorshipId.includes('test') 
-              ? "Test Mentorship Program" 
+            appData.mentorshipTitle = appData.mentorshipId.includes('test')
+              ? "Test Mentorship Program"
               : appData.mentorshipId;
           }
         } catch (err) {
@@ -281,26 +339,26 @@ exports.getMentorshipApplicationsForUser = async (req, res) => {
           appData.mentorshipTitle = "Mentorship Program";
         }
       }
-      
+
       // Add an indicator if this is a test application
-      appData.isTestData = 
-        (appData.name && appData.name.toLowerCase().includes('debug')) || 
+      appData.isTestData =
+        (appData.name && appData.name.toLowerCase().includes('debug')) ||
         (appData.name && appData.name.toLowerCase().includes('test')) ||
-        (appData.email && appData.email.toLowerCase().includes('test')) || 
+        (appData.email && appData.email.toLowerCase().includes('test')) ||
         (appData.mentorshipTitle && appData.mentorshipTitle.toLowerCase().includes('test')) ||
         (appData.email === 'debug-test@example.com') ||
         (typeof appData.mentorshipId === 'string' && appData.mentorshipId.includes('test'));
-      
+
       return appData;
     }));
-    
+
     // Filter out test data if requested
-    const filteredApplications = excludeTestData 
+    const filteredApplications = excludeTestData
       ? enhancedApplications.filter(app => !app.isTestData)
       : enhancedApplications;
-    
+
     console.log(`Returning ${filteredApplications.length} applications (filtered out ${enhancedApplications.length - filteredApplications.length} test applications)`);
-    
+
     // Log real applications for debugging
     if (filteredApplications.length > 0) {
       console.log('Real applications found:');
@@ -316,7 +374,7 @@ exports.getMentorshipApplicationsForUser = async (req, res) => {
     } else {
       console.log('No real applications found for this user');
     }
-    
+
     res.status(200).json({
       success: true,
       count: filteredApplications.length,
@@ -324,10 +382,10 @@ exports.getMentorshipApplicationsForUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching mentorship applications for user:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to retrieve applications for user', 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve applications for user',
+      error: error.message
     });
   }
-}; 
+};

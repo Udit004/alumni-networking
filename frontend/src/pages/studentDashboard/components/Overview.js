@@ -1,4 +1,5 @@
 import React from 'react';
+import ActivityList from '../../../components/ActivityList';
 
 const Overview = ({ connections = [], courseCount = 0, isDarkMode, navigate, jobApplicationsCount = 0, mentorshipsCount = 0, upcomingEventsCount = 0 }) => {
   // Filter connections by role
@@ -286,39 +287,14 @@ const Overview = ({ connections = [], courseCount = 0, isDarkMode, navigate, job
            style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
         <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Recent Activities</h2>
 
-        <ul className="space-y-4">
-          <li className="border-l-4 border-blue-500 pl-4 py-1">
-            <div className="flex justify-between">
-              <p className="text-gray-800 dark:text-white font-medium">New assignment added to Web Development</p>
-              <span className="text-sm text-gray-500 dark:text-gray-400">Today</span>
-            </div>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">Due in 5 days</p>
-          </li>
-
-          <li className="border-l-4 border-green-500 pl-4 py-1">
-            <div className="flex justify-between">
-              <p className="text-gray-800 dark:text-white font-medium">Your assignment was graded</p>
-              <span className="text-sm text-gray-500 dark:text-gray-400">Yesterday</span>
-            </div>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">Data Structures - Score: 92/100</p>
-          </li>
-
-          <li className="border-l-4 border-purple-500 pl-4 py-1">
-            <div className="flex justify-between">
-              <p className="text-gray-800 dark:text-white font-medium">New event: Tech Career Fair</p>
-              <span className="text-sm text-gray-500 dark:text-gray-400">2 days ago</span>
-            </div>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">April 15, 2023 - Campus Main Hall</p>
-          </li>
-
-          <li className="border-l-4 border-yellow-500 pl-4 py-1">
-            <div className="flex justify-between">
-              <p className="text-gray-800 dark:text-white font-medium">Mentor request accepted</p>
-              <span className="text-sm text-gray-500 dark:text-gray-400">3 days ago</span>
-            </div>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">Dr. James Wilson will be your mentor</p>
-          </li>
-        </ul>
+        {/* Use the ActivityList component */}
+        <ActivityList
+          limit={5}
+          showMarkAllRead={true}
+          showEmpty={true}
+          emptyMessage="No recent activities yet. Start exploring courses, jobs, and events!"
+          className="mt-2"
+        />
       </div>
     </div>
   );

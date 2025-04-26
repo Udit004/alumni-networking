@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import axios from 'axios';
 import { API_URLS, DEFAULT_TIMEOUT } from '../../../config/apiConfig';
 import { getTeacherCourses, getUserEvents } from '../../../services/firestoreFallbackService';
+import ActivityList from '../../../components/ActivityList';
 
 const Overview = ({ connections = [], studentConnections = [], alumniConnections = [], teacherConnections = [], isDarkMode, handleRequestConnection }) => {
   const navigate = useNavigate();
@@ -391,6 +392,21 @@ const Overview = ({ connections = [], studentConnections = [], alumniConnections
             )}
           </div>
         )}
+      </div>
+
+      {/* Recent Activities Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6"
+           style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Recent Activities</h2>
+
+        {/* Use the ActivityList component */}
+        <ActivityList
+          limit={5}
+          showMarkAllRead={true}
+          showEmpty={true}
+          emptyMessage="No recent activities yet. Start creating courses and events!"
+          className="mt-2"
+        />
       </div>
 
       {/* Suggested Connections */}

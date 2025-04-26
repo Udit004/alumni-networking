@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const jobApplicationController = require('../controllers/jobApplicationController');
+const jobApplicationController = require('../controllers/jobApplicationControllerWithActivities');
 const { protect } = require('../middleware/authMiddleware');
 
 // Apply for a job
@@ -314,132 +314,12 @@ router.get('/user-test/:userId', (req, res) => {
 router.get('/:id', protect, jobApplicationController.getJobApplication);
 
 // Accept a job application
-router.put('/:id/accept', protect, async (req, res) => {
-  try {
-    const { id } = req.params;
-    console.log(`Accepting job application with ID: ${id}`);
-
-    // Find and update the application using findByIdAndUpdate to bypass validation
-    const JobApplication = require('../models/JobApplication');
-
-    // Use findByIdAndUpdate with { new: true } to return the updated document
-    // and { runValidators: false } to bypass validation
-    const application = await JobApplication.findByIdAndUpdate(
-      id,
-      { status: 'accepted' },
-      {
-        new: true,
-        runValidators: false
-      }
-    );
-
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Application accepted successfully',
-      data: application
-    });
-  } catch (error) {
-    console.error('Error accepting job application:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to accept application',
-      error: error.message
-    });
-  }
-});
+router.put('/:id/accept', protect, jobApplicationController.acceptJobApplication);
 
 // Reject a job application
-router.put('/:id/reject', protect, async (req, res) => {
-  try {
-    const { id } = req.params;
-    console.log(`Rejecting job application with ID: ${id}`);
-
-    // Use findByIdAndUpdate to update only the status field without triggering validation
-    const JobApplication = require('../models/JobApplication');
-    const application = await JobApplication.findByIdAndUpdate(
-      id,
-      { status: 'rejected' },
-      {
-        new: true,        // Return the updated document
-        runValidators: false  // Skip validation
-      }
-    );
-
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Application rejected successfully',
-      data: application
-    });
-  } catch (error) {
-    console.error('Error rejecting job application:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to reject application',
-      error: error.message
-    });
-  }
-});
+router.put('/:id/reject', protect, jobApplicationController.rejectJobApplication);
 
 // Update job application status
-router.put('/:id/status', protect, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!['pending', 'accepted', 'rejected'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid status value. Must be one of: pending, accepted, rejected'
-      });
-    }
-
-    console.log(`Updating job application ${id} status to: ${status}`);
-
-    // Use findByIdAndUpdate to update only the status field without triggering validation
-    const JobApplication = require('../models/JobApplication');
-    const application = await JobApplication.findByIdAndUpdate(
-      id,
-      { status: status },
-      {
-        new: true,        // Return the updated document
-        runValidators: false  // Skip validation
-      }
-    );
-
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: `Application status updated to ${status} successfully`,
-      data: application
-    });
-  } catch (error) {
-    console.error('Error updating job application status:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update application status',
-      error: error.message
-    });
-  }
-});
+router.put('/:id/status', protect, jobApplicationController.updateJobApplicationStatus);
 
 module.exports = router;

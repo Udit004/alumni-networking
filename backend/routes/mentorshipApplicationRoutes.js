@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const mentorshipApplicationController = require('../controllers/mentorshipApplicationController');
+const mentorshipApplicationController = require('../controllers/mentorshipApplicationControllerWithActivities');
 const { protect } = require('../middleware/authMiddleware');
 const mongoose = require('mongoose');
 
@@ -155,82 +155,10 @@ router.get('/user/:userId', protect, (req, res, next) => {
 router.get('/:id', protect, mentorshipApplicationController.getMentorshipApplication);
 
 // Accept a mentorship application
-router.put('/:id/accept', protect, async (req, res) => {
-  try {
-    const { id } = req.params;
-    console.log(`Accepting mentorship application with ID: ${id}`);
-
-    // Use findByIdAndUpdate to update only the status field without triggering validation
-    const MentorshipApplication = require('../models/MentorshipApplication');
-    const application = await MentorshipApplication.findByIdAndUpdate(
-      id,
-      { status: 'accepted' },
-      {
-        new: true,        // Return the updated document
-        runValidators: false  // Skip validation
-      }
-    );
-
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Application accepted successfully',
-      data: application
-    });
-  } catch (error) {
-    console.error('Error accepting mentorship application:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to accept application',
-      error: error.message
-    });
-  }
-});
+router.put('/:id/accept', protect, mentorshipApplicationController.acceptMentorshipApplication);
 
 // Reject a mentorship application
-router.put('/:id/reject', protect, async (req, res) => {
-  try {
-    const { id } = req.params;
-    console.log(`Rejecting mentorship application with ID: ${id}`);
-
-    // Use findByIdAndUpdate to update only the status field without triggering validation
-    const MentorshipApplication = require('../models/MentorshipApplication');
-    const application = await MentorshipApplication.findByIdAndUpdate(
-      id,
-      { status: 'rejected' },
-      {
-        new: true,        // Return the updated document
-        runValidators: false  // Skip validation
-      }
-    );
-
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Application rejected successfully',
-      data: application
-    });
-  } catch (error) {
-    console.error('Error rejecting mentorship application:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to reject application',
-      error: error.message
-    });
-  }
-});
+router.put('/:id/reject', protect, mentorshipApplicationController.rejectMentorshipApplication);
 
 // Create test application and immediately retrieve
 router.post('/debug-create-and-get/:userId', async (req, res) => {
