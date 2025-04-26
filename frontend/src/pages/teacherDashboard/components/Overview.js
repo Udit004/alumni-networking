@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import axios from 'axios';
@@ -15,15 +15,8 @@ const Overview = ({ connections = [], studentConnections = [], alumniConnections
 
   // API endpoints are now defined in the apiConfig.js file
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchCoursesCount();
-      fetchEventsCount();
-    }
-  }, [currentUser]);
-
   // Fetch courses count
-  const fetchCoursesCount = async () => {
+  const fetchCoursesCount = useCallback(async () => {
     if (!currentUser) return;
 
     try {
@@ -73,10 +66,10 @@ const Overview = ({ connections = [], studentConnections = [], alumniConnections
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser]);
 
   // Fetch events count - only count events created by this user
-  const fetchEventsCount = async () => {
+  const fetchEventsCount = useCallback(async () => {
     if (!currentUser) return;
 
     // Log current user info for debugging
@@ -160,7 +153,15 @@ const Overview = ({ connections = [], studentConnections = [], alumniConnections
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser]);
+
+  // Call the fetch functions when the component mounts
+  useEffect(() => {
+    if (currentUser) {
+      fetchCoursesCount();
+      fetchEventsCount();
+    }
+  }, [currentUser, fetchCoursesCount, fetchEventsCount]);
 
   return (
     <div>

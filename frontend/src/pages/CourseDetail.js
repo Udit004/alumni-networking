@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import CourseAnnouncements from '../components/CourseAnnouncements';
+import AnnouncementCreation from '../components/AnnouncementCreation';
 
 const CourseDetail = () => {
   const { id } = useParams();
@@ -397,6 +399,29 @@ const CourseDetail = () => {
             </div>
           )}
 
+          {/* Announcements Section */}
+          {(isEnrolled() || (currentUser && course.teacherId === currentUser.uid)) && (
+            <div className="mb-8">
+              {/* Teacher can create announcements */}
+              {currentUser && course.teacherId === currentUser.uid && (
+                <AnnouncementCreation
+                  courseId={id}
+                  onAnnouncementCreated={() => {
+                    // This will be called after a new announcement is created
+                    // We could refresh the announcements list here if needed
+                  }}
+                />
+              )}
+
+              {/* Display announcements */}
+              <CourseAnnouncements
+                courseId={id}
+                isTeacher={currentUser && course.teacherId === currentUser.uid}
+              />
+            </div>
+          )}
+
+          {/* Classmates Section */}
           {isEnrolled() && course.students && course.students.length > 0 && (
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Classmates</h2>

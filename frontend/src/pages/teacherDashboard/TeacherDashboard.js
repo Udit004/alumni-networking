@@ -4,9 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import './TeacherDashboard.css';
 import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { Overview, Profile, Notifications, Courses, Events, Resources, Students, Settings } from './components';
+import { Overview, Profile, Notifications, Courses, Events, Resources, Students, Settings, Announcements } from './components';
 import TeacherNetwork from './components/Network';
-import TeacherChat from './TeacherChat';
 import { getConnectionRequests, sendConnectionRequest } from '../../services/connectionService';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
 
@@ -138,8 +137,8 @@ const TeacherDashboard = () => {
     },
     { id: 'notifications', label: 'Notifications', icon: '🔔' },
     { id: 'courses', label: 'My Courses', icon: '📚' },
+    { id: 'announcements', label: 'Announcements', icon: '📢' },
     { id: 'events', label: 'Events', icon: '📅' },
-    { id: 'chat', label: 'Chat', icon: '💬' },
     { id: 'resources', label: 'Teaching Resources', icon: '📋' },
     { id: 'students', label: 'My Students', icon: '👨‍🎓' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
@@ -820,8 +819,8 @@ const TeacherDashboard = () => {
             />
           )}
 
-          {activeSection === 'chat' && (
-            <TeacherChat />
+          {activeSection === 'announcements' && (
+            <Announcements isDarkMode={isDarkMode} />
           )}
 
           {activeSection === 'resources' && (

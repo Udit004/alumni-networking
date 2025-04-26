@@ -14,6 +14,7 @@ require("./models/EventRegistration");
 require("./models/Message");
 require("./models/Course");
 require("./models/CourseApplication");
+require("./models/Announcement");
 
 const eventRoutes = require("./routes/eventRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -30,6 +31,7 @@ const courseRoutes = require('./routes/courses');
 const courseApplicationRoutes = require('./routes/courseApplications');
 const notificationRoutes = require('./routes/notifications');
 const testNotificationRoutes = require('./routes/testNotifications');
+const announcementRoutes = require('./routes/announcementRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5001; // Changed to 5001 to avoid conflict
@@ -88,6 +90,15 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/course-applications', courseApplicationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/test-notifications', testNotificationRoutes);
+// Register announcement routes
+app.use('/', announcementRoutes);
+// Log the registered routes
+console.log('Registered announcement routes:');
+announcementRoutes.stack.forEach(r => {
+  if (r.route && r.route.path) {
+    console.log(`${Object.keys(r.route.methods)[0].toUpperCase()} ${r.route.path}`);
+  }
+});
 
 // Direct test endpoint for mentorship applications
 app.post('/api/test-mentorship-application/:mentorshipId', async (req, res) => {

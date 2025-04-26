@@ -8,6 +8,7 @@ import Students from './Students';
 import Settings from './Settings';
 import Network from './Network';
 import CourseApplications from './CourseApplications';
+import Announcements from './Announcements';
 
 export {
   Overview,
@@ -19,5 +20,6 @@ export {
   Students,
   Settings,
   Network,
-  CourseApplications
+  CourseApplications,
+  Announcements
 };

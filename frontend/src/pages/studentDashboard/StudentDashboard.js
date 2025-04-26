@@ -13,7 +13,7 @@ import { fetchEnrolledEventsData } from "./services/eventService";
 import Mentorship from "./components/Mentorship";
 import Jobs from "./components/Jobs";
 import Overview from "./components/Overview";
-import StudentChat from "./StudentChat";
+import Announcements from "./components/Announcements";
 import Courses from "./components/Courses";
 import axios from 'axios';
 import { API_URLS, DEFAULT_TIMEOUT } from '../../config/apiConfig';
@@ -251,9 +251,9 @@ const StudentDashboard = () => {
     { id: 'notifications', label: 'Notifications', icon: '🔔' },
     { id: 'events', label: 'Enrolled Events', icon: '📅' },
     { id: 'courses', label: 'Course Materials', icon: '📚' },
+    { id: 'announcements', label: 'Announcements', icon: '📢' },
     { id: 'mentorship', label: 'Mentorship', icon: '🎓' },
     { id: 'jobs', label: 'Jobs & Internships', icon: '💼' },
-    { id: 'chat', label: 'Chat', icon: '💬' },
     { id: 'network', label: 'Network', icon: '👥' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];
@@ -1166,8 +1166,8 @@ const StudentDashboard = () => {
             </div>
           )}
 
-          {activeSection === 'chat' && (
-            <StudentChat />
+          {activeSection === 'announcements' && (
+            <Announcements isDarkMode={isDarkMode} />
           )}
         </main>
       </div>
