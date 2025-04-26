@@ -162,6 +162,22 @@ const Mentorship = ({ isDarkMode }) => {
     !isMentorshipFull(mentorship)
   );
 
+  // Debug logs for counts
+  console.log('Mentorship Component - Applications Count:', applications.length);
+  console.log('Mentorship Component - Applied Mentorships Count:', appliedMentorships.length);
+  console.log('Mentorship Component - Enrolled Mentorships Count:', enrolledMentorships.length);
+
+  // Log application IDs for debugging
+  console.log('Mentorship Component - Application IDs:', applications.map(app => app._id));
+
+  // Log the status of each application
+  const statusCounts = {
+    pending: applications.filter(app => app.status === 'pending').length,
+    accepted: applications.filter(app => app.status === 'accepted' || app.status === 'approved').length,
+    rejected: applications.filter(app => app.status === 'rejected').length
+  };
+  console.log('Mentorship Component - Application Status Counts:', statusCounts);
+
   return (
     <div className="mentorship-section">
       {/* Search Bar for Mentorships */}

@@ -35,7 +35,7 @@ const Overview = ({
               onClick={() => navigate('/directory')}
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
-              Browse Directory
+              Browsefix the student dashboard mentorship and job counter to work propely like course couter and other and show total no of applied application Directory
             </button>
           </div>
         </div>

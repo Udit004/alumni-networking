@@ -305,6 +305,17 @@ const Jobs = ({ isDarkMode }) => {
   console.log('Jobs Component - Applications Count:', applications.length);
   console.log('Jobs Component - Applied Jobs Count:', appliedJobs.length);
 
+  // Log application IDs for debugging
+  console.log('Jobs Component - Application IDs:', applications.map(app => app._id));
+
+  // Log the status of each application
+  const statusCounts = {
+    pending: applications.filter(app => app.status === 'pending').length,
+    accepted: applications.filter(app => app.status === 'accepted').length,
+    rejected: applications.filter(app => app.status === 'rejected').length
+  };
+  console.log('Jobs Component - Application Status Counts:', statusCounts);
+
   return (
     <div className="jobs-section">
       {/* Search Bar for Jobs */}
