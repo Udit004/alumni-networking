@@ -10,14 +10,14 @@ router.post('/create-test-for-current-user', protect, async (req, res) => {
     console.log('Creating test application specifically for current user');
     console.log('User info:', req.user);
     console.log('Query params:', req.query);
-    
+
     const firebaseUID = req.query.firebaseUID || req.user?.firebaseUid || req.user?.id;
     console.log(`Using Firebase UID: ${firebaseUID}`);
-    
+
     // Get the MongoDB connection directly
     const db = mongoose.connection.db;
     const collection = db.collection('mentorshipapplications');
-    
+
     // Create test application data with the current user's ID
     const applicationData = {
       mentorshipId: "test-mentorship-id-123",
@@ -35,13 +35,13 @@ router.post('/create-test-for-current-user', protect, async (req, res) => {
       status: "pending",
       appliedAt: new Date()
     };
-    
+
     console.log('Creating test application with data:', applicationData);
-    
+
     // Insert directly into MongoDB
     const result = await collection.insertOne(applicationData);
     console.log('Test application creation result:', result);
-    
+
     // Get all applications for this user to verify
     const allUserApps = await collection.find({
       $or: [
@@ -49,9 +49,9 @@ router.post('/create-test-for-current-user', protect, async (req, res) => {
         { firebaseUID: firebaseUID }
       ]
     }).toArray();
-    
+
     console.log(`Found ${allUserApps.length} total applications for this user`);
-    
+
     return res.status(201).json({
       success: true,
       message: 'Test application created successfully for current user',
@@ -64,7 +64,7 @@ router.post('/create-test-for-current-user', protect, async (req, res) => {
   } catch (error) {
     console.error('Error creating test application:', error);
     return res.status(500).json({
-      success: false, 
+      success: false,
       message: 'Failed to create test application',
       error: error.message
     });
@@ -79,11 +79,11 @@ router.post('/direct-test/:mentorshipId', protect, async (req, res) => {
     console.log('Request params:', req.params);
     console.log('Request query:', req.query);
     console.log('User:', req.user);
-    
+
     // Get the MongoDB connection directly
     const db = mongoose.connection.db;
     const collection = db.collection('mentorshipapplications');
-    
+
     // Create application data with all required fields
     const applicationData = {
       mentorshipId: req.body.mentorshipId || req.params.mentorshipId,
@@ -101,13 +101,13 @@ router.post('/direct-test/:mentorshipId', protect, async (req, res) => {
       status: "pending",
       appliedAt: new Date()
     };
-    
+
     console.log('Using application data:', applicationData);
-    
+
     // Insert directly into MongoDB
     const result = await collection.insertOne(applicationData);
     console.log('Direct MongoDB insert result:', result);
-    
+
     if (result.acknowledged) {
       return res.status(201).json({
         success: true,
@@ -154,16 +154,94 @@ router.get('/user/:userId', protect, (req, res, next) => {
 // Get a specific mentorship application
 router.get('/:id', protect, mentorshipApplicationController.getMentorshipApplication);
 
+// Accept a mentorship application
+router.put('/:id/accept', protect, async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`Accepting mentorship application with ID: ${id}`);
+
+    // Use findByIdAndUpdate to update only the status field without triggering validation
+    const MentorshipApplication = require('../models/MentorshipApplication');
+    const application = await MentorshipApplication.findByIdAndUpdate(
+      id,
+      { status: 'accepted' },
+      {
+        new: true,        // Return the updated document
+        runValidators: false  // Skip validation
+      }
+    );
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Application accepted successfully',
+      data: application
+    });
+  } catch (error) {
+    console.error('Error accepting mentorship application:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to accept application',
+      error: error.message
+    });
+  }
+});
+
+// Reject a mentorship application
+router.put('/:id/reject', protect, async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`Rejecting mentorship application with ID: ${id}`);
+
+    // Use findByIdAndUpdate to update only the status field without triggering validation
+    const MentorshipApplication = require('../models/MentorshipApplication');
+    const application = await MentorshipApplication.findByIdAndUpdate(
+      id,
+      { status: 'rejected' },
+      {
+        new: true,        // Return the updated document
+        runValidators: false  // Skip validation
+      }
+    );
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Application rejected successfully',
+      data: application
+    });
+  } catch (error) {
+    console.error('Error rejecting mentorship application:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to reject application',
+      error: error.message
+    });
+  }
+});
+
 // Create test application and immediately retrieve
 router.post('/debug-create-and-get/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
     console.log('Debug - Create and Get for user:', userId);
-    
+
     // Get the MongoDB connection directly
     const db = mongoose.connection.db;
     const collection = db.collection('mentorshipapplications');
-    
+
     // Try to find a real mentorship to use
     let testMentorshipId;
     try {
@@ -181,7 +259,7 @@ router.post('/debug-create-and-get/:userId', async (req, res) => {
       console.log('Error finding mentorship, using generated ObjectId:', err.message);
       testMentorshipId = new mongoose.Types.ObjectId().toString();
     }
-    
+
     // Create test application data specifically with the provided userId and firebaseUID
     const applicationData = {
       mentorshipId: testMentorshipId,
@@ -199,34 +277,34 @@ router.post('/debug-create-and-get/:userId', async (req, res) => {
       status: "pending",
       appliedAt: new Date()
     };
-    
+
     console.log('Creating debug test application with data:', applicationData);
-    
+
     // Insert directly into MongoDB
     const result = await collection.insertOne(applicationData);
     console.log('Debug test application creation result:', result);
-    
+
     // Verify it exists immediately
     console.log('Immediately checking if application exists');
-    
+
     // Try both direct find and Mongoose find
     const directFind = await collection.findOne({ userId: userId });
     console.log('Direct find result:', directFind ? 'Found' : 'Not found');
-    
+
     // Try various other queries to find the application
     const byFirebaseUID = await collection.findOne({ firebaseUID: userId });
     console.log('Find by firebaseUID:', byFirebaseUID ? 'Found' : 'Not found');
-    
+
     // Search with $or to try both fields
-    const orQuery = await collection.find({ 
+    const orQuery = await collection.find({
       $or: [
         { userId: userId },
         { firebaseUID: userId }
       ]
     }).toArray();
-    
+
     console.log(`Found ${orQuery.length} applications with $or query`);
-    
+
     return res.status(200).json({
       success: true,
       message: 'Debug test complete',
@@ -238,11 +316,11 @@ router.post('/debug-create-and-get/:userId', async (req, res) => {
   } catch (error) {
     console.error('Error in debug endpoint:', error);
     return res.status(500).json({
-      success: false, 
+      success: false,
       message: 'Debug endpoint failed',
       error: error.message
     });
   }
 });
 
-module.exports = router; 
+module.exports = router;

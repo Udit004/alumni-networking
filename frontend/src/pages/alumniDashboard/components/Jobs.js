@@ -36,16 +36,51 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchJobs();
-  }, [user]);
+  // Modified fetchJobs without mock data
+  const fetchJobs = useCallback(async () => {
+    try {
+      setLoading(true);
 
-  // Fetch applications when active tab changes to applications
-  useEffect(() => {
-    if (activeTab === 'applications' && user) {
-      fetchApplications();
+      if (!user) {
+        setJobs([]);
+        setLoading(false);
+        return;
+      }
+
+      const apiUrl = API_URL || process.env.REACT_APP_API_URL;
+      const fullEndpoint = `${apiUrl}/api/jobs/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`;
+
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch(fullEndpoint, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          setError('Failed to load jobs');
+          setJobs([]);
+          return;
+        }
+
+        const data = await response.json();
+        const sortedJobs = data.jobs?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) || [];
+        setJobs(sortedJobs);
+
+      } catch (error) {
+        setError('Failed to load jobs');
+        setJobs([]);
+      }
+    } catch (err) {
+      setError('Failed to load jobs. Please try again.');
+      setJobs([]);
+    } finally {
+      setLoading(false);
     }
-  }, [activeTab, user]);
+  }, [API_URL, user, role]);
 
   // Fetch job applications for all the job postings created by the alumni
   const fetchApplications = useCallback(async () => {
@@ -59,14 +94,14 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
 
       const token = await user.getIdToken();
       console.log('Auth token:', token);
-      // Use the test endpoint which has hardcoded data that we know works
-      // We're using a specific user ID that we know has applications in the database
-      const testEndpoint = `${API_URL}/api/job-applications/user-test/4EOWySj0hHfLOCWFxi3JeJYsqTj2?firebaseUID=${user.uid}&role=${role}`;
-      console.log('Fetching applications from test endpoint:', testEndpoint);
+
+      // Use the proper employer endpoint to fetch real applications
+      const endpoint = `${API_URL}/api/job-applications/employer/${user.uid}?firebaseUID=${user.uid}&role=${role}`;
+      console.log('Fetching applications from endpoint:', endpoint);
 
       let response;
       try {
-        response = await fetch(testEndpoint, {
+        response = await fetch(endpoint, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -110,9 +145,6 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
       console.log('Current jobs:', jobs);
       console.log('Raw applications data:', applicationsData);
 
-      // Log the applications data for debugging
-      console.log('Applications data from test endpoint:', applicationsData);
-
       // Enhance application data with job details and normalize fields
       const enhancedApplications = applicationsData.map(app => {
         // Start with the original application
@@ -139,21 +171,9 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
               enhancedApp.jobTitle = partialMatchJob.title;
               enhancedApp.company = partialMatchJob.company;
             } else {
-              // Special case handling for known job IDs from the test data
-              if (app.jobId === '67f7c12800974b02743f6da3') {
-                enhancedApp.jobTitle = 'Python';
-                enhancedApp.company = 'Google';
-              } else if (app.jobId === '67f133c955e741d8ab42b6cb') {
-                enhancedApp.jobTitle = 'Excel Specialist';
-                enhancedApp.company = 'Microsoft';
-              } else if (app.jobId === '67f043f4e6c88c45191e2188') {
-                enhancedApp.jobTitle = 'iOS Developer';
-                enhancedApp.company = 'Apple';
-              } else {
-                // If we still can't find a matching job, use default values
-                enhancedApp.jobTitle = enhancedApp.jobTitle || 'Unknown Job';
-                enhancedApp.company = enhancedApp.company || 'Unknown Company';
-              }
+              // If we still can't find a matching job, use default values
+              enhancedApp.jobTitle = enhancedApp.jobTitle || 'Unknown Job';
+              enhancedApp.company = enhancedApp.company || 'Unknown Company';
             }
           }
         }
@@ -194,51 +214,17 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
   }, [API_URL, user, role, jobs]);
 
 
-  // Modified fetchJobs without mock data
-  const fetchJobs = async () => {
-    try {
-      setLoading(true);
+  // Add useEffect hooks to fetch data
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
 
-      if (!user) {
-        setJobs([]);
-        setLoading(false);
-        return;
-      }
-
-      const apiUrl = API_URL || process.env.REACT_APP_API_URL;
-      const fullEndpoint = `${apiUrl}/api/jobs/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`;
-
-      try {
-        const token = await user.getIdToken();
-        const response = await fetch(fullEndpoint, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          setError('Failed to load jobs');
-          setJobs([]);
-          return;
-        }
-
-        const data = await response.json();
-        const sortedJobs = data.jobs?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) || [];
-        setJobs(sortedJobs);
-
-      } catch (error) {
-        setError('Failed to load jobs');
-        setJobs([]);
-      }
-    } catch (err) {
-      setError('Failed to load jobs. Please try again.');
-      setJobs([]);
-    } finally {
-      setLoading(false);
+  // Fetch applications when active tab changes to applications
+  useEffect(() => {
+    if (activeTab === 'applications' && user) {
+      fetchApplications();
     }
-  };
+  }, [activeTab, user, fetchApplications]);
 
   const handleCreateJob = async (e) => {
     e.preventDefault();
@@ -458,7 +444,137 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
     setShowApplicationDetails(true);
   };
 
+  const handleAcceptApplication = async (application) => {
+    try {
+      setProcessingApplication(application._id);
+
+      // Log the request details and application object for debugging
+      console.log('Accepting job application:', {
+        applicationId: application._id,
+        userId: user.uid,
+        role: role,
+        API_URL: API_URL
+      });
+      console.log('Application object:', application);
+
+      const token = await user.getIdToken();
+
+      // Use the correct endpoint format
+      const endpoint = `${API_URL}/api/job-applications/${application._id}/accept`;
+      console.log('Using endpoint:', endpoint);
+
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          firebaseUID: user.uid,
+          role: role
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response content:', errorText);
+        throw new Error('Failed to accept application');
+      }
+
+      const result = await response.json();
+      console.log('Accept application response:', result);
+
+      // Update application status in state
+      const updatedApplications = applications.map(app =>
+        app._id === application._id ? { ...app, status: 'accepted', updatedAt: new Date().toISOString() } : app
+      );
+
+      setApplications(updatedApplications);
+
+      // If showing details, update the selected application
+      if (selectedApplication && selectedApplication._id === application._id) {
+        setSelectedApplication({ ...selectedApplication, status: 'accepted', updatedAt: new Date().toISOString() });
+      }
+
+      // Show success message
+      alert(`Application from ${application.name || 'the applicant'} has been accepted successfully.`);
+
+    } catch (error) {
+      console.error('Error accepting application:', error);
+      alert(`Failed to accept application: ${error.message}`);
+    } finally {
+      setProcessingApplication(null);
+    }
+  };
+
+  const handleRejectApplication = async (application) => {
+    try {
+      setProcessingApplication(application._id);
+
+      // Log the request details
+      console.log('Rejecting job application:', {
+        applicationId: application._id,
+        userId: user.uid,
+        role: role,
+        API_URL: API_URL
+      });
+
+      const token = await user.getIdToken();
+      const endpoint = `${API_URL}/api/job-applications/${application._id}/reject`;
+      console.log('Using endpoint:', endpoint);
+
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          firebaseUID: user.uid,
+          role: role
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response content:', errorText);
+        throw new Error('Failed to reject application');
+      }
+
+      const result = await response.json();
+      console.log('Reject application response:', result);
+
+      // Update application status in state
+      const updatedApplications = applications.map(app =>
+        app._id === application._id ? { ...app, status: 'rejected', updatedAt: new Date().toISOString() } : app
+      );
+
+      setApplications(updatedApplications);
+
+      // If showing details, update the selected application
+      if (selectedApplication && selectedApplication._id === application._id) {
+        setSelectedApplication({ ...selectedApplication, status: 'rejected', updatedAt: new Date().toISOString() });
+      }
+
+      // Show success message
+      alert(`Application from ${application.name || 'the applicant'} has been rejected.`);
+
+    } catch (error) {
+      console.error('Error rejecting application:', error);
+      alert(`Failed to reject application: ${error.message}`);
+    } finally {
+      setProcessingApplication(null);
+    }
+  };
+
+  // For backward compatibility
   const handleUpdateApplicationStatus = async (application, newStatus) => {
+    if (newStatus === 'accepted') {
+      return handleAcceptApplication(application);
+    } else if (newStatus === 'rejected') {
+      return handleRejectApplication(application);
+    }
+
     try {
       setProcessingApplication(application._id);
 
@@ -1062,15 +1178,15 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                       {application.status === 'pending' && (
                         <>
                           <button
-                            onClick={() => handleUpdateApplicationStatus(application, 'shortlisted')}
+                            onClick={() => handleAcceptApplication(application)}
                             disabled={processingApplication === application._id}
-                            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {processingApplication === application._id ? 'Processing...' : 'Shortlist'}
+                            {processingApplication === application._id ? 'Processing...' : 'Accept'}
                           </button>
 
                           <button
-                            onClick={() => handleUpdateApplicationStatus(application, 'rejected')}
+                            onClick={() => handleRejectApplication(application)}
                             disabled={processingApplication === application._id}
                             className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -1090,7 +1206,7 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                           </button>
 
                           <button
-                            onClick={() => handleUpdateApplicationStatus(application, 'rejected')}
+                            onClick={() => handleRejectApplication(application)}
                             disabled={processingApplication === application._id}
                             className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -1234,18 +1350,18 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                     <div className="flex gap-3 mt-6">
                       <button
                         onClick={() => {
-                          handleUpdateApplicationStatus(selectedApplication, 'shortlisted');
+                          handleAcceptApplication(selectedApplication);
                           setShowApplicationDetails(false);
                         }}
                         disabled={processingApplication === selectedApplication._id}
-                        className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {processingApplication === selectedApplication._id ? 'Processing...' : 'Shortlist Candidate'}
+                        {processingApplication === selectedApplication._id ? 'Processing...' : 'Accept Application'}
                       </button>
 
                       <button
                         onClick={() => {
-                          handleUpdateApplicationStatus(selectedApplication, 'rejected');
+                          handleRejectApplication(selectedApplication);
                           setShowApplicationDetails(false);
                         }}
                         disabled={processingApplication === selectedApplication._id}
@@ -1271,7 +1387,7 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
 
                       <button
                         onClick={() => {
-                          handleUpdateApplicationStatus(selectedApplication, 'rejected');
+                          handleRejectApplication(selectedApplication);
                           setShowApplicationDetails(false);
                         }}
                         disabled={processingApplication === selectedApplication._id}

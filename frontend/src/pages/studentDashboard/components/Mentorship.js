@@ -135,6 +135,7 @@ const Mentorship = ({ isDarkMode }) => {
   const getStatusDisplay = (status) => {
     switch(status?.toLowerCase()) {
       case 'approved':
+      case 'accepted':
         return { text: 'Approved', bgColor: 'bg-green-100 dark:bg-green-900', textColor: 'text-green-800 dark:text-green-200' };
       case 'rejected':
         return { text: 'Rejected', bgColor: 'bg-red-100 dark:bg-red-900', textColor: 'text-red-800 dark:text-red-200' };
