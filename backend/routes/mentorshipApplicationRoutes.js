@@ -160,9 +160,16 @@ router.put('/:id/accept', protect, async (req, res) => {
     const { id } = req.params;
     console.log(`Accepting mentorship application with ID: ${id}`);
 
-    // Find the application
+    // Use findByIdAndUpdate to update only the status field without triggering validation
     const MentorshipApplication = require('../models/MentorshipApplication');
-    const application = await MentorshipApplication.findById(id);
+    const application = await MentorshipApplication.findByIdAndUpdate(
+      id,
+      { status: 'accepted' },
+      {
+        new: true,        // Return the updated document
+        runValidators: false  // Skip validation
+      }
+    );
 
     if (!application) {
       return res.status(404).json({
@@ -170,10 +177,6 @@ router.put('/:id/accept', protect, async (req, res) => {
         message: 'Application not found'
       });
     }
-
-    // Update the application status
-    application.status = 'accepted';
-    await application.save();
 
     return res.status(200).json({
       success: true,
@@ -196,9 +199,16 @@ router.put('/:id/reject', protect, async (req, res) => {
     const { id } = req.params;
     console.log(`Rejecting mentorship application with ID: ${id}`);
 
-    // Find the application
+    // Use findByIdAndUpdate to update only the status field without triggering validation
     const MentorshipApplication = require('../models/MentorshipApplication');
-    const application = await MentorshipApplication.findById(id);
+    const application = await MentorshipApplication.findByIdAndUpdate(
+      id,
+      { status: 'rejected' },
+      {
+        new: true,        // Return the updated document
+        runValidators: false  // Skip validation
+      }
+    );
 
     if (!application) {
       return res.status(404).json({
@@ -206,10 +216,6 @@ router.put('/:id/reject', protect, async (req, res) => {
         message: 'Application not found'
       });
     }
-
-    // Update the application status
-    application.status = 'rejected';
-    await application.save();
 
     return res.status(200).json({
       success: true,
