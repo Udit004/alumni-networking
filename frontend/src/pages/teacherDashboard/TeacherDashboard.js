@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import './TeacherDashboard.css';
 import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { Overview, Profile, Notifications, Courses, Events, Resources, Students, Settings, Announcements } from './components';
+import { Overview, Profile, Notifications, Courses, Events, Resources, Students, Announcements } from './components';
 import TeacherNetwork from './components/Network';
 import { getConnectionRequests, sendConnectionRequest } from '../../services/connectionService';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
@@ -140,8 +140,7 @@ const TeacherDashboard = () => {
     { id: 'announcements', label: 'Announcements', icon: '📢' },
     { id: 'events', label: 'Events', icon: '📅' },
     { id: 'resources', label: 'Teaching Resources', icon: '📋' },
-    { id: 'students', label: 'My Students', icon: '👨‍🎓' },
-    { id: 'settings', label: 'Settings', icon: '⚙️' }
+    { id: 'students', label: 'My Students', icon: '👨‍🎓' }
   ];
 
   useEffect(() => {
@@ -831,9 +830,7 @@ const TeacherDashboard = () => {
             <Students />
           )}
 
-          {activeSection === 'settings' && (
-            <Settings />
-          )}
+          {/* Settings section removed */}
 
           {activeSection === 'network' && (
             <div className="network-section">

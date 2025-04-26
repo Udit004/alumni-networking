@@ -220,6 +220,7 @@ export const getUserNotifications = async (userId, limitCount = 20) => {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
 
+          // Use the notifications endpoint (now using Firestore)
           const response = await fetch(`${baseUrl}/api/notifications`, {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -452,7 +453,7 @@ export const markAllNotificationsAsRead = async (userId) => {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
 
-          const response = await fetch(`${baseUrl}/api/notifications/mark-all-read`, {
+          const response = await fetch(`${baseUrl}/api/notifications/read-all`, {
             method: 'PUT',
             headers: {
               'Authorization': `Bearer ${token}`,

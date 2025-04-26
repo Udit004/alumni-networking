@@ -1,5 +1,5 @@
 const Job = require('../models/Job');
-const notificationService = require('../services/notificationService');
+const admin = require('firebase-admin');
 
 // Get all jobs
 exports.getAllJobs = async (req, res) => {
@@ -28,15 +28,43 @@ exports.createJob = async (req, res) => {
     const newJob = new Job(req.body);
     await newJob.save();
 
-    // Send notification to all students about the new job
+    // Send notification to all students about the new job using Firestore
     try {
-      await notificationService.notifyAllStudents(
-        'New Job Opportunity',
-        `A new job "${newJob.title}" has been posted. Check it out!`,
-        'job',
-        newJob._id.toString(),
-        newJob.creatorId || 'system'
-      );
+      // Find all students
+      const User = require('../models/user');
+      const students = await User.find({ role: 'student' });
+      console.log(`Found ${students.length} students to notify about the new job`);
+
+      // Send notification to each student
+      for (const student of students) {
+        try {
+          if (!student.firebaseUID) {
+            console.log(`Skipping notification for student ${student._id} - no Firebase UID`);
+            continue;
+          }
+
+          // Create notification data
+          const notificationData = {
+            userId: student.firebaseUID,
+            title: 'New Job Opportunity',
+            message: `A new job "${newJob.title}" has been posted. Check it out!`,
+            type: 'job',
+            itemId: newJob._id.toString(),
+            createdBy: newJob.creatorId || 'system',
+            read: false,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: new Date().toISOString()
+          };
+
+          // Add to Firestore
+          const docRef = await admin.firestore().collection('notifications').add(notificationData);
+          console.log(`Notification created for student ${student.firebaseUID} with ID: ${docRef.id}`);
+        } catch (studentError) {
+          console.error(`Error sending notification to student ${student.firebaseUID}:`, studentError);
+          // Continue with next student even if one fails
+        }
+      }
+
       console.log(`Notifications sent to all students about the new job: ${newJob.title}`);
     } catch (notificationError) {
       console.error('Error sending notifications:', notificationError);

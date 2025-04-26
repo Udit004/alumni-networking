@@ -1,5 +1,5 @@
 const Mentorship = require('../models/Mentorship');
-const notificationService = require('../services/notificationService');
+const admin = require('firebase-admin');
 
 // Get all mentorships
 exports.getAllMentorships = async (req, res) => {
@@ -28,15 +28,43 @@ exports.createMentorship = async (req, res) => {
     const newMentorship = new Mentorship(req.body);
     await newMentorship.save();
 
-    // Send notification to all students about the new mentorship
+    // Send notification to all students about the new mentorship using Firestore
     try {
-      await notificationService.notifyAllStudents(
-        'New Mentorship Opportunity',
-        `A new mentorship "${newMentorship.title}" has been posted. Check it out!`,
-        'mentorship',
-        newMentorship._id.toString(),
-        newMentorship.mentorId || 'system'
-      );
+      // Find all students
+      const User = require('../models/user');
+      const students = await User.find({ role: 'student' });
+      console.log(`Found ${students.length} students to notify about the new mentorship`);
+
+      // Send notification to each student
+      for (const student of students) {
+        try {
+          if (!student.firebaseUID) {
+            console.log(`Skipping notification for student ${student._id} - no Firebase UID`);
+            continue;
+          }
+
+          // Create notification data
+          const notificationData = {
+            userId: student.firebaseUID,
+            title: 'New Mentorship Opportunity',
+            message: `A new mentorship "${newMentorship.title}" has been posted. Check it out!`,
+            type: 'mentorship',
+            itemId: newMentorship._id.toString(),
+            createdBy: newMentorship.mentorId || 'system',
+            read: false,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: new Date().toISOString()
+          };
+
+          // Add to Firestore
+          const docRef = await admin.firestore().collection('notifications').add(notificationData);
+          console.log(`Notification created for student ${student.firebaseUID} with ID: ${docRef.id}`);
+        } catch (studentError) {
+          console.error(`Error sending notification to student ${student.firebaseUID}:`, studentError);
+          // Continue with next student even if one fails
+        }
+      }
+
       console.log(`Notifications sent to all students about the new mentorship: ${newMentorship.title}`);
     } catch (notificationError) {
       console.error('Error sending notifications:', notificationError);

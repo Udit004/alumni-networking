@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const Course = require('../models/Course');
 const admin = require('firebase-admin');
-const notificationService = require('../services/notificationService');
 
 // Authentication middleware - DEVELOPMENT VERSION (more permissive)
 const authenticateToken = async (req, res, next) => {
@@ -155,15 +154,43 @@ router.post('/', authenticateToken, async (req, res) => {
     const course = new Course(courseData);
     await course.save();
 
-    // Send notification to all students about the new course
+    // Send notification to all students about the new course using Firestore
     try {
-      await notificationService.notifyAllStudents(
-        'New Course Available',
-        `A new course "${course.title}" has been created by ${course.teacherName}. Check it out!`,
-        'course',
-        course._id.toString(),
-        course.teacherId
-      );
+      // Find all students
+      const User = require('../models/user');
+      const students = await User.find({ role: 'student' });
+      console.log(`Found ${students.length} students to notify about the new course`);
+
+      // Send notification to each student
+      for (const student of students) {
+        try {
+          if (!student.firebaseUID) {
+            console.log(`Skipping notification for student ${student._id} - no Firebase UID`);
+            continue;
+          }
+
+          // Create notification data
+          const notificationData = {
+            userId: student.firebaseUID,
+            title: 'New Course Available',
+            message: `A new course "${course.title}" has been created by ${course.teacherName}. Check it out!`,
+            type: 'course',
+            itemId: course._id.toString(),
+            createdBy: course.teacherId,
+            read: false,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            createdAt: new Date().toISOString()
+          };
+
+          // Add to Firestore
+          const docRef = await admin.firestore().collection('notifications').add(notificationData);
+          console.log(`Notification created for student ${student.firebaseUID} with ID: ${docRef.id}`);
+        } catch (studentError) {
+          console.error(`Error sending notification to student ${student.firebaseUID}:`, studentError);
+          // Continue with next student even if one fails
+        }
+      }
+
       console.log(`Notifications sent to all students about the new course: ${course.title}`);
     } catch (notificationError) {
       console.error('Error sending notifications:', notificationError);

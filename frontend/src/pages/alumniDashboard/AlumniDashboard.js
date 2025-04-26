@@ -11,9 +11,7 @@ import {
   Notifications,
   Mentorship,
   Jobs,
-  Events,
-  Settings,
-  Resources
+  Events
 } from './components';
 import AlumniNetwork from './components/Network';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
@@ -97,8 +95,7 @@ const AlumniDashboard = () => {
     { id: 'mentorship', label: 'Mentorship', icon: '🎓' },
     { id: 'jobs', label: 'Job Opportunities', icon: '💼' },
     { id: 'events', label: 'Events', icon: '📅' },
-    { id: 'network', label: 'Network', icon: '🔗' },
-    { id: 'settings', label: 'Settings', icon: '⚙️' }
+    { id: 'network', label: 'Network', icon: '🔗' }
   ];
 
   // Fetch mentoring, job posting, and events data for the alumni
@@ -852,17 +849,7 @@ const AlumniDashboard = () => {
                 </div>
               )}
 
-              {activeSection === 'settings' && (
-                <Settings
-                  isDarkMode={isDarkMode}
-                  setIsDarkMode={setIsDarkMode}
-                  handleLogout={() => {
-                    // Implement logout functionality
-                    // For now, just navigate to home
-                    navigate('/');
-                  }}
-                />
-              )}
+              {/* Settings section removed */}
             </div>
           </main>
         </div>

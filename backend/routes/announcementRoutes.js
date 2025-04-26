@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Announcement = require('../models/Announcement');
+const Course = require('../models/Course');
 const admin = require('firebase-admin');
 
 // Authentication middleware with Firebase verification
@@ -116,6 +117,57 @@ router.post('/api/courses/:courseId/announcements', authenticateToken, async (re
     });
 
     await newAnnouncement.save();
+
+    // Send notifications to all students enrolled in this course
+    try {
+      // Get the course to find enrolled students
+      const course = await Course.findById(courseId);
+
+      if (course && course.students && course.students.length > 0) {
+        console.log(`Sending notifications to ${course.students.length} enrolled students`);
+        console.log('Course students:', JSON.stringify(course.students));
+
+        try {
+          // Send notifications directly to Firestore for each student
+          for (const student of course.students) {
+            try {
+              console.log(`Creating Firestore notification for student: ${student.studentId}`);
+
+              // Create notification data
+              const notificationData = {
+                userId: student.studentId,
+                title: `New Announcement: ${title}`,
+                message: `${req.user.name} posted a new announcement in ${course.title}: ${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`,
+                type: 'announcement',
+                itemId: newAnnouncement._id.toString(),
+                createdBy: req.user.id,
+                read: false,
+                timestamp: admin.firestore.FieldValue.serverTimestamp(),
+                createdAt: new Date().toISOString()
+              };
+
+              console.log('Saving notification to Firestore:', notificationData);
+
+              // Add the notification to Firestore
+              const docRef = await admin.firestore().collection('notifications').add(notificationData);
+              console.log(`Notification created with ID: ${docRef.id}`);
+            } catch (notificationError) {
+              console.error(`Error creating notification for student ${student.studentId}:`, notificationError);
+              // Continue with next student even if one fails
+            }
+          }
+
+          console.log(`Finished sending notifications to students`);
+        } catch (innerError) {
+          console.error('Error sending notifications:', innerError);
+        }
+      } else {
+        console.log('No students enrolled in this course, skipping notifications');
+      }
+    } catch (notificationError) {
+      console.error('Error sending notifications to enrolled students:', notificationError);
+      // Continue even if notifications fail
+    }
 
     res.status(201).json({
       success: true,

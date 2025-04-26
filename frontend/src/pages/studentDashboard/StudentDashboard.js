@@ -254,8 +254,7 @@ const StudentDashboard = () => {
     { id: 'announcements', label: 'Announcements', icon: '📢' },
     { id: 'mentorship', label: 'Mentorship', icon: '🎓' },
     { id: 'jobs', label: 'Jobs & Internships', icon: '💼' },
-    { id: 'network', label: 'Network', icon: '👥' },
-    { id: 'settings', label: 'Settings', icon: '⚙️' }
+    { id: 'network', label: 'Network', icon: '👥' }
   ];
 
   const handleSectionClick = (sectionId) => {

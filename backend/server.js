@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
+const admin = require('./config/firebase-admin'); // Import Firebase Admin
 
 // Import models before routes
 require("./models/user");
@@ -29,8 +30,7 @@ const messageRoutesDB = require('./routes/messageRoutes');
 const testMessagesRoutes = require('./routes/testMessages');
 const courseRoutes = require('./routes/courses');
 const courseApplicationRoutes = require('./routes/courseApplications');
-const notificationRoutes = require('./routes/notifications');
-const testNotificationRoutes = require('./routes/testNotifications');
+const firestoreNotificationRoutes = require('./routes/firestoreNotifications');
 const announcementRoutes = require('./routes/announcementRoutes');
 
 const app = express();
@@ -88,8 +88,7 @@ app.use('/api/messages-db', messageRoutesDB);
 app.use('/api/test-messages', testMessagesRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/course-applications', courseApplicationRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/test-notifications', testNotificationRoutes);
+app.use('/api/notifications', firestoreNotificationRoutes);
 // Register announcement routes
 app.use('/', announcementRoutes);
 // Log the registered routes

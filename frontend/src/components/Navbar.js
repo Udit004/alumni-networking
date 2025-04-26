@@ -248,7 +248,7 @@ const Navbar = () => {
                     >
                       Profile
                     </Link>
-                    {role === 'student' && (
+                    {/* {role === 'student' && (
                       <Link
                         to="/student-chat"
                         className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
@@ -265,7 +265,7 @@ const Navbar = () => {
                       >
                         Chat with Students
                       </Link>
-                    )}
+                    )} */}
                     <Link
                       to="/about"
                       className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 no-underline"
