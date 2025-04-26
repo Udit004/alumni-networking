@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../AuthContext';
 import "./EnrolledEvents.css";
+import config from '../../config';
 
 // Helper function to get upcoming events count
 export const getUpcomingEventsCount = (events) => {
@@ -47,6 +48,17 @@ const EnrolledEvents = ({ onEventsLoaded }) => {
   useEffect(() => {
     const fetchEnrolledEvents = async () => {
       try {
+        // Debug logging for API URL
+        console.log('EnrolledEvents - API URL:', config.apiUrl);
+        console.log('EnrolledEvents - Environment:', process.env.NODE_ENV);
+
+        // Define fallback URLs for API endpoints to handle different environments
+        const baseUrls = [
+          config.apiUrl,
+          'https://alumni-networking.onrender.com',
+          'http://localhost:5000'
+        ];
+
         if (!user) {
           setError('User not authenticated');
           setLoading(false);
@@ -55,16 +67,50 @@ const EnrolledEvents = ({ onEventsLoaded }) => {
 
         // First try to get the MongoDB user ID
         try {
-          const userRes = await axios.get(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000'}/api/users/firebase/${user.uid}`);
-          const mongoUser = userRes.data;
+          let mongoUser = null;
+          let success = false;
 
-          if (!mongoUser || !mongoUser._id) {
-            throw new Error('User data not found');
+          // Try each base URL until one works
+          for (const baseUrl of baseUrls) {
+            try {
+              console.log(`Trying to fetch user data from ${baseUrl}...`);
+              const userRes = await axios.get(`${baseUrl}/api/users/firebase/${user.uid}`);
+              mongoUser = userRes.data;
+
+              if (mongoUser && mongoUser._id) {
+                console.log(`Successfully fetched user data from ${baseUrl}`);
+                success = true;
+                break;
+              }
+            } catch (urlErr) {
+              console.log(`Failed to fetch user data from ${baseUrl}:`, urlErr.message);
+            }
           }
 
-          // Then fetch enrolled events
-          const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000'}/api/events`);
-          const allEvents = response.data;
+          if (!success || !mongoUser || !mongoUser._id) {
+            throw new Error('User data not found after trying all endpoints');
+          }
+
+          // Then fetch enrolled events - try each base URL until one works
+          let allEvents = null;
+          success = false;
+
+          for (const baseUrl of baseUrls) {
+            try {
+              console.log(`Trying to fetch events from ${baseUrl}...`);
+              const response = await axios.get(`${baseUrl}/api/events`);
+              allEvents = response.data;
+              console.log(`Successfully fetched ${allEvents.length} events from ${baseUrl}`);
+              success = true;
+              break;
+            } catch (urlErr) {
+              console.log(`Failed to fetch events from ${baseUrl}:`, urlErr.message);
+            }
+          }
+
+          if (!success || !allEvents) {
+            throw new Error('Events data not found after trying all endpoints');
+          }
 
           // Filter events where user is registered
           const userEvents = allEvents.filter(event => {
@@ -97,11 +143,19 @@ const EnrolledEvents = ({ onEventsLoaded }) => {
           }
         } catch (err) {
           console.error('Error fetching enrolled events from MongoDB:', err);
-          setError('Failed to load enrolled events. Please try again later.');
+          const errorDetails = err.response ?
+            `Status: ${err.response.status}, Message: ${JSON.stringify(err.response.data)}` :
+            err.message;
+          console.error('Error details:', errorDetails);
+          setError(`Failed to load enrolled events. ${errorDetails}`);
         }
       } catch (err) {
         console.error('Error fetching enrolled events:', err);
-        setError('Failed to load enrolled events. Please try again later.');
+        const errorDetails = err.response ?
+          `Status: ${err.response.status}, Message: ${JSON.stringify(err.response.data)}` :
+          err.message;
+        console.error('Error details:', errorDetails);
+        setError(`Failed to load enrolled events. ${errorDetails}`);
       } finally {
         setLoading(false);
       }
