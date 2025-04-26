@@ -6,6 +6,9 @@ const Overview = ({ connections = [], courseCount = 0, isDarkMode, navigate, job
   const teacherConnections = connections?.filter(conn => conn.role === "teacher") || [];
   const studentConnections = connections?.filter(conn => conn.role === "student") || [];
 
+  // Debug log for job applications count
+  console.log('Overview - Job Applications Count:', jobApplicationsCount);
+
   return (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
