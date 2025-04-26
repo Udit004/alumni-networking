@@ -390,7 +390,20 @@ const StudentDashboard = () => {
 
           // Filter for current user's applications
           const userApplications = applicationData.filter(app => app.userId === currentUser.uid);
-          setJobApplicationsCount(userApplications.length);
+
+          // Get unique job IDs from applications to match the "Applied Jobs" count
+          const uniqueJobIds = new Set();
+          userApplications.forEach(app => {
+            const jobId = typeof app.jobId === 'object' ? app.jobId?._id : app.jobId;
+            if (jobId) {
+              uniqueJobIds.add(jobId.toString());
+            }
+          });
+
+          // Set the count to match what will be shown in the "Applied Jobs" section
+          const count = userApplications.length;
+          console.log(`Setting job applications count to ${count}`);
+          setJobApplicationsCount(count);
         } catch (jobError) {
           console.error("Error fetching job applications:", jobError);
           // Set default value if API fails
