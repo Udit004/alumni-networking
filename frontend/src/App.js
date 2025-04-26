@@ -29,6 +29,7 @@ import JobApplication from './pages/JobApplication';
 import CourseDetail from './pages/CourseDetail';
 import './App.css';
 import { initializeFirestoreCollections } from './utils/firestoreInit';
+import StudentEditProfile from './pages/StudentEditProfile';
 
 function App() {
   const [firestoreInitialized, setFirestoreInitialized] = useState(false);
@@ -171,6 +172,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <StudentDashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/student-edit-profile"
+                element={
+                  <PrivateRoute>
+                    <StudentEditProfile />
                   </PrivateRoute>
                 }
               />

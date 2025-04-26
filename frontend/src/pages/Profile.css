@@ -1,16 +1,104 @@
-.container {
-    max-width: 800px;
-  }
-  
-  .card {
-    border-radius: 12px;
-  }
-  
-  .card h2 {
-    font-weight: bold;
-  }
-  
-  button {
-    width: 48%;
-  }
-  
+body {
+  background-color: #0f172a; /* Very dark navy background */
+  font-family: 'Inter', sans-serif;
+  color: #ffffff;
+  margin: 0;
+  padding: 0;
+}
+
+/* Container */
+.edit-profile-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Card */
+.edit-profile-card {
+  background-color: #1e293b; /* Dark gray-blue card */
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Inputs and Textareas */
+.edit-profile-input,
+.edit-profile-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  background-color: #334155;
+  border: 1px solid #475569;
+  border-radius: 0.75rem;
+  color: #ffffff;
+  font-size: 1rem;
+  transition: border 0.3s, background-color 0.3s;
+}
+
+.edit-profile-input::placeholder,
+.edit-profile-textarea::placeholder {
+  color: #94a3b8;
+}
+
+.edit-profile-input:focus,
+.edit-profile-textarea:focus {
+  border-color: #3b82f6; /* Blue border on focus */
+  background-color: #1e293b;
+  outline: none;
+}
+
+/* Buttons */
+.edit-profile-button,
+.add-education-button,
+.remove-education-button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  margin-top: 1rem;
+  border-radius: 0.75rem;
+  font-weight: bold;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.edit-profile-button {
+  background-color: #22c55e; /* Green */
+  color: white;
+}
+
+.edit-profile-button:hover {
+  background-color: #16a34a; /* Darker Green */
+}
+
+.add-education-button {
+  background-color: #3b82f6; /* Blue */
+  color: white;
+}
+
+.add-education-button:hover {
+  background-color: #2563eb; /* Darker Blue */
+}
+
+.remove-education-button {
+  background: none;
+  color: #f87171; /* Red */
+  font-size: 0.9rem;
+}
+
+.remove-education-button:hover {
+  color: #ef4444;
+}
+
+/* Section Headings */
+.edit-profile-section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* Small helper text */
+.helper-text {
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
