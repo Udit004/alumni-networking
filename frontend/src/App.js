@@ -25,9 +25,7 @@ import CreateJob from './pages/CreateJob';
 import CreateMentorship from './pages/CreateMentorship';
 import MentorshipApplication from './pages/MentorshipApplication';
 import JobApplication from './pages/JobApplication';
-import StudentChat from './pages/studentDashboard/StudentChat';
-import TeacherChat from './pages/teacherDashboard/TeacherChat';
-import TestChat from './pages/TestChat';
+// Chat components removed
 import CourseDetail from './pages/CourseDetail';
 import './App.css';
 import { initializeFirestoreCollections } from './utils/firestoreInit';
@@ -202,21 +200,7 @@ function App() {
                   <CreateMentorship />
                 </PrivateRoute>
               } />
-              <Route path="/student-chat" element={
-                <PrivateRoute allowedRoles={['student']}>
-                  <StudentChat />
-                </PrivateRoute>
-              } />
-              <Route path="/teacher-chat" element={
-                <PrivateRoute allowedRoles={['teacher']}>
-                  <TeacherChat />
-                </PrivateRoute>
-              } />
-              <Route path="/test-chat" element={
-                <PrivateRoute>
-                  <TestChat />
-                </PrivateRoute>
-              } />
+              {/* Chat routes removed */}
               <Route path="/course/:id" element={
                 <PrivateRoute>
                   <CourseDetail />

@@ -12,7 +12,7 @@ require("./models/Mentorship");
 require("./models/JobApplication");
 require("./models/MentorshipApplication");
 require("./models/EventRegistration");
-require("./models/Message");
+// Message model removed
 require("./models/Course");
 require("./models/CourseApplication");
 require("./models/Announcement");
@@ -25,9 +25,7 @@ const jobRoutes = require('./routes/jobs');
 const mentorshipRoutes = require('./routes/mentorships');
 const jobApplicationRoutes = require('./routes/jobApplicationRoutes');
 const mentorshipApplicationRoutes = require('./routes/mentorshipApplicationRoutes');
-const messagesRoutes = require('./routes/messages');
-const messageRoutesDB = require('./routes/messageRoutes');
-const testMessagesRoutes = require('./routes/testMessages');
+// Chat routes removed
 const courseRoutes = require('./routes/courses');
 const courseApplicationRoutes = require('./routes/courseApplications');
 const firestoreNotificationRoutes = require('./routes/firestoreNotifications');
@@ -83,9 +81,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/mentorships', mentorshipRoutes);
 app.use('/api/job-applications', jobApplicationRoutes);
 app.use('/api/mentorship-applications', mentorshipApplicationRoutes);
-app.use('/api/messages', messagesRoutes);
-app.use('/api/messages-db', messageRoutesDB);
-app.use('/api/test-messages', testMessagesRoutes);
+// Chat routes removed
 app.use('/api/courses', courseRoutes);
 app.use('/api/course-applications', courseApplicationRoutes);
 app.use('/api/notifications', firestoreNotificationRoutes);

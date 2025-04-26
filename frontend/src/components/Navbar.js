@@ -491,33 +491,7 @@ const Navbar = () => {
                 </NavLink>
               )}
 
-              {/* Chat links in mobile menu */}
-              {role === 'student' && (
-                <NavLink
-                  to="/student-chat"
-                  className={({ isActive }) =>
-                    isActive
-                      ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline"
-                      : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
-                  }
-                  onClick={handleNavClick}
-                >
-                  Chat with Teachers
-                </NavLink>
-              )}
-              {role === 'teacher' && (
-                <NavLink
-                  to="/teacher-chat"
-                  className={({ isActive }) =>
-                    isActive
-                      ? "block py-3 px-4 rounded-md text-primary dark:text-primary bg-blue-50 dark:bg-blue-900/20 no-underline"
-                      : "block py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 no-underline"
-                  }
-                  onClick={handleNavClick}
-                >
-                  Chat with Students
-                </NavLink>
-              )}
+              {/* Chat links removed */}
 
               <NavLink
                 to="/about"
