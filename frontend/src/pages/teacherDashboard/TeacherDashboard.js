@@ -17,74 +17,7 @@ const TeacherDashboard = () => {
     location.state?.activeSection || 'overview'
   );
   const [events, setEvents] = useState([]);
-  const [materials, setMaterials] = useState([
-    {
-      id: 1,
-      title: 'Data Structures Notes',
-      course: 'CS101 - Week 1',
-      description: 'Comprehensive notes covering arrays, linked lists, and trees with examples.',
-      students: 120,
-      lastUpdated: '2 days ago',
-      type: 'notes',
-      icon: '📝',
-      color: 'blue'
-    },
-    {
-      id: 2,
-      title: 'Algorithm Analysis',
-      course: 'CS201 - Assignment 2',
-      description: 'Practice problems on time complexity and space complexity analysis.',
-      students: 85,
-      lastUpdated: 'Due: 1 week',
-      type: 'assignment',
-      icon: '📋',
-      color: 'purple'
-    },
-    {
-      id: 3,
-      title: 'Web Dev Template',
-      course: 'CS301 - Project 1',
-      description: 'Starter template for React.js project with authentication setup.',
-      students: 45,
-      lastUpdated: '1 week ago',
-      type: 'template',
-      icon: '🎯',
-      color: 'yellow'
-    },
-    {
-      id: 4,
-      title: 'Database Design Quiz',
-      course: 'CS401 - Quiz 3',
-      description: 'Multiple choice questions on ER diagrams and normalization.',
-      students: 65,
-      lastUpdated: 'Due: 3 days',
-      type: 'quiz',
-      icon: '✍️',
-      color: 'red'
-    },
-    {
-      id: 5,
-      title: 'ML Lab Manual',
-      course: 'CS501 - Lab 2',
-      description: 'Step-by-step guide for implementing machine learning algorithms.',
-      students: 40,
-      lastUpdated: '5 days ago',
-      type: 'lab',
-      icon: '🔬',
-      color: 'indigo'
-    },
-    {
-      id: 6,
-      title: 'OS Study Guide',
-      course: 'CS601 - Final Review',
-      description: 'Comprehensive review materials for operating systems final exam.',
-      students: 95,
-      lastUpdated: '1 day ago',
-      type: 'guide',
-      icon: '📖',
-      color: 'teal'
-    }
-  ]);
+  const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -93,7 +26,7 @@ const TeacherDashboard = () => {
   const [pendingRequests, setPendingRequests] = useState({ incoming: [], outgoing: [] });
   const { currentUser: user, role } = useAuth();
   const navigate = useNavigate();
-  const API_URL = process.env.REACT_APP_API_URL;
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
   const [connections, setConnections] = useState([]);
   const [connectionLoading, setConnectionLoading] = useState(true);
   const [profileData, setProfileData] = useState({
@@ -511,32 +444,26 @@ const TeacherDashboard = () => {
   };
 
   const handleDeleteMaterial = async (materialId) => {
+    if (!user) return;
+    
     try {
-      setLoading(true);
-      // Call API to delete material
-      const response = await fetch(`${API_URL}/api/materials/${materialId}?firebaseUID=${user.uid}&role=teacher`, {
+      const response = await fetch(`${API_URL}/api/materials/${materialId}`, {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${await user.getIdToken()}`
         }
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete material');
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove deleted material from state
+        setMaterials(materials.filter(m => m.id !== materialId));
+      } else {
+        console.error('Failed to delete material:', data.message);
       }
-
-      // Remove material from local state
-      setMaterials(prevMaterials => prevMaterials.filter(material => material.id !== materialId));
-
-      // Show success message
-      alert('Material deleted successfully');
-    } catch (err) {
-      console.error('Error deleting material:', err);
-      alert(`Failed to delete material: ${err.message}`);
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Error deleting material:', error);
     }
   };
 
@@ -720,6 +647,102 @@ const TeacherDashboard = () => {
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
+
+  // Fetch data on load
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        setError('');
+        
+        // Fetch profile data
+        const profileRes = await fetch(`${API_URL}/api/teachers/${user.uid}`, {
+          headers: {
+            'Authorization': `Bearer ${await user.getIdToken()}`
+          }
+        });
+        
+        const profileData = await profileRes.json();
+        
+        if (profileData.success) {
+          setProfileData(profileData.teacher);
+        } else {
+          throw new Error(profileData.message || 'Failed to fetch profile');
+        }
+        
+        // Fetch courses
+        const coursesRes = await fetch(`${API_URL}/api/courses/teacher/${user.uid}`, {
+          headers: {
+            'Authorization': `Bearer ${await user.getIdToken()}`
+          }
+        });
+        
+        const coursesData = await coursesRes.json();
+        
+        if (coursesData.success) {
+          setMaterials(coursesData.courses || []);
+        } else {
+          throw new Error(coursesData.message || 'Failed to fetch courses');
+        }
+        
+        // Fetch materials
+        const materialsRes = await fetch(`${API_URL}/api/materials`, {
+          headers: {
+            'Authorization': `Bearer ${await user.getIdToken()}`
+          }
+        });
+        
+        const materialsData = await materialsRes.json();
+        
+        if (materialsData.success) {
+          setMaterials(materialsData.materials || []);
+        } else {
+          throw new Error(materialsData.message || 'Failed to fetch materials');
+        }
+        
+      } catch (err) {
+        console.error('Error fetching teacher data:', err);
+        setError('Failed to load data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [user, API_URL]);
+
+  // Fetch materials
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      if (!user) return;
+      
+      try {
+        // Fetch materials
+        const materialsRes = await fetch(`${API_URL}/api/materials`, {
+          headers: {
+            'Authorization': `Bearer ${await user.getIdToken()}`
+          }
+        });
+        
+        const materialsData = await materialsRes.json();
+        
+        if (materialsData.success) {
+          setMaterials(materialsData.materials || []);
+        } else {
+          console.error('Failed to fetch materials:', materialsData.message);
+        }
+      } catch (err) {
+        console.error('Error fetching materials:', err);
+      }
+    };
+    
+    // Only fetch materials when on the resources tab
+    if (activeSection === 'resources') {
+      fetchMaterials();
+    }
+  }, [user, API_URL, activeSection]);
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
@@ -924,7 +947,12 @@ const TeacherDashboard = () => {
           )}
 
           {activeSection === 'resources' && (
-            <Resources />
+            <Resources 
+              materials={materials} 
+              handleDeleteMaterial={handleDeleteMaterial}
+              loading={loading}
+              isDarkMode={isDarkMode}
+            />
           )}
 
           {activeSection === 'students' && (
