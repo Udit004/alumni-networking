@@ -427,7 +427,6 @@
     /* Fix mobile header */
     header {
       padding: 10px !important;
-      position: fixed;
       top: 0;
       left: 0;
       right: 0;

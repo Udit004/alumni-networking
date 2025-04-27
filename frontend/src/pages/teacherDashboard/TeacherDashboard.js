@@ -370,40 +370,72 @@ const TeacherDashboard = () => {
         endpoint: `${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`
       });
 
-      // Use the user-specific endpoint to get events created by this user, including role
-      const response = await fetch(`${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      // Define base URLs for API fallback
+      const baseUrls = [
+        API_URL,
+        'http://localhost:5000',
+        'http://localhost:5001'
+      ];
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
+      let success = false;
+      let responseData = null;
+      let lastError = null;
+
+      for (const baseUrl of baseUrls) {
+        try {
+          console.log(`Trying to fetch events from ${baseUrl}...`);
+          const token = await user.getIdToken();
+          
+          // Use the user-specific endpoint to get events created by this user, including role
+          const response = await fetch(`${baseUrl}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
+            method: 'GET',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            timeout: 5000
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          console.log(`Events response from ${baseUrl}:`, data);
+          responseData = data;
+          success = true;
+          break; // Exit the loop if successful
+        } catch (err) {
+          console.log(`Failed to connect to ${baseUrl}:`, err.message);
+          lastError = err;
+        }
       }
 
-      const data = await response.json();
+      if (success) {
+        // Use the createdEvents array directly from the API response
+        console.log('Teacher events received from API:', {
+          response: 'success',
+          createdEvents: responseData.createdEvents?.length || 0,
+          createdEventsData: responseData.createdEvents,
+          registeredEvents: responseData.registeredEvents?.length || 0,
+          data: responseData
+        });
 
-      // Use the createdEvents array directly from the API response
-      console.log('Teacher events received from API:', {
-        response: 'success',
-        responseStatus: response.status,
-        createdEvents: data.createdEvents?.length || 0,
-        createdEventsData: data.createdEvents,
-        registeredEvents: data.registeredEvents?.length || 0,
-        data: data
-      });
-
-      // Check if createdEvents exists in the response
-      if (!data.createdEvents) {
-        console.warn('No createdEvents found in API response:', data);
-        // Fallback to data.events if createdEvents doesn't exist
-        const eventsToUse = data.events || [];
-        setEvents(eventsToUse);
-        console.log('Using fallback events array:', eventsToUse);
+        // Check if createdEvents exists in the response
+        if (!responseData.createdEvents) {
+          console.warn('No createdEvents found in API response:', responseData);
+          // Fallback to data.events if createdEvents doesn't exist
+          const eventsToUse = responseData.events || [];
+          setEvents(eventsToUse);
+          console.log('Using fallback events array:', eventsToUse);
+        } else {
+          // Sort events by date
+          const sortedEvents = responseData.createdEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+          console.log('Setting sorted events:', sortedEvents);
+          setEvents(sortedEvents);
+        }
       } else {
-        // Sort events by date
-        const sortedEvents = data.createdEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
-        console.log('Setting sorted events:', sortedEvents);
-        setEvents(sortedEvents);
+        throw new Error(lastError?.message || 'Failed to connect to any server');
       }
     } catch (err) {
       setError(`Failed to load events: ${err.message}`);

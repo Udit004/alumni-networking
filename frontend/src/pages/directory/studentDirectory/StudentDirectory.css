@@ -4,12 +4,16 @@
   --tertiary-color: #8b5cf6;
   --tertiary-dark: #7c3aed;
   --tertiary-light: #a5b4fc;
+  --mentor-gradient-from: #10b981;
+  --mentor-gradient-to: #059669;
 }
 
 /* Dark mode variables with better contrast */
 :root.dark {
   --tertiary-light: #d1dafe; /* Increased brightness for better visibility */
   --text-color-light: #f3f4f6; /* Bright text for dark backgrounds */
+  --mentor-gradient-from: #10b981;
+  --mentor-gradient-to: #059669;
 }
 
 /* Custom scrollbar for filter dropdowns */
@@ -32,16 +36,18 @@ select::-webkit-scrollbar-thumb:hover {
 
 /* Directory card hover effects */
 .directory-card {
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform, box-shadow;
 }
 
 .directory-card:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: translateY(-5px);
 }
 
 /* Dark mode specific adjustments */
 .dark .bg-gray-750 {
-  background-color: #252f3f;
+  background-color: #1e293b;
 }
 
 .dark .text-tertiary-light {
@@ -61,6 +67,7 @@ select::-webkit-scrollbar-thumb:hover {
 .skill-tag:hover {
   background-color: var(--tertiary-color);
   color: white;
+  transform: scale(1.05);
 }
 
 /* Enhanced skill tag contrast for dark mode */
@@ -91,8 +98,88 @@ select::-webkit-scrollbar-thumb:hover {
   background-image: linear-gradient(to right, var(--tertiary-color), var(--tertiary-dark));
 }
 
-/* View Profile button with enhanced visibility in dark mode */
-.dark .text-tertiary-light {
-  color: var(--tertiary-light);
-  font-weight: 500;
+/* Find a Mentor button gradient */
+.bg-gradient-to-r.from-green-500.to-emerald-600 {
+  background-image: linear-gradient(to right, var(--mentor-gradient-from), var(--mentor-gradient-to));
+  transition: all 0.3s ease;
+}
+
+.bg-gradient-to-r.from-green-500.to-emerald-600:hover {
+  background-image: linear-gradient(to right, #059669, #047857);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Animate the group-hover:animate-pulse icon */
+@keyframes gentle-pulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+}
+
+.group:hover .group-hover\:animate-pulse {
+  animation: gentle-pulse 1.5s infinite;
+}
+
+/* Search input focus styles */
+input:focus {
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+  outline: none;
+}
+
+.dark input:focus {
+  box-shadow: 0 0 0 2px rgba(209, 218, 254, 0.3);
+}
+
+/* Select dropdown focus styles */
+select:focus {
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+  outline: none;
+}
+
+.dark select:focus {
+  box-shadow: 0 0 0 2px rgba(209, 218, 254, 0.3);
+}
+
+/* Smooth hover transitions for buttons */
+button {
+  transition: all 0.2s ease;
+}
+
+/* Card hover animation for view profile button */
+.directory-card .group-hover\:translate-x-1 {
+  transition: transform 0.2s ease;
+}
+
+/* Pagination styles */
+.rounded-md.bg-tertiary {
+  background-color: var(--tertiary-color);
+}
+
+/* Better card borders in dark mode */
+.dark .border-gray-100.dark\:border-gray-700 {
+  border-color: rgba(55, 65, 81, 0.5);
+}
+
+/* Improved card shadows for dark mode */
+.dark .directory-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+}
+
+.dark .directory-card:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Smooth section transitions */
+.bg-white, .dark\:bg-gray-800 {
+  transition: background-color 0.3s ease;
 } 
