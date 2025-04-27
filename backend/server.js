@@ -2,7 +2,12 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
-const admin = require('./config/firebase-admin'); // Import Firebase Admin
+// Set NODE_ENV if not already set
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+console.log(`🌍 Running in ${process.env.NODE_ENV} mode`);
+
+// Import Firebase Admin after setting NODE_ENV
+const admin = require('./config/firebase-admin');
 const path = require('path');
 
 // Import models before routes
@@ -33,7 +38,8 @@ const courseApplicationRoutes = require('./routes/courseApplications');
 const firestoreNotificationRoutes = require('./routes/firestoreNotifications');
 const announcementRoutes = require('./routes/announcementRoutes');
 const activityRoutes = require('./routes/activityRoutes');
-const materialsRoutes = require('./routes/materialsRoutes');
+// Temporarily comment out materialsRoutes due to missing multer dependency
+// const materialsRoutes = require('./routes/materialsRoutes');
 
 const app = express();
 const PORT = 5000; // Use port 5000 explicitly
@@ -57,7 +63,7 @@ app.use(cors({
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             return callback(null, true);
         }
-        
+
         // For debugging - log blocked origins
         console.log('Blocked origin:', origin);
         const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
@@ -95,7 +101,8 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/course-applications', courseApplicationRoutes);
 app.use('/api/notifications', firestoreNotificationRoutes);
 app.use('/api/activities', activityRoutes);
-app.use('/api/materials', materialsRoutes);
+// Temporarily comment out materialsRoutes due to missing multer dependency
+// app.use('/api/materials', materialsRoutes);
 // Register announcement routes
 app.use('/', announcementRoutes);
 // Log the registered routes
@@ -205,9 +212,9 @@ app.get("/api/health", (req, res) => {
 
 // Test CORS endpoint
 app.get("/api/test-cors", (req, res) => {
-    res.status(200).json({ 
-        status: "ok", 
-        message: "CORS test successful!", 
+    res.status(200).json({
+        status: "ok",
+        message: "CORS test successful!",
         timestamp: new Date().toISOString(),
         origin: req.headers.origin || 'No origin header'
     });
