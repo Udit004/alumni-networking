@@ -11,7 +11,8 @@ import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRea
 
 const TeacherDashboard = () => {
   const location = useLocation();
-  const [isNavExpanded, setIsNavExpanded] = useState(true);
+  const [isNavExpanded, setIsNavExpanded] = useState(window.innerWidth > 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [activeSection, setActiveSection] = useState(
     // Check if we have a section in the location state, otherwise default to 'overview'
     location.state?.activeSection || 'overview'
@@ -441,6 +442,10 @@ const TeacherDashboard = () => {
 
   const handleSectionClick = (section) => {
     setActiveSection(section);
+    // Close sidebar on mobile when a section is selected
+    if (isMobile) {
+      setIsNavExpanded(false);
+    }
   };
 
   const handleDeleteMaterial = async (materialId) => {
@@ -744,13 +749,35 @@ const TeacherDashboard = () => {
     }
   }, [user, API_URL, activeSection]);
 
+  // Add resize listener to handle mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile && !isNavExpanded) {
+        setIsNavExpanded(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isNavExpanded]);
+
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
       {/* Sidebar */}
       <div
-        className={`h-full transition-all duration-300 bg-white dark:bg-gray-800 shadow-lg
-                   ${isNavExpanded ? 'w-64' : 'w-20'}`}
-        style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
+        className={`h-full transition-all duration-300 shadow-lg
+                   ${isNavExpanded ? 'w-64' : 'w-20'} 
+                   ${isMobile ? 'fixed z-50' : 'relative'}`}
+        style={{ 
+          backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+          top: '0',
+          left: isMobile && !isNavExpanded ? '-100%' : '0',
+          height: '100%',
+          overflow: 'auto',
+          width: isMobile && isNavExpanded ? '100%' : ''
+        }}
       >
         <div className="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
           {isNavExpanded && (
@@ -790,14 +817,33 @@ const TeacherDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <header className="bg-white dark:bg-gray-800 shadow-md p-4 sticky top-0 z-10"
+      <div className={`flex-1 overflow-auto ${isMobile ? 'w-full' : ''}`}>
+        <header className="bg-white dark:bg-gray-800 shadow-md p-4 sticky top-0 z-40"
                 style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+            {isMobile && (
+              <button
+                className="p-2 mr-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 z-50"
+                onClick={() => setIsNavExpanded(!isNavExpanded)}
+              >
+                {isNavExpanded ? '✕' : '☰'}
+              </button>
+            )}
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white truncate">
               {menuItems.find(item => item.id === activeSection)?.label}
             </h1>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 z-50 relative">
+              {/* Dark mode toggle */}
+              <button
+                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                onClick={() => {
+                  document.documentElement.classList.toggle('dark');
+                  setIsDarkMode(!isDarkMode);
+                }}
+              >
+                {isDarkMode ? '☀️' : '🌙'}
+              </button>
+            
               <div className="relative" ref={notificationRef}>
                 <button
                   className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -887,7 +933,15 @@ const TeacherDashboard = () => {
           </div>
         </header>
 
-        <main className="p-6">
+        {/* Mobile sidebar overlay */}
+        {isMobile && isNavExpanded && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setIsNavExpanded(false)}
+          ></div>
+        )}
+
+        <main className="p-3 md:p-6">
           {activeSection === 'overview' && (
             <Overview
               connections={connections}
