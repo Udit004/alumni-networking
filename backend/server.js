@@ -2,13 +2,13 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
-
 // Set NODE_ENV if not already set
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 console.log(`🌍 Running in ${process.env.NODE_ENV} mode`);
 
 // Import Firebase Admin after setting NODE_ENV
 const admin = require('./config/firebase-admin');
+const path = require('path');
 
 // Import models before routes
 require("./models/user");
@@ -38,15 +38,18 @@ const courseApplicationRoutes = require('./routes/courseApplications');
 const firestoreNotificationRoutes = require('./routes/firestoreNotifications');
 const announcementRoutes = require('./routes/announcementRoutes');
 const activityRoutes = require('./routes/activityRoutes');
+// Temporarily comment out materialsRoutes due to missing multer dependency
+// const materialsRoutes = require('./routes/materialsRoutes');
 
 const app = express();
 const PORT = 5000; // Use port 5000 explicitly
 const HOST = "0.0.0.0";
-const MONGO_URI = process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/alumni-networking";
 
 // CORS Configuration with all allowed origins
 const allowedOrigins = [
     'http://localhost:3000',
+    'http://127.0.0.1:3000',
     'https://alumni-networking.vercel.app',
     'https://alumni-networking-89f98.web.app',
     'https://alumni-networking-89f98.firebaseapp.com',
@@ -56,15 +59,15 @@ const allowedOrigins = [
 // CORS Configuration
 app.use(cors({
     origin: function(origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-
-        if (allowedOrigins.indexOf(origin) === -1) {
-            console.log('Blocked origin:', origin); // Debug log
-            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-            return callback(new Error(msg), false);
+        // Allow requests with no origin (like mobile apps, curl requests, or requests from the same origin)
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            return callback(null, true);
         }
-        return callback(null, true);
+
+        // For debugging - log blocked origins
+        console.log('Blocked origin:', origin);
+        const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+        return callback(new Error(msg), false);
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -73,6 +76,10 @@ app.use(cors({
 
 // Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Debug middleware
 app.use((req, res, next) => {
@@ -94,6 +101,8 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/course-applications', courseApplicationRoutes);
 app.use('/api/notifications', firestoreNotificationRoutes);
 app.use('/api/activities', activityRoutes);
+// Temporarily comment out materialsRoutes due to missing multer dependency
+// app.use('/api/materials', materialsRoutes);
 // Register announcement routes
 app.use('/', announcementRoutes);
 // Log the registered routes
@@ -201,6 +210,16 @@ app.get("/api/health", (req, res) => {
     res.status(200).json({ status: "ok", message: "Backend is running" });
 });
 
+// Test CORS endpoint
+app.get("/api/test-cors", (req, res) => {
+    res.status(200).json({
+        status: "ok",
+        message: "CORS test successful!",
+        timestamp: new Date().toISOString(),
+        origin: req.headers.origin || 'No origin header'
+    });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('❌ Error:', err);
@@ -210,7 +229,7 @@ app.use((err, req, res, next) => {
 // Connect to MongoDB and start server
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => {
-        console.log("✅ Connected to MongoDB Atlas");
+        console.log("✅ Connected to MongoDB at:", MONGO_URI);
         app.listen(PORT, HOST, () => {
             console.log(`🚀 Server running at http://localhost:${PORT}`);
             // Log available routes
@@ -221,5 +240,6 @@ mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     })
     .catch(err => {
         console.error("❌ MongoDB Connection Error:", err);
+        console.log("💡 TIP: Make sure you have MongoDB installed locally or provide a valid MONGO_URI in .env file");
         process.exit(1);
     });
