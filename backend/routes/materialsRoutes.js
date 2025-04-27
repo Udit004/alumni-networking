@@ -12,9 +12,12 @@ const admin = require('firebase-admin');
 router.get('/', auth, async (req, res) => {
   try {
     const teacherId = req.user.uid;
+    console.log('Fetching materials for teacher:', teacherId);
     
     // Find all courses taught by this teacher
     const courses = await Course.find({ teacherId }).lean();
+    
+    console.log(`Found ${courses.length} courses for teacher ${teacherId}`);
     
     if (!courses || courses.length === 0) {
       return res.json({ success: true, materials: [] });
@@ -30,6 +33,8 @@ router.get('/', auth, async (req, res) => {
       return [...materials, ...courseMaterials];
     }, []);
     
+    console.log(`Found ${allMaterials.length} total materials across all courses`);
+    
     res.json({ success: true, materials: allMaterials });
   } catch (error) {
     console.error('Error fetching materials:', error);
@@ -43,6 +48,8 @@ router.get('/:materialId', auth, async (req, res) => {
     const { materialId } = req.params;
     const teacherId = req.user.uid;
     
+    console.log(`Fetching material ${materialId} for teacher ${teacherId}`);
+    
     // Find all courses taught by this teacher
     const courses = await Course.find({ teacherId });
     
@@ -53,7 +60,7 @@ router.get('/:materialId', auth, async (req, res) => {
     for (const course of courses) {
       const foundMaterial = (course.materials || []).find(m => m.id === materialId);
       if (foundMaterial) {
-        material = { ...foundMaterial, courseId: course._id, courseTitle: course.title };
+        material = { ...foundMaterial.toObject(), courseId: course._id, courseTitle: course.title };
         foundCourse = course;
         break;
       }
@@ -62,6 +69,8 @@ router.get('/:materialId', auth, async (req, res) => {
     if (!material) {
       return res.status(404).json({ success: false, message: 'Material not found' });
     }
+    
+    console.log('Found material:', material.title);
     
     res.json({ success: true, material, course: foundCourse });
   } catch (error) {
@@ -73,6 +82,9 @@ router.get('/:materialId', auth, async (req, res) => {
 // Add a new material with file upload
 router.post('/', upload.single('file'), async (req, res) => {
   try {
+    console.log('Adding new material, request body:', req.body);
+    console.log('File upload:', req.file ? req.file.originalname : 'No file uploaded');
+    
     const { courseId, title, description, type } = req.body;
     
     // Try to get user from auth token
@@ -81,11 +93,13 @@ router.post('/', upload.single('file'), async (req, res) => {
       const authHeader = req.headers.authorization;
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.split('Bearer ')[1];
+        console.log('Got authorization token, verifying...');
         const decodedToken = await admin.auth().verifyIdToken(token);
         teacherId = decodedToken.uid;
+        console.log('Verified token for teacher:', teacherId);
       }
     } catch (authError) {
-      console.log("Authentication error:", authError.message);
+      console.error("Authentication error:", authError);
     }
     
     // Fallback for development - get teacher ID from query params
@@ -113,6 +127,8 @@ router.post('/', upload.single('file'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'Course ID and material title are required' });
     }
     
+    console.log(`Validated request. Finding course ${courseId} for teacher ${teacherId}`);
+    
     // Find the course
     const course = await Course.findById(courseId);
     
@@ -121,8 +137,11 @@ router.post('/', upload.single('file'), async (req, res) => {
       if (req.file) {
         fs.unlinkSync(req.file.path);
       }
+      console.log(`Course ${courseId} not found`);
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
+    
+    console.log(`Found course: ${course.title}`);
     
     // Verify the user is the course teacher
     if (course.teacherId !== teacherId) {
@@ -130,6 +149,7 @@ router.post('/', upload.single('file'), async (req, res) => {
       if (req.file) {
         fs.unlinkSync(req.file.path);
       }
+      console.log(`Unauthorized: Course teacher is ${course.teacherId}, request teacher is ${teacherId}`);
       return res.status(403).json({ 
         success: false, 
         message: 'Unauthorized to add materials to this course',
@@ -143,12 +163,15 @@ router.post('/', upload.single('file'), async (req, res) => {
       title,
       description: description || '',
       type: type || 'notes',
-      id: Date.now().toString(),
-      createdAt: Date.now()
+      id: new mongoose.Types.ObjectId().toString(), // Use MongoDB ObjectId for more uniqueness
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     
     // Add file data if file was uploaded
     if (req.file) {
+      console.log(`Processing uploaded file: ${req.file.originalname} (${req.file.mimetype}, ${req.file.size} bytes)`);
+      
       // Generate server URL from request
       const protocol = req.protocol;
       const host = req.get('host');
@@ -159,26 +182,71 @@ router.post('/', upload.single('file'), async (req, res) => {
       newMaterial.filePath = req.file.path;
       newMaterial.fileSize = req.file.size;
       newMaterial.mimeType = req.file.mimetype;
+      
+      console.log(`File URL will be: ${newMaterial.fileUrl}`);
     }
     
     // Add icon and color based on material type
     newMaterial.icon = getIconForType(newMaterial.type);
     newMaterial.color = getColorForType(newMaterial.type);
     
-    // Add the material to the course
-    course.materials = course.materials || [];
-    course.materials.push(newMaterial);
-    await course.save();
+    console.log(`Adding new material "${newMaterial.title}" to course using addMaterial method`);
+    console.log('Material data:', newMaterial);
     
-    res.status(201).json({ 
-      success: true, 
-      message: 'Material added successfully', 
-      material: { ...newMaterial, courseId: course._id, courseTitle: course.title } 
-    });
+    // Use the new addMaterial method instead of directly modifying the array
+    try {
+      await course.addMaterial(newMaterial);
+      
+      // Fetch the updated course to ensure the material was added
+      const updatedCourse = await Course.findById(courseId);
+      const materials = updatedCourse.materials || [];
+      
+      console.log(`Course saved successfully. Now has ${materials.length} materials`);
+      if (materials.length > 0) {
+        console.log(`Last material in array: ${materials[materials.length-1].title}`);
+      }
+      
+      // Find the added material to return it
+      const addedMaterial = materials.find(m => m.id === newMaterial.id);
+      if (!addedMaterial) {
+        console.warn("Warning: Material was not found in the course after saving");
+      }
+      
+      res.status(201).json({ 
+        success: true, 
+        message: 'Material added successfully', 
+        material: { 
+          ...addedMaterial?.toObject() || newMaterial, 
+          courseId: course._id, 
+          courseTitle: course.title 
+        } 
+      });
+    } catch (saveError) {
+      console.error("Error saving course with new material:", saveError);
+      
+      // Check if it's a validation error
+      if (saveError.name === 'ValidationError') {
+        // Remove uploaded file if validation fails
+        if (req.file) {
+          fs.unlinkSync(req.file.path);
+        }
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Validation error: ' + saveError.message,
+          validationErrors: saveError.errors
+        });
+      }
+      
+      throw saveError; // Rethrow for the outer catch block
+    }
   } catch (error) {
     // Remove uploaded file if error occurs
     if (req.file) {
-      fs.unlinkSync(req.file.path);
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (unlinkError) {
+        console.error('Error removing file after failed upload:', unlinkError);
+      }
     }
     console.error('Error adding material:', error);
     res.status(500).json({ success: false, message: 'Failed to add material', error: error.message });
@@ -191,38 +259,84 @@ router.delete('/:materialId', auth, async (req, res) => {
     const { materialId } = req.params;
     const teacherId = req.user.uid;
     
+    console.log(`Attempting to delete material ${materialId} for teacher ${teacherId}`);
+    
     // Find courses taught by this teacher
     const courses = await Course.find({ teacherId });
     
     // Find which course has this material
     let materialDeleted = false;
     let filePath = null;
+    let courseSaved = null;
     
     for (const course of courses) {
-      const materialIndex = (course.materials || []).findIndex(m => m.id === materialId);
-      if (materialIndex >= 0) {
+      // First check if the material exists in this course
+      const foundMaterial = course.materials.find(m => m.id === materialId);
+      
+      if (foundMaterial) {
+        console.log(`Found material "${foundMaterial.title}" in course "${course.title}". Preparing to remove...`);
+        
         // Store file path if exists before removing
-        if (course.materials[materialIndex].filePath) {
-          filePath = course.materials[materialIndex].filePath;
+        if (foundMaterial.filePath) {
+          filePath = foundMaterial.filePath;
         }
         
-        // Remove the material
-        course.materials.splice(materialIndex, 1);
-        await course.save();
-        materialDeleted = true;
-        break;
+        // Use MongoDB's atomic operations for more reliable updates
+        try {
+          // Find the material by id and pull it from the array
+          const updateResult = await Course.updateOne(
+            { _id: course._id },
+            { $pull: { materials: { id: materialId } } }
+          );
+          
+          console.log('MongoDB update result:', updateResult);
+          
+          if (updateResult.modifiedCount > 0) {
+            materialDeleted = true;
+            courseSaved = course._id;
+            console.log(`Material removed from course ${course.title} (MongoDB atomic operation)`);
+          } else {
+            console.warn(`Material not found in course or not removed (MongoDB atomic operation)`);
+          }
+        } catch (updateError) {
+          console.error('Error using atomic operation to remove material:', updateError);
+          
+          // Fallback to traditional approach
+          console.log('Falling back to traditional approach...');
+          const materialIndex = course.materials.findIndex(m => m.id === materialId);
+          
+          if (materialIndex >= 0) {
+            // Remove the material
+            course.materials.splice(materialIndex, 1);
+            await course.save();
+            materialDeleted = true;
+            courseSaved = course._id;
+            console.log(`Material removed from course ${course.title} (traditional approach)`);
+          }
+        }
+        
+        break; // Exit the loop once we've found and processed the material
       }
     }
     
     if (!materialDeleted) {
+      console.log(`Material ${materialId} not found for teacher ${teacherId}`);
       return res.status(404).json({ success: false, message: 'Material not found or unauthorized' });
+    }
+    
+    // Fetch the updated course to verify deletion
+    if (courseSaved) {
+      const updatedCourse = await Course.findById(courseSaved);
+      console.log(`Course now has ${updatedCourse.materials.length} materials`);
     }
     
     // Remove the file if it exists
     if (filePath && fs.existsSync(filePath)) {
+      console.log(`Removing file: ${filePath}`);
       fs.unlinkSync(filePath);
     }
     
+    console.log('Material deleted successfully');
     res.json({ success: true, message: 'Material deleted successfully' });
   } catch (error) {
     console.error('Error deleting material:', error);
@@ -237,6 +351,9 @@ router.put('/:materialId', auth, async (req, res) => {
     const { updatedMaterial } = req.body;
     const teacherId = req.user.uid;
     
+    console.log(`Updating material ${materialId} for teacher ${teacherId}`);
+    console.log('Update data:', updatedMaterial);
+    
     if (!updatedMaterial) {
       return res.status(400).json({ success: false, message: 'Updated material data is required' });
     }
@@ -250,20 +367,25 @@ router.put('/:materialId', auth, async (req, res) => {
     for (const course of courses) {
       const materialIndex = (course.materials || []).findIndex(m => m.id === materialId);
       if (materialIndex >= 0) {
+        console.log(`Found material in course ${course.title}. Updating...`);
+        
         // Update the material
         course.materials[materialIndex] = {
-          ...course.materials[materialIndex],
+          ...course.materials[materialIndex].toObject(),
           ...updatedMaterial,
           id: materialId, // Ensure ID doesn't change
-          updatedAt: Date.now()
+          updatedAt: new Date()
         };
         await course.save();
         materialUpdated = true;
+        
+        console.log('Material updated successfully');
         break;
       }
     }
     
     if (!materialUpdated) {
+      console.log(`Material ${materialId} not found for teacher ${teacherId}`);
       return res.status(404).json({ success: false, message: 'Material not found or unauthorized' });
     }
     
@@ -274,7 +396,39 @@ router.put('/:materialId', auth, async (req, res) => {
   }
 });
 
-// Helper functions for material types
+// Get all materials for a specific course
+router.get('/course/:courseId', auth, async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const teacherId = req.user.uid;
+    
+    console.log(`Fetching materials for course ${courseId} (teacher ${teacherId})`);
+    
+    // Find the course
+    const course = await Course.findOne({ _id: courseId, teacherId });
+    
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found or unauthorized' });
+    }
+    
+    const materials = course.materials || [];
+    console.log(`Found ${materials.length} materials for course ${course.title}`);
+    
+    // Add course info to each material
+    const materialsWithCourseInfo = materials.map(material => ({
+      ...material.toObject(),
+      courseId: course._id,
+      courseTitle: course.title
+    }));
+    
+    res.json({ success: true, materials: materialsWithCourseInfo });
+  } catch (error) {
+    console.error('Error fetching course materials:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch course materials', error: error.message });
+  }
+});
+
+// Helper function to get icon for material type
 function getIconForType(type) {
   switch(type) {
     case 'notes': return '📝';
@@ -287,6 +441,7 @@ function getIconForType(type) {
   }
 }
 
+// Helper function to get color for material type
 function getColorForType(type) {
   switch(type) {
     case 'notes': return 'blue';
