@@ -23,17 +23,17 @@ const StudentDirectory = () => {
           collection(db, 'users'),
           where('role', '==', 'student')
         );
-        
+
         const querySnapshot = await getDocs(studentQuery);
         const profiles = [];
-        
+
         querySnapshot.forEach((doc) => {
           profiles.push({
             id: doc.id,
             ...doc.data()
           });
         });
-        
+
         setStudentProfiles(profiles);
       } catch (err) {
         console.error('Error fetching student profiles:', err);
@@ -49,7 +49,7 @@ const StudentDirectory = () => {
   useEffect(() => {
     // Check initial dark mode state
     setIsDarkMode(document.documentElement.classList.contains('dark'));
-    
+
     // Monitor for dark mode changes
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -58,7 +58,7 @@ const StudentDirectory = () => {
         }
       });
     });
-    
+
     observer.observe(document.documentElement, { attributes: true });
     return () => observer.disconnect();
   }, []);
@@ -76,12 +76,17 @@ const StudentDirectory = () => {
   };
 
   const filteredProfiles = studentProfiles.filter((profile) => {
-    // First apply search term filter
+    // First filter out the current user
+    if (currentUser && profile.id === currentUser.uid) {
+      return false;
+    }
+
+    // Then apply search term filter
     const matchesSearch = profile.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           profile.major?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           profile.year?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (Array.isArray(profile.interests) && profile.interests.some(interest => interest.toLowerCase().includes(searchTerm.toLowerCase())));
-    
+
     // Then apply dropdown filter
     if (filterOption === 'all') {
       return matchesSearch;
@@ -92,7 +97,7 @@ const StudentDirectory = () => {
     } else if (filterOption === 'location') {
       return matchesSearch && profile.location?.toLowerCase().includes(filterOption);
     }
-    
+
     return matchesSearch;
   });
 
@@ -110,8 +115,8 @@ const StudentDirectory = () => {
         <div className="text-center p-6 max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-4">Error</h2>
           <p className="text-gray-700 dark:text-gray-200">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-tertiary text-white rounded-md hover:bg-opacity-90"
           >
             Try Again
@@ -156,8 +161,8 @@ const StudentDirectory = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProfiles.map((student) => (
-            <div 
-              key={student.id} 
+            <div
+              key={student.id}
               className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer transform hover:-translate-y-1 transition-transform directory-card"
               onClick={() => handleProfileClick(student.id)}
             >
@@ -168,9 +173,9 @@ const StudentDirectory = () => {
                 {/* Profile Image or Initials */}
                 <div className="flex justify-center mb-4">
                   {student.photoURL ? (
-                    <img 
-                      src={student.photoURL} 
-                      alt={student.name} 
+                    <img
+                      src={student.photoURL}
+                      alt={student.name}
                       className="h-24 w-24 rounded-full object-cover border-2 border-tertiary"
                     />
                   ) : (
@@ -179,7 +184,7 @@ const StudentDirectory = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Student Info */}
                 <div className="text-center">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
@@ -191,14 +196,14 @@ const StudentDirectory = () => {
                   <p className="text-gray-700 dark:text-gray-200 text-sm mt-1">
                     {student.major || 'Major'}
                   </p>
-                  
+
                   {/* Interests/Tags */}
                   <div className="mt-4 flex flex-wrap justify-center gap-2">
                     {Array.isArray(student.interests) && student.interests.length > 0 ? (
                       <>
                         {student.interests.slice(0, 3).map((interest, index) => (
-                          <span 
-                            key={index} 
+                          <span
+                            key={index}
                             className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs rounded-full skill-tag"
                           >
                             {interest}
@@ -218,7 +223,7 @@ const StudentDirectory = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="px-6 py-4 bg-gray-50 dark:bg-gray-750 flex justify-center border-t border-gray-100 dark:border-gray-700">
                 <button className="text-secondary dark:text-secondary-dark font-medium hover:underline flex items-center">
                   <span>View Profile</span>
@@ -235,4 +240,4 @@ const StudentDirectory = () => {
   );
 };
 
-export default StudentDirectory; 
+export default StudentDirectory;

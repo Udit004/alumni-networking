@@ -23,17 +23,17 @@ const AlumniDirectory = () => {
           collection(db, 'users'),
           where('role', '==', 'alumni')
         );
-        
+
         const querySnapshot = await getDocs(alumniQuery);
         const profiles = [];
-        
+
         querySnapshot.forEach((doc) => {
           profiles.push({
             id: doc.id,
             ...doc.data()
           });
         });
-        
+
         setAlumniProfiles(profiles);
       } catch (err) {
         console.error('Error fetching alumni profiles:', err);
@@ -49,7 +49,7 @@ const AlumniDirectory = () => {
   useEffect(() => {
     // Check initial dark mode state
     setIsDarkMode(document.documentElement.classList.contains('dark'));
-    
+
     // Monitor for dark mode changes
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -58,7 +58,7 @@ const AlumniDirectory = () => {
         }
       });
     });
-    
+
     observer.observe(document.documentElement, { attributes: true });
     return () => observer.disconnect();
   }, []);
@@ -76,20 +76,25 @@ const AlumniDirectory = () => {
   };
 
   const filteredProfiles = alumniProfiles.filter((profile) => {
-    // First apply search term filter
+    // First filter out the current user
+    if (currentUser && profile.id === currentUser.uid) {
+      return false;
+    }
+
+    // Then apply search term filter
     const matchesSearch = profile.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          profile.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          profile.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (Array.isArray(profile.skills) && profile.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase())));
-    
+
     // Then apply dropdown filter
     if (filterOption === 'all') {
       return matchesSearch;
     } else if (filterOption === 'industry') {
       // You can customize these filters based on your data structure
       const techIndustries = ['software', 'it', 'technology', 'tech'];
-      return matchesSearch && 
-             (profile.industry?.toLowerCase().includes(filterOption) || 
+      return matchesSearch &&
+             (profile.industry?.toLowerCase().includes(filterOption) ||
               techIndustries.some(industry => profile.industry?.toLowerCase().includes(industry)));
     } else if (filterOption === 'graduation-year') {
       // Filter by recent graduates (last 5 years)
@@ -100,7 +105,7 @@ const AlumniDirectory = () => {
       // You can customize these filters based on your location data
       return matchesSearch && profile.location?.toLowerCase().includes(filterOption);
     }
-    
+
     return matchesSearch;
   });
 
@@ -118,8 +123,8 @@ const AlumniDirectory = () => {
         <div className="text-center p-6 max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-4">Error</h2>
           <p className="text-gray-700 dark:text-gray-300">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90"
           >
             Try Again
@@ -164,8 +169,8 @@ const AlumniDirectory = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProfiles.map((alumni) => (
-            <div 
-              key={alumni.id} 
+            <div
+              key={alumni.id}
               className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer transform hover:-translate-y-1 transition-transform directory-card"
               onClick={() => handleProfileClick(alumni.id)}
             >
@@ -176,9 +181,9 @@ const AlumniDirectory = () => {
                 {/* Profile Image or Initials */}
                 <div className="flex justify-center mb-4">
                   {alumni.photoURL ? (
-                    <img 
-                      src={alumni.photoURL} 
-                      alt={alumni.name} 
+                    <img
+                      src={alumni.photoURL}
+                      alt={alumni.name}
                       className="h-24 w-24 rounded-full object-cover border-2 border-primary"
                     />
                   ) : (
@@ -187,7 +192,7 @@ const AlumniDirectory = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Alumni Info */}
                 <div className="text-center">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
@@ -199,14 +204,14 @@ const AlumniDirectory = () => {
                   <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
                     {alumni.company || 'Company'}
                   </p>
-                  
+
                   {/* Skills/Tags */}
                   <div className="mt-4 flex flex-wrap justify-center gap-2">
                     {Array.isArray(alumni.skills) && alumni.skills.length > 0 ? (
                       <>
                         {alumni.skills.slice(0, 3).map((skill, index) => (
-                          <span 
-                            key={index} 
+                          <span
+                            key={index}
                             className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full skill-tag"
                           >
                             {skill}
@@ -226,7 +231,7 @@ const AlumniDirectory = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="px-6 py-4 bg-gray-50 dark:bg-gray-750 flex justify-center border-t border-gray-100 dark:border-gray-700">
                 <button className="text-primary dark:text-primary-light font-medium hover:underline flex items-center">
                   <span>View Profile</span>
@@ -243,4 +248,4 @@ const AlumniDirectory = () => {
   );
 };
 
-export default AlumniDirectory; 
+export default AlumniDirectory;

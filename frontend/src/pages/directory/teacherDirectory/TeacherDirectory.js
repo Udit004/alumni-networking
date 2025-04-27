@@ -23,17 +23,17 @@ const TeacherDirectory = () => {
           collection(db, 'users'),
           where('role', '==', 'teacher')
         );
-        
+
         const querySnapshot = await getDocs(teacherQuery);
         const profiles = [];
-        
+
         querySnapshot.forEach((doc) => {
           profiles.push({
             id: doc.id,
             ...doc.data()
           });
         });
-        
+
         setTeacherProfiles(profiles);
       } catch (err) {
         console.error('Error fetching teacher profiles:', err);
@@ -49,7 +49,7 @@ const TeacherDirectory = () => {
   useEffect(() => {
     // Check initial dark mode state
     setIsDarkMode(document.documentElement.classList.contains('dark'));
-    
+
     // Monitor for dark mode changes
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -58,7 +58,7 @@ const TeacherDirectory = () => {
         }
       });
     });
-    
+
     observer.observe(document.documentElement, { attributes: true });
     return () => observer.disconnect();
   }, []);
@@ -76,12 +76,17 @@ const TeacherDirectory = () => {
   };
 
   const filteredProfiles = teacherProfiles.filter((profile) => {
-    // First apply search term filter
+    // First filter out the current user
+    if (currentUser && profile.id === currentUser.uid) {
+      return false;
+    }
+
+    // Then apply search term filter
     const matchesSearch = profile.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          profile.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          profile.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (Array.isArray(profile.subjects) && profile.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase())));
-    
+
     // Then apply dropdown filter
     if (filterOption === 'all') {
       return matchesSearch;
@@ -93,7 +98,7 @@ const TeacherDirectory = () => {
     } else if (filterOption === 'location') {
       return matchesSearch && profile.location?.toLowerCase().includes(filterOption);
     }
-    
+
     return matchesSearch;
   });
 
@@ -111,8 +116,8 @@ const TeacherDirectory = () => {
         <div className="text-center p-6 max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-4">Error</h2>
           <p className="text-gray-700 dark:text-gray-300">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-secondary text-white rounded-md hover:bg-opacity-90"
           >
             Try Again
@@ -157,8 +162,8 @@ const TeacherDirectory = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProfiles.map((teacher) => (
-            <div 
-              key={teacher.id} 
+            <div
+              key={teacher.id}
               className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer transform hover:-translate-y-1 transition-transform directory-card"
               onClick={() => handleProfileClick(teacher.id)}
             >
@@ -169,9 +174,9 @@ const TeacherDirectory = () => {
                 {/* Profile Image or Initials */}
                 <div className="flex justify-center mb-4">
                   {teacher.photoURL ? (
-                    <img 
-                      src={teacher.photoURL} 
-                      alt={teacher.name} 
+                    <img
+                      src={teacher.photoURL}
+                      alt={teacher.name}
                       className="h-24 w-24 rounded-full object-cover border-2 border-secondary"
                     />
                   ) : (
@@ -180,7 +185,7 @@ const TeacherDirectory = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Teacher Info */}
                 <div className="text-center">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
@@ -192,14 +197,14 @@ const TeacherDirectory = () => {
                   <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
                     {teacher.department || 'Department'}
                   </p>
-                  
+
                   {/* Subjects/Tags */}
                   <div className="mt-4 flex flex-wrap justify-center gap-2">
                     {Array.isArray(teacher.subjects) && teacher.subjects.length > 0 ? (
                       <>
                         {teacher.subjects.slice(0, 3).map((subject, index) => (
-                          <span 
-                            key={index} 
+                          <span
+                            key={index}
                             className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full skill-tag"
                           >
                             {subject}
@@ -219,7 +224,7 @@ const TeacherDirectory = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="px-6 py-4 bg-gray-50 dark:bg-gray-750 flex justify-center border-t border-gray-100 dark:border-gray-700">
                 <button className="text-secondary dark:text-secondary-light font-medium hover:underline flex items-center">
                   <span>View Profile</span>
@@ -236,4 +241,4 @@ const TeacherDirectory = () => {
   );
 };
 
-export default TeacherDirectory; 
+export default TeacherDirectory;
