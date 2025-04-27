@@ -381,18 +381,41 @@ const CourseDetail = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {course.materials.map((material) => (
                   <div key={material.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">{material.title}</h3>
-                    <p className="text-gray-700 dark:text-gray-300 mb-2">{material.description}</p>
-                    {material.link && (
+                    <div className="flex items-center mb-2">
+                      <span className="text-2xl mr-2">{material.icon || '📄'}</span>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{material.title}</h3>
+                    </div>
+                    {material.description && (
+                      <p className="text-gray-700 dark:text-gray-300 mb-2">{material.description}</p>
+                    )}
+                    {material.fileUrl && (
+                      <a
+                        href={material.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                      >
+                        <span className="mr-1">Download {material.fileName || 'Material'}</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                      </a>
+                    )}
+                    {material.link && !material.fileUrl && (
                       <a
                         href={material.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary transition-colors"
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         View Material →
                       </a>
                     )}
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      {material.createdAt && (
+                        <span>Added: {new Date(material.createdAt).toLocaleDateString()}</span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
