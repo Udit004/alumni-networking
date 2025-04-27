@@ -20,7 +20,8 @@ import { API_URLS, DEFAULT_TIMEOUT } from '../../config/apiConfig';
 import { getUserEvents, getStudentCourses } from '../../services/firestoreFallbackService';
 
 const StudentDashboard = () => {
-  const [isNavExpanded, setIsNavExpanded] = useState(true);
+  const [isNavExpanded, setIsNavExpanded] = useState(window.innerWidth > 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [enrolledCoursesCount, setEnrolledCoursesCount] = useState(0);
   const [activeSection, setActiveSection] = useState("overview");
   const [loading, setLoading] = useState(true);
@@ -71,6 +72,8 @@ const StudentDashboard = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
+  const profileRef = useRef(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   useEffect(() => {
     // Check initial dark mode state
@@ -257,8 +260,27 @@ const StudentDashboard = () => {
     { id: 'network', label: 'Network', icon: '👥' }
   ];
 
+  // Add resize listener to handle mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile && !isNavExpanded) {
+        setIsNavExpanded(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isNavExpanded]);
+
+  // Handle section click - close sidebar on mobile
   const handleSectionClick = (sectionId) => {
     setActiveSection(sectionId);
+    // Close sidebar on mobile when a section is selected
+    if (isMobile) {
+      setIsNavExpanded(false);
+    }
   };
 
   // Close notifications when clicking outside
@@ -274,6 +296,20 @@ const StudentDashboard = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [notificationRef]);
+
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [profileRef]);
 
   // Replace mock notification data loading with actual data fetching
   useEffect(() => {
@@ -643,9 +679,17 @@ const StudentDashboard = () => {
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
       {/* Sidebar */}
       <div
-        className={`h-full transition-all duration-300 bg-white dark:bg-gray-800 shadow-lg
-                  ${isNavExpanded ? 'w-64' : 'w-20'}`}
-        style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
+        className={`h-full transition-all duration-300 shadow-lg
+                   ${isNavExpanded ? 'w-64' : 'w-20'} 
+                   ${isMobile ? 'fixed z-50' : 'relative'}`}
+        style={{ 
+          backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+          top: '0',
+          left: isMobile && !isNavExpanded ? '-100%' : '0',
+          height: '100%',
+          overflow: 'auto',
+          width: isMobile && isNavExpanded ? '100%' : ''
+        }}
       >
         <div className="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
           {isNavExpanded && (
@@ -679,14 +723,33 @@ const StudentDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <header className="bg-white dark:bg-gray-800 shadow-md p-4 sticky top-0 z-10"
+      <div className={`flex-1 overflow-auto ${isMobile ? 'w-full' : ''}`}>
+        <header className="bg-white dark:bg-gray-800 shadow-md p-4 sticky top-0 z-40"
                 style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+            {isMobile && (
+              <button
+                className="p-2 mr-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 z-50"
+                onClick={() => setIsNavExpanded(!isNavExpanded)}
+              >
+                {isNavExpanded ? '✕' : '☰'}
+              </button>
+            )}
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white truncate">
               {menuItems.find(item => item.id === activeSection)?.label}
             </h1>
             <div className="flex items-center gap-4">
+              {/* Dark mode toggle */}
+              <button
+                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                onClick={() => {
+                  document.documentElement.classList.toggle('dark');
+                  setIsDarkMode(!isDarkMode);
+                }}
+              >
+                {isDarkMode ? '☀️' : '🌙'}
+              </button>
+            
               <div className="relative" ref={notificationRef}>
                 <button
                   className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -759,18 +822,61 @@ const StudentDashboard = () => {
                   </div>
                 )}
               </div>
-              <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                {profileData.name ? (
-                  profileData.name.charAt(0).toUpperCase()
-                ) : (
-                  '👤'
+              <div className="relative" ref={profileRef}>
+                <button 
+                  className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white"
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                >
+                  {profileData.name ? (
+                    profileData.name.charAt(0).toUpperCase()
+                  ) : (
+                    '👤'
+                  )}
+                </button>
+                
+                {/* Profile Menu */}
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                    <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                      <p className="font-semibold text-gray-800 dark:text-white">{profileData.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{profileData.email}</p>
+                    </div>
+                    <div className="py-2">
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => {
+                          setActiveSection('profile');
+                          setShowProfileMenu(false);
+                        }}
+                      >
+                        My Profile
+                      </button>
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => {
+                          navigate('/');
+                          setShowProfileMenu(false);
+                        }}
+                      >
+                        Log Out
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
           </div>
         </header>
 
-        <main className="p-6">
+        {/* Mobile sidebar overlay */}
+        {isMobile && isNavExpanded && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setIsNavExpanded(false)}
+          ></div>
+        )}
+
+        <main className="p-3 md:p-6">
           {renderActiveSection()}
           {activeSection === 'profile' && (
             <Profile isDarkMode={isDarkMode} />
@@ -856,9 +962,9 @@ const StudentDashboard = () => {
                       <button className="w-full px-4 py-3 flex items-center text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      </svg>
-                        Account
-                      </button>
+                        </svg>
+                          Account
+                        </button>
                     </div>
                   </div>
                 </div>
