@@ -1,31 +1,86 @@
 const express = require('express');
 const router = express.Router();
-const admin = require('firebase-admin');
+const admin = require('../config/firebase-admin');
 const { auth: authenticateToken } = require('../middleware/auth');
 
-// Helper function to safely access Firestore
-const safeFirestore = async (operation, fallbackData, errorMessage) => {
-  try {
-    // Check if Firestore is available
-    if (!admin.firestore) {
-      console.error('Firestore is not available');
-      return { success: false, error: 'Firestore is not available', data: fallbackData };
+// Import the safeFirestore helper from the notification service
+const { safeFirestore } = require('../services/firestoreNotificationService');
+
+// Initialize Firestore with settings
+let firestoreDb;
+try {
+  firestoreDb = admin.firestore();
+
+  // Configure Firestore settings
+  firestoreDb.settings({
+    ignoreUndefinedProperties: true,
+    timestampsInSnapshots: true
+  });
+
+  console.log('Firestore initialized in notifications route');
+} catch (error) {
+  console.error('Error initializing Firestore in notifications route:', error);
+  firestoreDb = null;
+}
+
+// Helper function to create mock notifications
+const createMockNotifications = (userId) => {
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const lastWeek = new Date(now);
+  lastWeek.setDate(lastWeek.getDate() - 7);
+
+  return [
+    {
+      id: 'mock-notification-1',
+      userId,
+      type: 'event',
+      title: 'New Event Available',
+      message: 'A new event "Career Fair 2023" has been added. Check it out!',
+      itemId: 'mock-event-1',
+      createdBy: 'system',
+      timestamp: now.toISOString(),
+      createdAt: now.toISOString(),
+      read: false
+    },
+    {
+      id: 'mock-notification-2',
+      userId,
+      type: 'job',
+      title: 'New Job Opportunity',
+      message: 'A new job "Software Engineer" at Google has been posted. Apply now!',
+      itemId: 'mock-job-1',
+      createdBy: 'system',
+      timestamp: yesterday.toISOString(),
+      createdAt: yesterday.toISOString(),
+      read: false
+    },
+    {
+      id: 'mock-notification-3',
+      userId,
+      type: 'course',
+      title: 'New Course Available',
+      message: 'A new course "Advanced Web Development" is now available for enrollment.',
+      itemId: 'mock-course-1',
+      createdBy: 'system',
+      timestamp: lastWeek.toISOString(),
+      createdAt: lastWeek.toISOString(),
+      read: true
+    },
+    {
+      id: 'mock-notification-4',
+      userId,
+      type: 'mentorship',
+      title: 'New Mentorship Opportunity',
+      message: 'A new mentorship program "Career Guidance" is now available.',
+      itemId: 'mock-mentorship-1',
+      createdBy: 'system',
+      timestamp: lastWeek.toISOString(),
+      createdAt: lastWeek.toISOString(),
+      read: true
     }
-
-    // Execute the operation
-    const result = await operation();
-    return { success: true, data: result };
-  } catch (error) {
-    console.error(`${errorMessage}:`, error);
-
-    // For development, return mock data
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Returning mock data for development');
-      return { success: false, error: error.message, data: fallbackData };
-    }
-
-    throw error; // Re-throw for production
-  }
+  ];
 };
 
 // Get all notifications for a user from Firestore
@@ -39,7 +94,7 @@ router.get('/', authenticateToken, async (req, res) => {
     const result = await safeFirestore(
       async () => {
         // Query Firestore for notifications
-        const notificationsRef = admin.firestore().collection('notifications');
+        const notificationsRef = firestoreDb.collection('notifications');
         const snapshot = await notificationsRef
           .where('userId', '==', userId)
           .orderBy('timestamp', 'desc')
@@ -59,7 +114,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
         return notifications;
       },
-      [], // Fallback empty array
+      createMockNotifications(userId), // Use mock notifications as fallback
       'Error fetching Firestore notifications'
     );
 
@@ -68,7 +123,8 @@ router.get('/', authenticateToken, async (req, res) => {
       console.log(`Found ${result.data.length} Firestore notifications for user ${userId}`);
       return res.status(200).json({
         success: true,
-        notifications: result.data
+        notifications: result.data,
+        mock: result.mock || false
       });
     }
     // If in development and operation failed, return mock data
@@ -76,7 +132,7 @@ router.get('/', authenticateToken, async (req, res) => {
       console.log('Returning mock notifications for development');
       return res.status(200).json({
         success: true,
-        notifications: [],
+        notifications: createMockNotifications(userId),
         mock: true,
         error: result.error
       });
@@ -87,6 +143,18 @@ router.get('/', authenticateToken, async (req, res) => {
     }
   } catch (error) {
     console.error('Error fetching Firestore notifications:', error);
+
+    // For development, return mock data even on error
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Error occurred, returning mock notifications for development');
+      return res.status(200).json({
+        success: true,
+        notifications: createMockNotifications(req.user?.uid || 'mock-user-id'),
+        mock: true,
+        error: error.message
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch notifications',
@@ -107,7 +175,7 @@ router.put('/:id/read', authenticateToken, async (req, res) => {
     const result = await safeFirestore(
       async () => {
         // Get the notification to verify ownership
-        const notificationRef = admin.firestore().collection('notifications').doc(id);
+        const notificationRef = firestoreDb.collection('notifications').doc(id);
         const notificationDoc = await notificationRef.get();
 
         if (!notificationDoc.exists) {
@@ -182,14 +250,14 @@ router.put('/read-all', authenticateToken, async (req, res) => {
     const result = await safeFirestore(
       async () => {
         // Get all unread notifications for the user
-        const notificationsRef = admin.firestore().collection('notifications');
+        const notificationsRef = firestoreDb.collection('notifications');
         const snapshot = await notificationsRef
           .where('userId', '==', userId)
           .where('read', '==', false)
           .get();
 
         // Use a batch to update all notifications
-        const batch = admin.firestore().batch();
+        const batch = firestoreDb.batch();
         snapshot.forEach(doc => {
           batch.update(doc.ref, { read: true });
         });
@@ -245,7 +313,7 @@ router.get('/unread-count', authenticateToken, async (req, res) => {
     const result = await safeFirestore(
       async () => {
         // Query Firestore for unread notifications
-        const notificationsRef = admin.firestore().collection('notifications');
+        const notificationsRef = firestoreDb.collection('notifications');
         const snapshot = await notificationsRef
           .where('userId', '==', userId)
           .where('read', '==', false)
@@ -312,7 +380,7 @@ router.post('/create', authenticateToken, async (req, res) => {
       itemId,
       createdBy: req.user.uid || req.user.id || 'system',
       read: false,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: admin.firestore ? admin.firestore.FieldValue.serverTimestamp() : new Date(),
       createdAt: new Date().toISOString()
     };
 
@@ -320,7 +388,7 @@ router.post('/create', authenticateToken, async (req, res) => {
     const result = await safeFirestore(
       async () => {
         // Add to Firestore
-        const docRef = await admin.firestore().collection('notifications').add(notificationData);
+        const docRef = await firestoreDb.collection('notifications').add(notificationData);
         return { id: docRef.id };
       },
       { id: `mock-${Date.now()}` }, // Fallback for development

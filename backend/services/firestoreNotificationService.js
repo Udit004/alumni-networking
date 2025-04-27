@@ -1,24 +1,66 @@
 const admin = require('../config/firebase-admin');
 
+// Initialize Firestore with settings
+let firestoreDb;
+try {
+  firestoreDb = admin.firestore();
+
+  // Configure Firestore settings
+  firestoreDb.settings({
+    ignoreUndefinedProperties: true,
+    timestampsInSnapshots: true
+  });
+
+  console.log('Firestore initialized in notification service');
+} catch (error) {
+  console.error('Error initializing Firestore in notification service:', error);
+  firestoreDb = null;
+}
+
 // Helper function to safely access Firestore
 const safeFirestore = async (operation, fallbackData, errorMessage) => {
   try {
+    // Check if we're using a mock Firebase Admin
+    if (admin.isMock && admin.isMock()) {
+      console.log('Using mock Firebase Admin, returning mock data');
+      return { success: true, mock: true, data: fallbackData };
+    }
+
     // Check if Firestore is available
-    if (!admin.firestore) {
+    if (!firestoreDb) {
       console.error('Firestore is not available');
+
+      // For development, return mock data
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Firestore not available, returning mock data for development');
+        return { success: true, mock: true, data: fallbackData };
+      }
+
       return { success: false, error: 'Firestore is not available', data: fallbackData };
     }
 
-    // Execute the operation
-    const result = await operation();
-    return { success: true, data: result };
+    try {
+      // Execute the operation
+      const result = await operation();
+      return { success: true, data: result };
+    } catch (operationError) {
+      console.error(`${errorMessage} - Operation error:`, operationError);
+
+      // For development, return mock data
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Operation failed, returning mock data for development');
+        return { success: true, mock: true, data: fallbackData };
+      }
+
+      return { success: false, error: operationError.message };
+    }
   } catch (error) {
-    console.error(`${errorMessage}:`, error);
+    console.error(`${errorMessage} - Unexpected error:`, error);
 
     // For development, return mock data
     if (process.env.NODE_ENV === 'development') {
-      console.log('Returning mock data for development');
-      return { success: false, error: error.message, data: fallbackData };
+      console.log('Unexpected error, returning mock data for development');
+      return { success: true, mock: true, data: fallbackData };
     }
 
     return { success: false, error: error.message };
@@ -61,7 +103,7 @@ const createNotification = async (notificationData) => {
       itemId: data.itemId,
       createdBy: data.createdBy || 'system',
       read: false,
-      timestamp: admin.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
+      timestamp: admin.firestore ? admin.firestore.FieldValue.serverTimestamp() : new Date(),
       createdAt: new Date().toISOString() // Backup readable timestamp
     };
 
@@ -71,7 +113,7 @@ const createNotification = async (notificationData) => {
     const result = await safeFirestore(
       async () => {
         // Add the notification to Firestore
-        const docRef = await admin.firestore().collection('notifications').add(completeNotificationData);
+        const docRef = await firestoreDb.collection('notifications').add(completeNotificationData);
         return docRef.id;
       },
       `mock-${Date.now()}`, // Fallback mock ID
@@ -218,5 +260,6 @@ const notifyCourseStudents = async (students, title, message, type, itemId, crea
 
 module.exports = {
   createNotification,
-  notifyCourseStudents
+  notifyCourseStudents,
+  safeFirestore
 };

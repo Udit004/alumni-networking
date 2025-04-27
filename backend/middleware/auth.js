@@ -1,31 +1,71 @@
 const admin = require('../config/firebase-admin');
 
+/**
+ * Create a mock user for development mode
+ * @param {Object} req - Express request object
+ * @returns {Object} - Mock user object
+ */
+const createMockUser = (req) => {
+    // Get user ID from query params, URL params, or use a default
+    const userId = req.query.userId || req.params.userId || req.body?.userId || '4EOWySj0hHfLOCWFxi3JeJYsqTj2';
+
+    // Get role from query params or use a default
+    const role = req.query.role || req.body?.role || 'student';
+
+    return {
+        uid: userId,
+        email: 'dev@example.com',
+        role: role,
+        mock: true
+    };
+};
+
+/**
+ * Main authentication middleware
+ * Verifies Firebase token and adds user info to request
+ */
 const auth = async (req, res, next) => {
     try {
-        const token = req.headers.authorization?.split('Bearer ')[1];
-
-        // For development, if no token is provided or token verification fails, use a mock user
-        if (process.env.NODE_ENV === 'development' && (!token || process.env.SKIP_AUTH === 'true')) {
+        // Check if we're in development mode with auth skipping enabled
+        if (process.env.NODE_ENV === 'development' && process.env.SKIP_AUTH === 'true') {
             console.log('Development mode: Using mock user authentication');
-            req.user = {
-                uid: req.query.userId || 'mock-user-123',
-                email: 'dev@example.com',
-                role: req.query.role || 'student'
-            };
+            req.user = createMockUser(req);
             return next();
         }
 
+        // Get token from Authorization header
+        const token = req.headers.authorization?.split('Bearer ')[1];
+
+        // If no token is provided
         if (!token) {
-            return res.status(401).json({ message: 'No authentication token provided' });
+            // In development, use mock user
+            if (process.env.NODE_ENV === 'development') {
+                console.log('Development mode: No token provided, using mock user');
+                req.user = createMockUser(req);
+                return next();
+            }
+
+            // In production, return error
+            return res.status(401).json({
+                success: false,
+                message: 'No authentication token provided'
+            });
         }
 
         try {
+            // Check if we're using a mock Firebase Admin
+            if (admin.isMock && admin.isMock()) {
+                console.log('Using mock Firebase Admin, creating mock user');
+                req.user = createMockUser(req);
+                return next();
+            }
+
             // Verify the Firebase token
             const decodedToken = await admin.auth().verifyIdToken(token);
 
             // Add user info to request
             req.user = {
-                uid: decodedToken.uid, // Changed from id to uid to match what the routes expect
+                uid: decodedToken.uid,
                 email: decodedToken.email,
                 role: decodedToken.role || 'student' // Default to student if role not set
             };
@@ -37,11 +77,7 @@ const auth = async (req, res, next) => {
             // For development only - bypass auth if token verification fails
             if (process.env.NODE_ENV === 'development') {
                 console.log('DEV MODE: Bypassing auth after token verification failure');
-                req.user = {
-                    uid: req.query.userId || 'mock-user-123',
-                    email: 'dev@example.com',
-                    role: req.query.role || 'student'
-                };
+                req.user = createMockUser(req);
                 return next();
             }
 
@@ -49,11 +85,27 @@ const auth = async (req, res, next) => {
         }
     } catch (error) {
         console.error('Auth Middleware Error:', error);
-        res.status(401).json({ message: 'Authentication failed', error: error.message });
+
+        // In development, use mock user even on error
+        if (process.env.NODE_ENV === 'development') {
+            console.log('DEV MODE: Using mock user after auth error');
+            req.user = createMockUser(req);
+            return next();
+        }
+
+        // In production, return error
+        res.status(401).json({
+            success: false,
+            message: 'Authentication failed',
+            error: error.message
+        });
     }
 };
 
-// Verify token middleware for chat messages
+/**
+ * Verify token middleware for chat messages
+ * Similar to auth middleware but with more logging
+ */
 const verifyToken = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
@@ -62,7 +114,7 @@ const verifyToken = async (req, res, next) => {
         // Skip auth for development if needed
         if (process.env.NODE_ENV === 'development' && process.env.SKIP_AUTH === 'true') {
             console.log('Skipping auth in development mode');
-            req.user = { uid: req.params.userId || 'dev-user-id' };
+            req.user = createMockUser(req);
             return next();
         }
 
@@ -70,6 +122,14 @@ const verifyToken = async (req, res, next) => {
 
         if (!token) {
             console.log('No token provided in request');
+
+            // In development, use mock user
+            if (process.env.NODE_ENV === 'development') {
+                console.log('Development mode: No token provided, using mock user');
+                req.user = createMockUser(req);
+                return next();
+            }
+
             return res.status(401).json({
                 success: false,
                 message: 'No authentication token provided'
@@ -77,6 +137,13 @@ const verifyToken = async (req, res, next) => {
         }
 
         try {
+            // Check if we're using a mock Firebase Admin
+            if (admin.isMock && admin.isMock()) {
+                console.log('Using mock Firebase Admin, creating mock user');
+                req.user = createMockUser(req);
+                return next();
+            }
+
             // Verify the Firebase token
             console.log('Verifying token...');
             const decodedToken = await admin.auth().verifyIdToken(token);
@@ -96,7 +163,7 @@ const verifyToken = async (req, res, next) => {
             // For development only - bypass auth if token verification fails
             if (process.env.NODE_ENV === 'development') {
                 console.log('DEV MODE: Bypassing auth after token verification failure');
-                req.user = { uid: req.params.userId || 'dev-user-id' };
+                req.user = createMockUser(req);
                 return next();
             }
 
@@ -104,6 +171,14 @@ const verifyToken = async (req, res, next) => {
         }
     } catch (error) {
         console.error('Token Verification Error:', error);
+
+        // In development, use mock user even on error
+        if (process.env.NODE_ENV === 'development') {
+            console.log('DEV MODE: Using mock user after token verification error');
+            req.user = createMockUser(req);
+            return next();
+        }
+
         res.status(401).json({
             success: false,
             message: 'Authentication failed',

@@ -187,12 +187,9 @@ export const getUserNotifications = async (userId, limitCount = 20) => {
   try {
     // First try to get notifications from the backend API
     try {
+      // Use only the main API URL to avoid unnecessary connection attempts
       const baseUrls = [
-        process.env.REACT_APP_API_URL || 'http://localhost:5001',
-        'http://localhost:5002',
-        'http://localhost:5003',
-        'http://localhost:5004',
-        'http://localhost:5000'
+        process.env.REACT_APP_API_URL || 'http://localhost:5000'
       ];
 
       // Get the auth token first to avoid multiple attempts if not authenticated
@@ -331,12 +328,9 @@ export const markNotificationAsRead = async (notificationId) => {
   try {
     // First try to mark notification as read in the backend API
     try {
+      // Use only the main API URL to avoid unnecessary connection attempts
       const baseUrls = [
-        process.env.REACT_APP_API_URL || 'http://localhost:5001',
-        'http://localhost:5002',
-        'http://localhost:5003',
-        'http://localhost:5004',
-        'http://localhost:5000'
+        process.env.REACT_APP_API_URL || 'http://localhost:5000'
       ];
 
       // Get the auth token
@@ -420,12 +414,9 @@ export const markAllNotificationsAsRead = async (userId) => {
   try {
     // First try to mark all notifications as read in the backend API
     try {
+      // Use only the main API URL to avoid unnecessary connection attempts
       const baseUrls = [
-        process.env.REACT_APP_API_URL || 'http://localhost:5001',
-        'http://localhost:5002',
-        'http://localhost:5003',
-        'http://localhost:5004',
-        'http://localhost:5000'
+        process.env.REACT_APP_API_URL || 'http://localhost:5000'
       ];
 
       // Get the auth token
