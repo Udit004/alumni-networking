@@ -1,9 +1,9 @@
 import { db } from '../firebaseConfig';
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
+import {
+  collection,
+  addDoc,
+  query,
+  where,
   getDocs,
   getDoc,
   doc,
@@ -22,7 +22,7 @@ import { createConnectionRequestNotification, createConnectionAcceptanceNotifica
 export const setupFirestoreCollections = async () => {
   try {
     console.log('Setting up Firestore collections...');
-    
+
     // Create connectionRequests collection if it doesn't exist
     const dummyRequestData = {
       from: 'system',
@@ -31,7 +31,7 @@ export const setupFirestoreCollections = async () => {
       createdAt: serverTimestamp(),
       _setup: true
     };
-    
+
     // Create notifications collection if it doesn't exist
     const dummyNotificationData = {
       userId: 'system',
@@ -41,10 +41,10 @@ export const setupFirestoreCollections = async () => {
       timestamp: serverTimestamp(),
       _setup: true
     };
-    
+
     // Use unique IDs based on timestamp to avoid conflicts
     const timestamp = Date.now();
-    
+
     try {
       // Create a document in connectionRequests collection
       const requestRef = doc(db, 'connectionRequests', `setup_${timestamp}`);
@@ -53,7 +53,7 @@ export const setupFirestoreCollections = async () => {
     } catch (err) {
       console.error('Error creating connectionRequests collection:', err);
     }
-    
+
     try {
       // Create a document in notifications collection
       const notificationRef = doc(db, 'notifications', `setup_${timestamp}`);
@@ -62,7 +62,7 @@ export const setupFirestoreCollections = async () => {
     } catch (err) {
       console.error('Error creating notifications collection:', err);
     }
-    
+
     return true;
   } catch (error) {
     console.error('Error setting up Firestore collections:', error);
@@ -80,7 +80,12 @@ setupFirestoreCollections().then(() => {
 // Send a connection request
 export const sendConnectionRequest = async (fromUserId, toUserId) => {
   try {
-    // First check if a request already exists
+    // Check if user is trying to connect with themselves
+    if (fromUserId === toUserId) {
+      return { success: false, message: 'You cannot connect with yourself' };
+    }
+
+    // Check if a request already exists
     const existingRequest = await checkExistingRequest(fromUserId, toUserId);
     if (existingRequest) {
       return { success: false, message: 'A connection request already exists' };
@@ -90,7 +95,7 @@ export const sendConnectionRequest = async (fromUserId, toUserId) => {
     const userDocRef = doc(db, 'users', fromUserId);
     const userDoc = await getDoc(userDocRef);
     const userData = userDoc.exists() ? userDoc.data() : {};
-    
+
     // Create the connection request
     const connectionRequest = {
       from: fromUserId,
@@ -98,11 +103,11 @@ export const sendConnectionRequest = async (fromUserId, toUserId) => {
       status: 'pending',
       createdAt: serverTimestamp()
     };
-    
+
     console.log('Creating connection request:', connectionRequest);
     const docRef = await addDoc(collection(db, 'connectionRequests'), connectionRequest);
     console.log('Connection request created with ID:', docRef.id);
-    
+
     // Send notification to the recipient with improved error handling
     try {
       console.log('Sending connection request notification', {
@@ -110,25 +115,25 @@ export const sendConnectionRequest = async (fromUserId, toUserId) => {
         fromUserName: userData.name || userData.displayName || 'A user',
         toUserId
       });
-      
+
       const notificationResult = await createConnectionRequestNotification(
         {
           id: fromUserId,
           name: userData.name || userData.displayName || 'A user'
-        }, 
+        },
         toUserId
       );
-      
+
       console.log('Connection request notification sent successfully:', notificationResult);
     } catch (notificationError) {
       console.error('Failed to create notification for connection request, but request was created:', notificationError);
       // Don't fail the whole operation if just the notification fails
     }
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       requestId: docRef.id,
-      message: 'Connection request sent successfully' 
+      message: 'Connection request sent successfully'
     };
   } catch (error) {
     console.error('Error sending connection request:', error);
@@ -141,10 +146,10 @@ export const ensureUserConnectionsField = async (userId) => {
   try {
     const userRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userRef);
-    
+
     if (userDoc.exists()) {
       const userData = userDoc.data();
-      
+
       // If connections field doesn't exist, add it
       if (!userData.hasOwnProperty('connections')) {
         console.log(`Adding connections field to user ${userId}`);
@@ -167,47 +172,47 @@ export const ensureUserConnectionsField = async (userId) => {
 export const acceptConnectionRequest = async (requestId) => {
   try {
     console.log(`Accepting connection request: ${requestId}`);
-    
+
     // Get the request document
     const requestRef = doc(db, 'connectionRequests', requestId);
     const requestSnap = await getDoc(requestRef);
-    
+
     if (!requestSnap.exists()) {
       console.error('Connection request not found');
       throw new Error('Connection request not found');
     }
-    
+
     const requestData = requestSnap.data();
-    
+
     // Create a batch for atomic operations
     const batch = writeBatch(db);
-    
+
     // Create timestamp
     const now = serverTimestamp();
-    
+
     // Get user document references
     const fromUserRef = doc(db, 'users', requestData.from);
     const toUserRef = doc(db, 'users', requestData.to);
-    
+
     // Update both users' connections arrays
     batch.update(fromUserRef, {
       connections: arrayUnion(requestData.to)
     });
-    
+
     batch.update(toUserRef, {
       connections: arrayUnion(requestData.from)
     });
-    
+
     // Update the request status to accepted
     batch.update(requestRef, {
       status: 'accepted',
       updatedAt: now
     });
-    
+
     // Get user details for notification
     const fromUserDoc = await getDoc(fromUserRef);
     const fromUserData = fromUserDoc.data();
-    
+
     // Create acceptance notification
     await createConnectionAcceptanceNotification(
       {
@@ -216,11 +221,11 @@ export const acceptConnectionRequest = async (requestId) => {
       },
       requestData.from
     );
-    
+
     // Commit all changes
     await batch.commit();
     console.log('Connection request accepted successfully');
-    
+
     return true;
   } catch (error) {
     console.error('Error accepting connection request:', error);
@@ -232,22 +237,22 @@ export const acceptConnectionRequest = async (requestId) => {
 export const rejectConnectionRequest = async (requestId) => {
   try {
     console.log(`Rejecting connection request: ${requestId}`);
-    
+
     // Get the request document reference
     const requestRef = doc(db, 'connectionRequests', requestId);
     const requestSnap = await getDoc(requestRef);
-    
+
     if (!requestSnap.exists()) {
       console.error('Connection request not found');
       throw new Error('Connection request not found');
     }
-    
+
     // Update the request status to rejected
     await updateDoc(requestRef, {
       status: 'rejected',
       updatedAt: serverTimestamp()
     });
-    
+
     console.log('Connection request rejected successfully');
     return true;
   } catch (error) {
@@ -262,18 +267,18 @@ export const removeConnection = async (userId, connectionId) => {
     // Remove from both users' connections arrays
     const userRef = doc(db, 'users', userId);
     const connectionRef = doc(db, 'users', connectionId);
-    
+
     await updateDoc(userRef, {
       connections: arrayRemove(connectionId)
     });
-    
+
     await updateDoc(connectionRef, {
       connections: arrayRemove(userId)
     });
-    
-    return { 
-      success: true, 
-      message: 'Connection removed successfully' 
+
+    return {
+      success: true,
+      message: 'Connection removed successfully'
     };
   } catch (error) {
     console.error('Error removing connection:', error);
@@ -368,24 +373,30 @@ export const getUserConnections = async (userId) => {
     // Get the user document
     const userRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userRef);
-    
+
     if (!userDoc.exists()) {
       throw new Error('User not found');
     }
-    
+
     const userData = userDoc.data();
     const connectionIds = userData.connections || [];
-    
+
     if (connectionIds.length === 0) {
       return [];
     }
-    
+
     // Fetch connection profiles
     const connections = [];
     for (const connectionId of connectionIds) {
+      // Skip if the connection ID is the same as the current user
+      if (connectionId === userId) {
+        console.log('Skipping self-connection for user:', userId);
+        continue;
+      }
+
       const connectionRef = doc(db, 'users', connectionId);
       const connectionDoc = await getDoc(connectionRef);
-      
+
       if (connectionDoc.exists()) {
         const connectionData = connectionDoc.data();
         connections.push({
@@ -402,7 +413,7 @@ export const getUserConnections = async (userId) => {
         });
       }
     }
-    
+
     return connections;
   } catch (error) {
     console.error('Error getting user connections:', error);
@@ -419,7 +430,7 @@ const checkExistingRequest = async (fromUserId, toUserId) => {
     where('to', '==', toUserId),
     where('status', '==', 'pending')
   );
-  
+
   // Check if there's an existing request from toUser to fromUser
   const toFromQuery = query(
     collection(db, 'connectionRequests'),
@@ -427,12 +438,12 @@ const checkExistingRequest = async (fromUserId, toUserId) => {
     where('to', '==', fromUserId),
     where('status', '==', 'pending')
   );
-  
+
   const [fromToSnapshot, toFromSnapshot] = await Promise.all([
     getDocs(fromToQuery),
     getDocs(toFromQuery)
   ]);
-  
+
   return !fromToSnapshot.empty || !toFromSnapshot.empty;
 };
 
@@ -441,14 +452,14 @@ export const areUsersConnected = async (userId1, userId2) => {
   try {
     const userRef = doc(db, 'users', userId1);
     const userDoc = await getDoc(userRef);
-    
+
     if (!userDoc.exists()) {
       return false;
     }
-    
+
     const userData = userDoc.data();
     const connections = userData.connections || [];
-    
+
     return connections.includes(userId2);
   } catch (error) {
     console.error('Error checking user connection:', error);
@@ -461,12 +472,12 @@ export const createMockConnectionRequests = async (userId) => {
   try {
     // Check if there are already pending requests
     const currentRequests = await getConnectionRequests(userId);
-    
+
     if (currentRequests.incoming.length > 0 || currentRequests.outgoing.length > 0) {
       console.log('User already has connection requests, no mock data needed');
       return;
     }
-    
+
     // Create mock users to send connection requests
     const mockUsers = [
       {
@@ -488,13 +499,13 @@ export const createMockConnectionRequests = async (userId) => {
         department: 'Computer Science'
       }
     ];
-    
+
     // Create connection requests
     for (const mockUser of mockUsers) {
       // Create the mock user if it doesn't exist
       const userRef = doc(db, 'users', mockUser.id);
       const userSnapshot = await getDoc(userRef);
-      
+
       if (!userSnapshot.exists()) {
         await setDoc(userRef, {
           name: mockUser.name,
@@ -506,7 +517,7 @@ export const createMockConnectionRequests = async (userId) => {
           connections: []
         });
       }
-      
+
       // Create a connection request from this mock user to the real user
       const connectionRequest = {
         from: mockUser.id,
@@ -514,14 +525,14 @@ export const createMockConnectionRequests = async (userId) => {
         status: 'pending',
         createdAt: serverTimestamp()
       };
-      
+
       await addDoc(collection(db, 'connectionRequests'), connectionRequest);
       console.log(`Created mock connection request from ${mockUser.name} to user ${userId}`);
     }
-    
+
     return true;
   } catch (error) {
     console.error('Error creating mock connection requests:', error);
     return false;
   }
-}; 
+};
