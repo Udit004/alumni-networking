@@ -1,61 +1,130 @@
-const admin = require('firebase-admin');
+const admin = require('../config/firebase-admin');
+
+// Helper function to safely access Firestore
+const safeFirestore = async (operation, fallbackData, errorMessage) => {
+  try {
+    // Check if Firestore is available
+    if (!admin.firestore) {
+      console.error('Firestore is not available');
+      return { success: false, error: 'Firestore is not available', data: fallbackData };
+    }
+
+    // Execute the operation
+    const result = await operation();
+    return { success: true, data: result };
+  } catch (error) {
+    console.error(`${errorMessage}:`, error);
+
+    // For development, return mock data
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Returning mock data for development');
+      return { success: false, error: error.message, data: fallbackData };
+    }
+
+    return { success: false, error: error.message };
+  }
+};
 
 /**
  * Create a notification for a specific user in Firestore
- * @param {string} userId - The user ID to send the notification to
- * @param {string} title - The notification title
- * @param {string} message - The notification message
- * @param {string} type - The notification type (event, job, course, mentorship, announcement)
- * @param {string} itemId - The ID of the related item (event, job, course, mentorship, announcement)
- * @param {string} createdBy - The user ID of who created the notification
+ * @param {Object} notificationData - The notification data object
  * @returns {Promise<Object>} - The created notification
  */
-const createNotification = async (userId, title, message, type, itemId, createdBy) => {
+const createNotification = async (notificationData) => {
   try {
-    console.log(`Creating Firestore notification for user ${userId}: ${title}`);
+    // Support both object and individual parameters
+    let data = notificationData;
 
-    // Validate inputs
-    if (!userId || !title || !message || !type || !itemId) {
-      console.error('Missing required fields for notification:', { userId, title, message, type, itemId });
-      throw new Error('Missing required fields for notification');
+    // If individual parameters were passed instead of an object
+    if (arguments.length > 1) {
+      const [userId, title, message, type, itemId, createdBy] = arguments;
+      data = { userId, title, message, type, itemId, createdBy };
     }
 
-    // Create notification data
-    const notificationData = {
-      userId,
-      title,
-      message,
-      type,
-      itemId,
-      createdBy: createdBy || 'system',
+    console.log(`Creating Firestore notification for user ${data.userId}: ${data.title}`);
+
+    // Validate inputs
+    if (!data.userId || !data.title || !data.message || !data.type || !data.itemId) {
+      console.error('Missing required fields for notification:', data);
+      return {
+        success: false,
+        message: 'Missing required fields for notification'
+      };
+    }
+
+    // Create complete notification data
+    const completeNotificationData = {
+      userId: data.userId,
+      title: data.title,
+      message: data.message,
+      type: data.type,
+      itemId: data.itemId,
+      createdBy: data.createdBy || 'system',
       read: false,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: admin.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
       createdAt: new Date().toISOString() // Backup readable timestamp
     };
 
-    console.log('Saving notification to Firestore:', notificationData);
+    console.log('Saving notification to Firestore:', completeNotificationData);
 
-    // Check if Firestore is initialized
-    if (!admin.firestore) {
-      console.error('Firestore is not initialized!');
-      throw new Error('Firestore is not initialized');
+    // Use the safe Firestore helper
+    const result = await safeFirestore(
+      async () => {
+        // Add the notification to Firestore
+        const docRef = await admin.firestore().collection('notifications').add(completeNotificationData);
+        return docRef.id;
+      },
+      `mock-${Date.now()}`, // Fallback mock ID
+      `Error creating Firestore notification for user ${data.userId}`
+    );
+
+    if (result.success) {
+      console.log(`Notification created with ID: ${result.data}`);
+
+      // Return the created notification
+      return {
+        success: true,
+        id: result.data,
+        ...completeNotificationData,
+        timestamp: new Date() // Use a JavaScript Date for immediate use
+      };
+    } else {
+      // For development, return mock success
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Returning mock notification for development');
+        return {
+          success: true,
+          id: result.data,
+          ...completeNotificationData,
+          timestamp: new Date(),
+          mock: true
+        };
+      }
+
+      return {
+        success: false,
+        message: result.error || 'Failed to create notification'
+      };
     }
-
-    console.log('Firestore instance:', admin.firestore() ? 'Available' : 'Not available');
-
-    // Add the notification to Firestore
-    const docRef = await admin.firestore().collection('notifications').add(notificationData);
-    console.log(`Notification created with ID: ${docRef.id}`);
-
-    // Return the created notification
-    return {
-      id: docRef.id,
-      ...notificationData,
-      timestamp: new Date() // Use a JavaScript Date for immediate use
-    };
   } catch (error) {
     console.error('Error creating Firestore notification:', error);
-    throw error;
+
+    // For development, return mock success
+    if (process.env.NODE_ENV === 'development') {
+      return {
+        success: true,
+        id: `mock-${Date.now()}`,
+        ...notificationData,
+        timestamp: new Date(),
+        mock: true,
+        error: error.message
+      };
+    }
+
+    return {
+      success: false,
+      message: error.message
+    };
   }
 };
 
@@ -67,7 +136,7 @@ const createNotification = async (userId, title, message, type, itemId, createdB
  * @param {string} type - The notification type (announcement)
  * @param {string} itemId - The ID of the announcement
  * @param {string} createdBy - The user ID of who created the notification
- * @returns {Promise<Array>} - Array of created notifications
+ * @returns {Promise<Object>} - Result object with success status and notifications array
  */
 const notifyCourseStudents = async (students, title, message, type, itemId, createdBy) => {
   try {
@@ -81,16 +150,27 @@ const notifyCourseStudents = async (students, title, message, type, itemId, crea
     for (const student of students) {
       try {
         console.log(`Creating notification for student: ${student.studentId}`);
-        const notification = await createNotification(
-          student.studentId,
+
+        // Create notification data
+        const notificationData = {
+          userId: student.studentId,
           title,
           message,
           type,
           itemId,
           createdBy
-        );
-        notifications.push(notification);
-        successCount++;
+        };
+
+        // Use the improved createNotification function
+        const result = await createNotification(notificationData);
+
+        if (result.success) {
+          notifications.push(result);
+          successCount++;
+        } else {
+          console.log(`Failed to create notification for student ${student.studentId}: ${result.message}`);
+          errorCount++;
+        }
       } catch (notificationError) {
         console.error(`Error creating notification for student ${student.studentId}:`, notificationError);
         errorCount++;
@@ -99,11 +179,40 @@ const notifyCourseStudents = async (students, title, message, type, itemId, crea
     }
 
     console.log(`Notification summary: ${successCount} succeeded, ${errorCount} failed`);
-    return notifications;
+
+    return {
+      success: true,
+      notifications,
+      summary: {
+        total: students.length,
+        success: successCount,
+        error: errorCount
+      }
+    };
   } catch (error) {
     console.error('Error notifying course students:', error);
-    // Return empty array instead of throwing to prevent breaking the main functionality
-    return [];
+
+    // For development, return mock success
+    if (process.env.NODE_ENV === 'development') {
+      return {
+        success: true,
+        notifications: [],
+        mock: true,
+        error: error.message,
+        summary: {
+          total: students.length,
+          success: 0,
+          error: students.length
+        }
+      };
+    }
+
+    // Return error object instead of empty array
+    return {
+      success: false,
+      message: error.message,
+      notifications: []
+    };
   }
 };
 

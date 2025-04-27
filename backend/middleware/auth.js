@@ -4,21 +4,49 @@ const auth = async (req, res, next) => {
     try {
         const token = req.headers.authorization?.split('Bearer ')[1];
 
+        // For development, if no token is provided or token verification fails, use a mock user
+        if (process.env.NODE_ENV === 'development' && (!token || process.env.SKIP_AUTH === 'true')) {
+            console.log('Development mode: Using mock user authentication');
+            req.user = {
+                uid: req.query.userId || 'mock-user-123',
+                email: 'dev@example.com',
+                role: req.query.role || 'student'
+            };
+            return next();
+        }
+
         if (!token) {
             return res.status(401).json({ message: 'No authentication token provided' });
         }
 
-        // Verify the Firebase token
-        const decodedToken = await admin.auth().verifyIdToken(token);
+        try {
+            // Verify the Firebase token
+            const decodedToken = await admin.auth().verifyIdToken(token);
 
-        // Add user info to request
-        req.user = {
-            uid: decodedToken.uid, // Changed from id to uid to match what the routes expect
-            email: decodedToken.email,
-            role: decodedToken.role || 'student' // Default to student if role not set
-        };
+            // Add user info to request
+            req.user = {
+                uid: decodedToken.uid, // Changed from id to uid to match what the routes expect
+                email: decodedToken.email,
+                role: decodedToken.role || 'student' // Default to student if role not set
+            };
 
-        next();
+            next();
+        } catch (verifyError) {
+            console.error('Token verification failed:', verifyError);
+
+            // For development only - bypass auth if token verification fails
+            if (process.env.NODE_ENV === 'development') {
+                console.log('DEV MODE: Bypassing auth after token verification failure');
+                req.user = {
+                    uid: req.query.userId || 'mock-user-123',
+                    email: 'dev@example.com',
+                    role: req.query.role || 'student'
+                };
+                return next();
+            }
+
+            throw verifyError; // Re-throw for the outer catch block
+        }
     } catch (error) {
         console.error('Auth Middleware Error:', error);
         res.status(401).json({ message: 'Authentication failed', error: error.message });

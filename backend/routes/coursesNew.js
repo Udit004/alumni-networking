@@ -1,72 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const Course = require('../models/Course');
-const admin = require('firebase-admin');
+const admin = require('../config/firebase-admin'); // Use the centralized Firebase Admin SDK
 
-// Authentication middleware - DEVELOPMENT VERSION (more permissive)
-const authenticateToken = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
+// Import the auth middleware from the central location
+const { auth } = require('../middleware/auth');
 
-    // For development, if no token is provided, create a mock user
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('No token provided, using mock user for development');
-      req.user = {
-        uid: 'dev-user-123',
-        email: 'dev@example.com',
-        role: 'teacher' // Default role for development
-      };
-      return next();
-    }
-
-    try {
-      // Try to verify the token
-      const token = authHeader.split(' ')[1];
-      const decodedToken = await admin.auth().verifyIdToken(token);
-
-      // Try to get user from Firestore
-      try {
-        const userRecord = await admin.firestore().collection('users').doc(decodedToken.uid).get();
-        const userData = userRecord.data() || {};
-
-        req.user = {
-          uid: decodedToken.uid,
-          email: decodedToken.email || userData.email,
-          role: userData.role || decodedToken.role || 'teacher' // Default to teacher for development
-        };
-      } catch (firestoreError) {
-        console.warn('Error getting user from Firestore:', firestoreError);
-        // If Firestore fails, still allow the request with token data
-        req.user = {
-          uid: decodedToken.uid,
-          email: decodedToken.email,
-          role: 'teacher' // Default to teacher for development
-        };
-      }
-    } catch (tokenError) {
-      console.warn('Token verification failed, using mock user for development:', tokenError);
-      // If token verification fails, still allow the request with mock data
-      req.user = {
-        uid: authHeader.split(' ')[1].substring(0, 20), // Use part of the token as UID
-        email: 'dev@example.com',
-        role: 'teacher' // Default role for development
-      };
-    }
-
-    console.log('User for request:', req.user);
-    next();
-  } catch (error) {
-    console.error('Authentication error:', error);
-    // For development, still allow the request even if authentication fails
-    req.user = {
-      uid: 'error-user-' + Date.now(),
-      email: 'error@example.com',
-      role: 'teacher'
-    };
-    console.log('Using fallback user due to error:', req.user);
-    next();
-  }
-};
+// Use the imported auth middleware
+const authenticateToken = auth;
 
 // ===== SPECIAL ROUTES (MUST BE DEFINED BEFORE GENERIC ROUTES) =====
 
@@ -74,7 +15,7 @@ const authenticateToken = async (req, res, next) => {
 router.get('/my-courses', authenticateToken, async (req, res) => {
   try {
     const teacherId = req.user.uid;
-    
+
     // Verify user is a teacher
     if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
       return res.status(403).json({
@@ -82,7 +23,7 @@ router.get('/my-courses', authenticateToken, async (req, res) => {
         message: 'Only teachers can access their created courses'
       });
     }
-    
+
     const courses = await Course.find({ teacherId });
     res.json({ success: true, data: courses });
   } catch (error) {
@@ -118,12 +59,23 @@ router.get('/student/:studentId', authenticateToken, async (req, res) => {
   try {
     const { studentId } = req.params;
 
-    // Verify the user is requesting their own courses or is an admin
-    if (req.user.uid !== studentId && req.user.role !== 'admin') {
+    console.log('Development mode:', process.env.NODE_ENV === 'development');
+    console.log('User requesting courses:', req.user);
+    console.log('Student ID requested:', studentId);
+
+    // In development mode, allow all authenticated requests
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Development mode: Allowing access to student courses');
+    }
+    // In production, verify the user is requesting their own courses or is an admin
+    else if (req.user.uid !== studentId && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Unauthorized access' });
     }
 
+    // Find courses where the student is enrolled
     const courses = await Course.find({ 'students.studentId': studentId });
+    console.log(`Found ${courses.length} courses for student ${studentId}`);
+
     res.json({ success: true, courses });
   } catch (error) {
     console.error('Error fetching student courses:', error);
@@ -174,6 +126,9 @@ router.post('/', authenticateToken, async (req, res) => {
       const students = await User.find({ role: 'student' });
       console.log(`Found ${students.length} students to notify about the new course`);
 
+      // Import the notification service
+      const notificationService = require('../services/firestoreNotificationService');
+
       // Send notification to each student
       for (const student of students) {
         try {
@@ -189,15 +144,17 @@ router.post('/', authenticateToken, async (req, res) => {
             message: `A new course "${course.title}" has been created by ${course.teacherName}. Check it out!`,
             type: 'course',
             itemId: course._id.toString(),
-            createdBy: course.teacherId,
-            read: false,
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            createdAt: new Date().toISOString()
+            createdBy: course.teacherId
           };
 
-          // Add to Firestore
-          const docRef = await admin.firestore().collection('notifications').add(notificationData);
-          console.log(`Notification created for student ${student.firebaseUID} with ID: ${docRef.id}`);
+          // Use the notification service to create the notification
+          const result = await notificationService.createNotification(notificationData);
+
+          if (result.success) {
+            console.log(`Notification created for student ${student.firebaseUID} with ID: ${result.id}`);
+          } else {
+            console.log(`Failed to create notification for student ${student.firebaseUID}: ${result.message}`);
+          }
         } catch (studentError) {
           console.error(`Error sending notification to student ${student.firebaseUID}:`, studentError);
           // Continue with next student even if one fails

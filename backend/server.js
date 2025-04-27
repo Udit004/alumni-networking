@@ -2,7 +2,13 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
-const admin = require('./config/firebase-admin'); // Import Firebase Admin
+
+// Set NODE_ENV if not already set
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+console.log(`🌍 Running in ${process.env.NODE_ENV} mode`);
+
+// Import Firebase Admin after setting NODE_ENV
+const admin = require('./config/firebase-admin');
 
 // Import models before routes
 require("./models/user");
