@@ -26,6 +26,13 @@ const CourseDetail = () => {
     fetchCourse();
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fetch course materials when the course is loaded and the user is enrolled
+  useEffect(() => {
+    if (course && currentUser && isEnrolled()) {
+      fetchCourseMaterials();
+    }
+  }, [course, currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetchCourse = async () => {
     try {
       setLoading(true);
@@ -166,6 +173,49 @@ const CourseDetail = () => {
     } catch (err) {
       console.error('Error unenrolling from course:', err);
       alert('Failed to unenroll from the course. Please try again.');
+    }
+  };
+
+  // Fetch course materials directly from the API
+  const fetchCourseMaterials = async () => {
+    if (!currentUser || !course || !id) return;
+
+    try {
+      const token = await currentUser.getIdToken();
+      let success = false;
+      let responseData = null;
+
+      for (const baseUrl of baseUrls) {
+        try {
+          console.log(`Trying to fetch materials from ${baseUrl} for course ${id}...`);
+          const response = await axios.get(
+            `${baseUrl}/api/materials/student/course/${id}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+
+          console.log(`Materials response from ${baseUrl}:`, response.data);
+          responseData = response.data;
+          success = true;
+          break; // Exit the loop if successful
+        } catch (err) {
+          console.log(`Failed to connect to ${baseUrl} for materials:`, err.message);
+        }
+      }
+
+      if (success && responseData.success) {
+        // Update the course with the latest materials
+        setCourse(prevCourse => ({
+          ...prevCourse,
+          materials: responseData.materials
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching course materials:', err);
     }
   };
 
@@ -375,10 +425,20 @@ const CourseDetail = () => {
             </div>
           )}
 
-          {course.materials && course.materials.length > 0 && (
+          {isEnrolled() && (
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Course Materials</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Course Materials</h2>
+                <button
+                  onClick={fetchCourseMaterials}
+                  className="p-2 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                  title="Refresh materials"
+                >
+                  🔄
+                </button>
+              </div>
+              {course.materials && course.materials.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {course.materials.map((material) => (
                   <div key={material.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                     <div className="flex items-center mb-2">
@@ -418,7 +478,12 @@ const CourseDetail = () => {
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <p className="text-gray-500 dark:text-gray-400">No materials available for this course yet.</p>
+                </div>
+              )}
             </div>
           )}
 

@@ -101,4 +101,13 @@ courseSchema.pre('save', function(next) {
   next();
 });
 
+// Add a method to add materials to a course
+courseSchema.methods.addMaterial = async function(material) {
+  // Add the material to the materials array
+  this.materials.push(material);
+
+  // Save the course
+  return this.save();
+};
+
 module.exports = mongoose.model('Course', courseSchema);

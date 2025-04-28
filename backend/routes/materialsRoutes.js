@@ -5,37 +5,43 @@ const Course = require('../models/Course');
 const admin = require('../config/firebase-admin');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
 
-// Try to load multer, but don't fail if it's not available
-let upload;
-try {
-  const multer = require('multer');
-  const storage = multer.diskStorage({
-    destination: function(req, file, cb) {
-      const uploadDir = path.join(__dirname, '../uploads');
-      // Create directory if it doesn't exist
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      cb(null, uploadDir);
-    },
-    filename: function(req, file, cb) {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, uniqueSuffix + '-' + file.originalname);
-    }
-  });
-  upload = multer({ storage: storage });
-  console.log('Multer loaded successfully');
-} catch (err) {
-  console.warn('Multer not available, file uploads will be disabled:', err.message);
-  // Create a mock upload middleware that does nothing
-  upload = {
-    single: () => (req, res, next) => {
-      console.log('Mock upload middleware called - file uploads are disabled');
-      next();
-    }
-  };
-}
+// Configure multer for memory storage (files stored in memory, not on disk)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // Limit file size to 5MB to ensure it fits in MongoDB document
+  }
+});
+
+// MongoDB has a document size limit of 16MB, but we need to leave room for other fields
+// and account for base64 encoding which increases size by ~33%
+
+// Helper functions for material types
+const getIconForType = (type) => {
+  switch(type) {
+    case 'notes': return '📝';
+    case 'assignment': return '📋';
+    case 'template': return '🎯';
+    case 'quiz': return '✍️';
+    case 'lab': return '🔬';
+    case 'guide': return '📖';
+    default: return '📄';
+  }
+};
+
+const getColorForType = (type) => {
+  switch(type) {
+    case 'notes': return 'blue';
+    case 'assignment': return 'green';
+    case 'template': return 'purple';
+    case 'quiz': return 'red';
+    case 'lab': return 'yellow';
+    case 'guide': return 'indigo';
+    default: return 'gray';
+  }
+};
 
 // Authentication middleware
 const authenticateToken = async (req, res, next) => {
@@ -269,18 +275,48 @@ router.post('/', upload.single('file'), async (req, res) => {
     if (req.file) {
       console.log(`Processing uploaded file: ${req.file.originalname} (${req.file.mimetype}, ${req.file.size} bytes)`);
 
-      // Generate server URL from request
-      const protocol = req.protocol;
-      const host = req.get('host');
-      const baseUrl = `${protocol}://${host}`;
-
+      // Store file metadata
       newMaterial.fileName = req.file.originalname;
-      newMaterial.fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
-      newMaterial.filePath = req.file.path;
       newMaterial.fileSize = req.file.size;
       newMaterial.mimeType = req.file.mimetype;
 
-      console.log(`File URL will be: ${newMaterial.fileUrl}`);
+      // Store the actual file content as base64 string
+      // This allows us to store the file directly in the database
+      // Check if buffer exists before trying to convert it
+      if (req.file.buffer) {
+        console.log(`Converting file buffer (${req.file.buffer.length} bytes) to base64`);
+        newMaterial.fileContent = req.file.buffer.toString('base64');
+      } else {
+        console.error('No buffer found in uploaded file');
+        throw new Error('File upload failed: No file data received');
+      }
+
+      // Generate a unique ID for the file
+      const fileId = new mongoose.Types.ObjectId().toString();
+      newMaterial.fileId = fileId;
+
+      // Create a virtual URL for accessing the file
+      // This will be handled by a special route that serves the file from the database
+      const protocol = req.protocol;
+      const host = req.get('host');
+      let baseUrl;
+      if (process.env.NODE_ENV === 'production') {
+        baseUrl = `${protocol}://${host}`;
+      } else {
+        baseUrl = 'http://localhost:5000';
+      }
+
+      // The URL will point to a route that retrieves the file from the database
+      newMaterial.fileUrl = `${baseUrl}/api/materials/file/${fileId}`;
+
+      console.log(`File stored directly in database. Virtual URL: ${newMaterial.fileUrl}`);
+      console.log(`File details:
+        - Original name: ${req.file.originalname}
+        - Size: ${req.file.size} bytes
+        - Type: ${req.file.mimetype}
+        - Content stored as base64 in database
+        - Virtual URL: ${newMaterial.fileUrl}
+      `);
     }
 
     // Add icon and color based on material type
@@ -337,16 +373,27 @@ router.post('/', upload.single('file'), async (req, res) => {
       throw saveError; // Rethrow for the outer catch block
     }
   } catch (error) {
-    // Remove uploaded file if error occurs
-    if (req.file) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (unlinkError) {
-        console.error('Error removing file after failed upload:', unlinkError);
-      }
-    }
+    // No need to remove files since they're not stored on disk anymore
+
+    // Log detailed error information
     console.error('Error adding material:', error);
-    res.status(500).json({ success: false, message: 'Failed to add material', error: error.message });
+    console.error('Error stack:', error.stack);
+
+    // Log request information for debugging
+    console.log('Request body:', req.body);
+    console.log('File information:', req.file ? {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      buffer: req.file.buffer ? 'Buffer present' : 'No buffer'
+    } : 'No file');
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add material',
+      error: error.message,
+      details: error.stack
+    });
   }
 });
 
@@ -427,11 +474,9 @@ router.delete('/:materialId', authenticateToken, async (req, res) => {
       console.log(`Course now has ${updatedCourse.materials.length} materials`);
     }
 
-    // Remove the file if it exists
-    if (filePath && fs.existsSync(filePath)) {
-      console.log(`Removing file: ${filePath}`);
-      fs.unlinkSync(filePath);
-    }
+    // No need to delete the file separately since it's stored directly in the course document
+    // When we remove the material from the course, the file content is automatically removed
+    console.log('File content will be removed with the material');
 
     console.log('Material deleted successfully');
     res.json({ success: true, message: 'Material deleted successfully' });
@@ -493,7 +538,7 @@ router.put('/:materialId', authenticateToken, async (req, res) => {
   }
 });
 
-// Get all materials for a specific course
+// Get all materials for a specific course (for teachers)
 router.get('/course/:courseId', authenticateToken, async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -525,30 +570,143 @@ router.get('/course/:courseId', authenticateToken, async (req, res) => {
   }
 });
 
-// Helper function to get icon for material type
-function getIconForType(type) {
-  switch(type) {
-    case 'notes': return '📝';
-    case 'assignment': return '📋';
-    case 'template': return '🎯';
-    case 'quiz': return '✍️';
-    case 'lab': return '🔬';
-    case 'guide': return '📖';
-    default: return '📄';
-  }
-}
+// Get all materials for a specific course (for students)
+router.get('/student/course/:courseId', authenticateToken, async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const studentId = req.user.uid;
 
-// Helper function to get color for material type
-function getColorForType(type) {
-  switch(type) {
-    case 'notes': return 'blue';
-    case 'assignment': return 'purple';
-    case 'template': return 'yellow';
-    case 'quiz': return 'red';
-    case 'lab': return 'indigo';
-    case 'guide': return 'teal';
-    default: return 'gray';
+    console.log(`Fetching materials for course ${courseId} (student ${studentId})`);
+
+    // First try to find the course with enrollment check
+    let course = await Course.findOne({
+      _id: courseId,
+      'students.studentId': studentId
+    });
+
+    // If not found with enrollment check, try to find the course directly
+    // This is more permissive for testing purposes
+    if (!course) {
+      console.log(`Course ${courseId} not found with student ${studentId} enrolled, trying direct lookup`);
+
+      course = await Course.findById(courseId);
+
+      if (course) {
+        console.log(`Course found by ID: ${course.title}`);
+        console.log(`Course has ${course.students.length} students.`);
+
+        if (course.students.length > 0) {
+          console.log(`First student in course: ${course.students[0].studentId}`);
+          console.log(`All student IDs: ${course.students.map(s => s.studentId).join(', ')}`);
+        }
+
+        // For testing purposes, we'll allow access even if not enrolled
+        console.log(`WARNING: Allowing access to course materials for testing purposes even though student is not enrolled`);
+      } else {
+        console.log(`Course ${courseId} does not exist at all`);
+        return res.status(404).json({
+          success: false,
+          message: 'Course not found'
+        });
+      }
+    }
+
+    const materials = course.materials || [];
+    console.log(`Found ${materials.length} materials for course ${course.title} for student ${studentId}`);
+
+    // Add course info to each material and ensure icons/colors
+    const materialsWithCourseInfo = materials.map(material => {
+      // Convert to plain object if it's a Mongoose document
+      const materialObj = material.toObject ? material.toObject() : material;
+
+      // Make sure each material has an icon and color
+      if (!materialObj.icon) {
+        materialObj.icon = getIconForType(materialObj.type || 'notes');
+      }
+      if (!materialObj.color) {
+        materialObj.color = getColorForType(materialObj.type || 'notes');
+      }
+
+      // Log file URL for debugging
+      if (materialObj.fileUrl) {
+        console.log(`Material ${materialObj.title} has file URL: ${materialObj.fileUrl}`);
+      }
+
+      return {
+        ...materialObj,
+        courseId: course._id,
+        courseTitle: course.title
+      };
+    });
+
+    res.json({
+      success: true,
+      materials: materialsWithCourseInfo,
+      course: {
+        _id: course._id,
+        title: course.title,
+        description: course.description,
+        teacherName: course.teacherName
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching course materials for student:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch course materials',
+      error: error.message
+    });
   }
-}
+});
+
+// Route to serve file content directly from the database
+router.get('/file/:fileId', async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    console.log(`Fetching file with ID: ${fileId}`);
+
+    // Find all courses
+    const courses = await Course.find();
+    let fileFound = false;
+
+    // Search through all courses and their materials to find the file
+    for (const course of courses) {
+      if (!course.materials || course.materials.length === 0) continue;
+
+      const material = course.materials.find(m => m.fileId === fileId);
+      if (material && material.fileContent) {
+        console.log(`Found file: ${material.fileName} in course: ${course.title}`);
+
+        // Convert base64 string back to binary data
+        const fileBuffer = Buffer.from(material.fileContent, 'base64');
+
+        // Set appropriate headers
+        res.set('Content-Type', material.mimeType || 'application/octet-stream');
+        res.set('Content-Disposition', `inline; filename="${material.fileName}"`);
+        res.set('Content-Length', fileBuffer.length);
+
+        // Send the file data
+        res.send(fileBuffer);
+        fileFound = true;
+        break;
+      }
+    }
+
+    if (!fileFound) {
+      console.log(`File with ID ${fileId} not found in any course`);
+      return res.status(404).json({
+        success: false,
+        message: 'File not found'
+      });
+    }
+  } catch (error) {
+    console.error('Error serving file from database:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error serving file',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router;

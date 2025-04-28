@@ -32,6 +32,7 @@ const courseApplicationRoutes = require('./routes/courseApplications');
 // Firebase notification routes removed
 const announcementRoutes = require('./routes/announcementRoutes');
 const activityRoutes = require('./routes/activityRoutes');
+const materialsRoutes = require('./routes/materialsRoutes');
 
 const app = express();
 const PORT = 5000; // Use port 5000 explicitly
@@ -67,6 +68,11 @@ app.use(cors({
 
 // Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from the uploads directory
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Debug middleware
 app.use((req, res, next) => {
@@ -88,6 +94,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/course-applications', courseApplicationRoutes);
 // Firebase notification routes removed
 app.use('/api/activities', activityRoutes);
+app.use('/api/materials', materialsRoutes);
 // Register announcement routes
 app.use('/', announcementRoutes);
 // Log the registered routes
