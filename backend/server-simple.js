@@ -2,7 +2,12 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
-const admin = require('./config/firebase-admin'); // Import Firebase Admin
+
+// Set NODE_ENV if not already set
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+console.log(`🌍 Running in ${process.env.NODE_ENV} mode`);
+
+const path = require('path');
 
 // Import models before routes
 require("./models/user");
@@ -12,11 +17,9 @@ require("./models/Mentorship");
 require("./models/JobApplication");
 require("./models/MentorshipApplication");
 require("./models/EventRegistration");
-// Message model removed
 require("./models/Course");
 require("./models/CourseApplication");
 require("./models/Announcement");
-require("./models/Activity");
 
 const eventRoutes = require("./routes/eventRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -26,21 +29,21 @@ const jobRoutes = require('./routes/jobs');
 const mentorshipRoutes = require('./routes/mentorships');
 const jobApplicationRoutes = require('./routes/jobApplicationRoutes');
 const mentorshipApplicationRoutes = require('./routes/mentorshipApplicationRoutes');
-// Chat routes removed
 const courseRoutes = require('./routes/coursesNew');
 const courseApplicationRoutes = require('./routes/courseApplications');
-const firestoreNotificationRoutes = require('./routes/firestoreNotifications');
 const announcementRoutes = require('./routes/announcementRoutes');
-const activityRoutes = require('./routes/activityRoutes');
+const materialsRoutes = require('./routes/materialsRoutes');
+const teacherRoutes = require('./routes/teacherRoutes');
 
 const app = express();
 const PORT = 5000; // Use port 5000 explicitly
 const HOST = "0.0.0.0";
-const MONGO_URI = process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/alumni-networking";
 
 // CORS Configuration with all allowed origins
 const allowedOrigins = [
     'http://localhost:3000',
+    'http://127.0.0.1:3000',
     'https://alumni-networking.vercel.app',
     'https://alumni-networking-89f98.web.app',
     'https://alumni-networking-89f98.firebaseapp.com',
@@ -50,15 +53,15 @@ const allowedOrigins = [
 // CORS Configuration
 app.use(cors({
     origin: function(origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-
-        if (allowedOrigins.indexOf(origin) === -1) {
-            console.log('Blocked origin:', origin); // Debug log
-            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-            return callback(new Error(msg), false);
+        // Allow requests with no origin (like mobile apps, curl requests, or requests from the same origin)
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            return callback(null, true);
         }
-        return callback(null, true);
+
+        // For debugging - log blocked origins
+        console.log('Blocked origin:', origin);
+        const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+        return callback(new Error(msg), false);
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -67,6 +70,10 @@ app.use(cors({
 
 // Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Debug middleware
 app.use((req, res, next) => {
@@ -83,11 +90,10 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/mentorships', mentorshipRoutes);
 app.use('/api/job-applications', jobApplicationRoutes);
 app.use('/api/mentorship-applications', mentorshipApplicationRoutes);
-// Chat routes removed
 app.use('/api/courses', courseRoutes);
 app.use('/api/course-applications', courseApplicationRoutes);
-app.use('/api/notifications', firestoreNotificationRoutes);
-app.use('/api/activities', activityRoutes);
+app.use('/api/materials', materialsRoutes);
+app.use('/api/teachers', teacherRoutes);
 // Register announcement routes
 app.use('/', announcementRoutes);
 // Log the registered routes
@@ -156,8 +162,8 @@ app.post('/api/test-mentorship-application/:mentorshipId', async (req, res) => {
     }
 });
 
-// Special Firebase events route that avoids ObjectId casting issues
-app.get("/api/events-firebase", async (req, res) => {
+// Special events route that avoids ObjectId casting issues
+app.get("/api/events-simple", async (req, res) => {
     try {
         const Event = mongoose.model('Event');
         const events = await Event.find().lean();
@@ -170,12 +176,12 @@ app.get("/api/events-firebase", async (req, res) => {
             organizer: event.organizer || "Unknown"
         }));
 
-        console.log(`Found ${safeEvents.length} events for Firebase endpoint`);
+        console.log(`Found ${safeEvents.length} events for simple endpoint`);
         res.status(200).json(safeEvents);
     } catch (error) {
-        console.error("Error in Firebase events endpoint:", error);
+        console.error("Error in simple events endpoint:", error);
         res.status(500).json({
-            message: "Server error in Firebase events endpoint",
+            message: "Server error in simple events endpoint",
             error: error.message
         });
     }
@@ -195,6 +201,16 @@ app.get("/api/health", (req, res) => {
     res.status(200).json({ status: "ok", message: "Backend is running" });
 });
 
+// Test CORS endpoint
+app.get("/api/test-cors", (req, res) => {
+    res.status(200).json({
+        status: "ok",
+        message: "CORS test successful!",
+        timestamp: new Date().toISOString(),
+        origin: req.headers.origin || 'No origin header'
+    });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('❌ Error:', err);
@@ -202,18 +218,46 @@ app.use((err, req, res, next) => {
 });
 
 // Connect to MongoDB and start server
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => {
-        console.log("✅ Connected to MongoDB Atlas");
-        app.listen(PORT, HOST, () => {
-            console.log(`🚀 Server running at http://localhost:${PORT}`);
-            // Log available routes
-            console.log("\n✅ Available Routes:");
-            const expressListRoutes = require("express-list-routes");
-            expressListRoutes(app);
+try {
+    // Try to use the in-memory MongoDB server if available
+    const mongoMemory = require('./config/mongodb-memory');
+
+    // Connect to MongoDB (either real or in-memory)
+    mongoMemory.connect()
+        .then(() => {
+            console.log("✅ MongoDB connection established");
+
+            // Start the server
+            app.listen(PORT, HOST, () => {
+                console.log(`🚀 Server running at http://localhost:${PORT}`);
+                // Log available routes
+                console.log("\n✅ Available Routes:");
+                const expressListRoutes = require("express-list-routes");
+                expressListRoutes(app);
+            });
+        })
+        .catch((err) => {
+            console.error("❌ MongoDB Connection Error:", err);
+            console.log("💡 TIP: Make sure you have MongoDB installed locally or provide a valid MONGO_URI in .env file");
+            process.exit(1);
         });
-    })
-    .catch(err => {
-        console.error("❌ MongoDB Connection Error:", err);
-        process.exit(1);
-    });
+} catch (error) {
+    // Fall back to regular MongoDB connection if memory server is not available
+    console.warn("⚠️ In-memory MongoDB not available, falling back to regular connection");
+    mongoose.connect(MONGO_URI, {})
+        .then(() => {
+            console.log("✅ Connected to MongoDB at:", MONGO_URI);
+            app.listen(PORT, HOST, () => {
+                console.log(`🚀 Server running at http://localhost:${PORT}`);
+                // Log available routes
+                console.log("\n✅ Available Routes:");
+                const expressListRoutes = require("express-list-routes");
+                expressListRoutes(app);
+            });
+        })
+        .catch(err => {
+            console.error("❌ MongoDB Connection Error:", err);
+            console.log("💡 TIP: Make sure you have MongoDB installed locally or provide a valid MONGO_URI in .env file");
+            process.exit(1);
+        });
+}
