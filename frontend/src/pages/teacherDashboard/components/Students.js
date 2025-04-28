@@ -108,8 +108,9 @@ const getTeacherCourses = async (token, userId) => {
     console.log('API_URLS object:', API_URLS);
     console.log('Courses API URL:', API_URLS.courses);
 
-    const apiUrl = API_URLS.courses || 'https://alumni-networking.onrender.com/api/courses';
-    console.log(`Using API URL: ${apiUrl}`);
+    // Use the deployed URL directly to ensure it works
+    const apiUrl = 'https://alumni-networking.onrender.com/api/courses';
+    console.log(`Using hardcoded API URL: ${apiUrl}`);
     console.log(`Fetching courses for teacher with ID: ${userId}`);
 
     // Use the correct endpoint with the teacher's user ID
@@ -156,8 +157,9 @@ const getCourseStudents = async (token, courseId, userId) => {
     console.log('API_URLS object for students:', API_URLS);
     console.log('Courses API URL for students:', API_URLS.courses);
 
-    const apiUrl = API_URLS.courses || 'https://alumni-networking.onrender.com/api/courses';
-    console.log(`Using API URL for students: ${apiUrl}`);
+    // Use the deployed URL directly to ensure it works
+    const apiUrl = 'https://alumni-networking.onrender.com/api/courses';
+    console.log(`Using hardcoded API URL for students: ${apiUrl}`);
     console.log(`Fetching students for course ${courseId} with teacher ID: ${userId}`);
 
     // Use the correct endpoint with the course ID
@@ -178,7 +180,8 @@ const getCourseStudents = async (token, courseId, userId) => {
     console.log(`Students for course ${courseId} response:`, response.data);
 
     if (response.data && response.data.success) {
-      return response.data.students || [];
+      // The backend returns students in the 'data' property, not 'students'
+      return response.data.data || [];
     } else if (response.data && Array.isArray(response.data)) {
       // Handle case where API returns array directly
       return response.data;
@@ -234,11 +237,13 @@ const Students = ({ isDarkMode }) => {
               // Fetch students for each course
               console.log('Fetching students for each course...');
               for (const course of coursesData) {
-                if (course && course._id) {
-                  console.log(`Fetching students for course: ${course._id}`);
-                  const students = await getCourseStudents(token, course._id, userId);
-                  studentsData[course._id] = students;
-                  console.log(`Students for course ${course._id}:`, students.length);
+                // Check for both _id and id fields (MongoDB uses _id, but some APIs return id)
+                const courseId = course._id || course.id;
+                if (course && courseId) {
+                  console.log(`Fetching students for course: ${courseId}`);
+                  const students = await getCourseStudents(token, courseId, userId);
+                  studentsData[courseId] = students;
+                  console.log(`Students for course ${courseId}:`, students.length);
                 } else {
                   console.warn('Invalid course object:', course);
                 }
@@ -300,9 +305,22 @@ const Students = ({ isDarkMode }) => {
   const getAllStudents = () => {
     const allStudents = [];
     Object.values(courseStudents).forEach(students => {
+      if (!Array.isArray(students)) return;
+
       students.forEach(student => {
+        if (!student) return;
+
+        // Get a consistent ID from various possible formats
+        const studentId = student.studentId || student._id || student.id;
+        if (!studentId) return;
+
         // Check if student already exists in the array
-        const existingStudent = allStudents.find(s => s.studentId === student.studentId);
+        const existingStudent = allStudents.find(s =>
+          (s.studentId && s.studentId === studentId) ||
+          (s._id && s._id === studentId) ||
+          (s.id && s.id === studentId)
+        );
+
         if (!existingStudent) {
           allStudents.push(student);
         }
@@ -336,7 +354,13 @@ const Students = ({ isDarkMode }) => {
   const getStudentCourses = (studentId) => {
     const studentCourses = [];
     courses.forEach(course => {
-      const isEnrolled = courseStudents[course._id]?.some(student => student.studentId === studentId);
+      // Handle both _id and id fields
+      const courseId = course._id || course.id;
+      if (!courseId) return;
+
+      const isEnrolled = courseStudents[courseId]?.some(student =>
+        student.studentId === studentId || student._id === studentId || student.id === studentId
+      );
       if (isEnrolled) {
         studentCourses.push(course);
       }
