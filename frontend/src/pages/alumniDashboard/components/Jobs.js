@@ -1114,9 +1114,6 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
               </div>
             ) : (
               <div>
-                <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 p-4 rounded-lg mb-4">
-                  <p className="text-sm"><strong>Note:</strong> Showing sample job applications for demonstration purposes. These applications are from the database but may not be directly associated with your account.</p>
-                </div>
                 <div className="space-y-4">
                 {applications.map(application => (
                   <div
