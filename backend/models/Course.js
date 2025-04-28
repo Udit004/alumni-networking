@@ -84,6 +84,16 @@ const courseSchema = new mongoose.Schema({
   materials: {
     type: Array,
     default: []
+    // Each material can have:
+    // - id: String (unique identifier)
+    // - title: String (title of the material)
+    // - description: String (description of the material)
+    // - type: String (type of material: notes, assignment, etc.)
+    // - driveLink: String (Google Drive or other cloud storage link)
+    // - icon: String (icon for the material type)
+    // - color: String (color for the material type)
+    // - createdAt: Date (when the material was created)
+    // - updatedAt: Date (when the material was last updated)
   },
   createdAt: {
     type: Date,

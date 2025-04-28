@@ -11,7 +11,8 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
     description: '',
     type: 'notes',
     courseId: '',
-    file: null
+    driveLink: '',
+    fileName: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -180,17 +181,11 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
     setErrorMessage('');
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      console.log("File selected:", file.name, file.type, file.size);
-      setNewMaterial(prev => ({
-        ...prev,
-        file: file
-      }));
-      // Clear any error messages when user selects a file
-      setErrorMessage('');
-    }
+  const handleDriveLinkChange = (e) => {
+    const { name, value } = e.target;
+    setNewMaterial(prev => ({ ...prev, [name]: value }));
+    // Clear any error messages when user enters a drive link
+    setErrorMessage('');
   };
 
   // Custom implementation of handleDeleteMaterial if not provided by props
@@ -289,6 +284,12 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
       return;
     }
 
+    // Validate drive link if provided
+    if (newMaterial.driveLink && !newMaterial.driveLink.startsWith('https://')) {
+      setErrorMessage('Please enter a valid URL starting with https://');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -297,24 +298,17 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
         throw new Error('You must be logged in to add materials');
       }
 
-      // Prepare form data for multipart file upload
-      const formData = new FormData();
-      formData.append('courseId', newMaterial.courseId);
-      formData.append('title', newMaterial.title);
-      formData.append('description', newMaterial.description || '');
-      formData.append('type', newMaterial.type || 'notes');
+      // Prepare data for API request
+      const materialData = {
+        courseId: newMaterial.courseId,
+        title: newMaterial.title,
+        description: newMaterial.description || '',
+        type: newMaterial.type || 'notes',
+        driveLink: newMaterial.driveLink || '',
+        fileName: newMaterial.fileName || ''
+      };
 
-      // Add file if selected
-      if (newMaterial.file) {
-        formData.append('file', newMaterial.file);
-        console.log("Adding file to form data:", newMaterial.file.name);
-      }
-
-      // Debug the contents of the FormData
-      console.log("FormData entries:");
-      for (let pair of formData.entries()) {
-        console.log(pair[0] + ': ' + (pair[0] === 'file' ? pair[1].name : pair[1]));
-      }
+      console.log("Material data to send:", materialData);
 
       // Get a fresh token
       let token = null;
@@ -342,11 +336,11 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
           const response = await fetch(`${baseUrl}/api/materials`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${token}`
-              // Note: Do NOT set Content-Type for FormData uploads - browser sets it automatically with boundary
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
             },
-            body: formData,
-            timeout: 10000  // Longer timeout for file uploads
+            body: JSON.stringify(materialData),
+            timeout: 10000
           });
 
           if (!response.ok) {
@@ -377,12 +371,9 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
           description: '',
           type: 'notes',
           courseId: courses.length > 0 ? courses[0]._id : '',
-          file: null
+          driveLink: '',
+          fileName: ''
         });
-
-        // Reset the file input
-        const fileInput = document.querySelector('input[type="file"]');
-        if (fileInput) fileInput.value = '';
 
         // Add the new material to state immediately
         if (responseData.material) {
@@ -480,19 +471,19 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 text-center sm:text-left">{material.courseTitle || material.course}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{material.description}</p>
 
-                    {/* Show file details if available */}
-                    {material.fileUrl && (
+                    {/* Show drive link if available */}
+                    {material.driveLink && (
                       <div className="mb-3 text-sm">
                         <a
-                          href={material.fileUrl}
+                          href={material.driveLink}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center justify-center sm:justify-start text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                         >
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                           </svg>
-                          {material.fileName || 'Download file'}
+                          {material.fileName || 'Open in Google Drive'}
                         </a>
                       </div>
                     )}
@@ -602,16 +593,31 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
                 ></textarea>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-gray-700 dark:text-gray-300 mb-2">Upload File (Optional)</label>
+              <div className="mb-4">
+                <label className="block text-gray-700 dark:text-gray-300 mb-2">Google Drive Link (Optional)</label>
                 <input
-                  type="file"
-                  onChange={handleFileChange}
+                  type="url"
+                  name="driveLink"
+                  value={newMaterial.driveLink}
+                  onChange={handleInputChange}
+                  placeholder="https://drive.google.com/file/d/..."
                   className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Supported files: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, JPG, PNG, MP4, MP3
+                  Paste a shareable Google Drive link to your document
                 </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-gray-700 dark:text-gray-300 mb-2">File Name (Optional)</label>
+                <input
+                  type="text"
+                  name="fileName"
+                  value={newMaterial.fileName}
+                  onChange={handleInputChange}
+                  placeholder="Enter a descriptive file name"
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
               </div>
 
               <div className="flex flex-col md:flex-row justify-end gap-3 mt-6">

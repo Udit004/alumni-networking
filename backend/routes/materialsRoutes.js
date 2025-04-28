@@ -3,20 +3,9 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Course = require('../models/Course');
 const admin = require('../config/firebase-admin');
-const path = require('path');
-const fs = require('fs');
-const multer = require('multer');
 
-// Configure multer for memory storage (files stored in memory, not on disk)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 5 * 1024 * 1024, // Limit file size to 5MB to ensure it fits in MongoDB document
-  }
-});
-
-// MongoDB has a document size limit of 16MB, but we need to leave room for other fields
-// and account for base64 encoding which increases size by ~33%
+// We're no longer using multer for file uploads
+// Instead, we'll use Google Drive links for materials
 
 // Helper functions for material types
 const getIconForType = (type) => {
@@ -182,8 +171,8 @@ router.get('/:materialId', authenticateToken, async (req, res) => {
   }
 });
 
-// Add a new material with file upload
-router.post('/', upload.single('file'), async (req, res) => {
+// Add a new material with drive link
+router.post('/', async (req, res) => {
   try {
     console.log('Adding new material, request body:', req.body);
     console.log('File upload:', req.file ? req.file.originalname : 'No file uploaded');
@@ -271,49 +260,19 @@ router.post('/', upload.single('file'), async (req, res) => {
       updatedAt: new Date()
     };
 
-    // Add file data if file was uploaded
-    if (req.file) {
-      console.log(`Processing uploaded file: ${req.file.originalname} (${req.file.mimetype}, ${req.file.size} bytes)`);
+    // Add drive link if provided
+    if (req.body.driveLink) {
+      console.log(`Processing drive link: ${req.body.driveLink}`);
 
-      // Store file metadata
-      newMaterial.fileName = req.file.originalname;
-      newMaterial.fileSize = req.file.size;
-      newMaterial.mimeType = req.file.mimetype;
+      // Store the drive link
+      newMaterial.driveLink = req.body.driveLink;
 
-      // Store the actual file content as base64 string
-      // This allows us to store the file directly in the database
-      // Check if buffer exists before trying to convert it
-      if (req.file.buffer) {
-        console.log(`Converting file buffer (${req.file.buffer.length} bytes) to base64`);
-        newMaterial.fileContent = req.file.buffer.toString('base64');
-      } else {
-        console.error('No buffer found in uploaded file');
-        throw new Error('File upload failed: No file data received');
+      // Store any additional metadata if provided
+      if (req.body.fileName) {
+        newMaterial.fileName = req.body.fileName;
       }
 
-      // Generate a unique ID for the file
-      const fileId = new mongoose.Types.ObjectId().toString();
-      newMaterial.fileId = fileId;
-
-      // Create a virtual URL for accessing the file
-      // This will be handled by a special route that serves the file from the database
-      const protocol = req.protocol;
-      const host = req.get('host');
-
-      // Always use the actual host from the request to ensure URLs work from any device
-      const baseUrl = `${protocol}://${host}`;
-
-      // The URL will point to a route that retrieves the file from the database
-      newMaterial.fileUrl = `${baseUrl}/api/materials/file/${fileId}`;
-
-      console.log(`File stored directly in database. Virtual URL: ${newMaterial.fileUrl}`);
-      console.log(`File details:
-        - Original name: ${req.file.originalname}
-        - Size: ${req.file.size} bytes
-        - Type: ${req.file.mimetype}
-        - Content stored as base64 in database
-        - Virtual URL: ${newMaterial.fileUrl}
-      `);
+      console.log(`Drive link stored: ${newMaterial.driveLink}`);
     }
 
     // Add icon and color based on material type
@@ -323,9 +282,11 @@ router.post('/', upload.single('file'), async (req, res) => {
     console.log(`Adding new material "${newMaterial.title}" to course using addMaterial method`);
     console.log('Material data:', newMaterial);
 
-    // Use the new addMaterial method instead of directly modifying the array
+    // Add the material to the course
     try {
-      await course.addMaterial(newMaterial);
+      // Add the material directly to the materials array
+      course.materials.push(newMaterial);
+      await course.save();
 
       // Fetch the updated course to ensure the material was added
       const updatedCourse = await Course.findById(courseId);
@@ -407,7 +368,6 @@ router.delete('/:materialId', authenticateToken, async (req, res) => {
 
     // Find which course has this material
     let materialDeleted = false;
-    let filePath = null;
     let courseSaved = null;
 
     for (const course of courses) {
@@ -416,11 +376,6 @@ router.delete('/:materialId', authenticateToken, async (req, res) => {
 
       if (foundMaterial) {
         console.log(`Found material "${foundMaterial.title}" in course "${course.title}". Preparing to remove...`);
-
-        // Store file path if exists before removing
-        if (foundMaterial.filePath) {
-          filePath = foundMaterial.filePath;
-        }
 
         // Use MongoDB's atomic operations for more reliable updates
         try {
@@ -656,51 +611,48 @@ router.get('/student/course/:courseId', authenticateToken, async (req, res) => {
   }
 });
 
-// Route to serve file content directly from the database
-router.get('/file/:fileId', async (req, res) => {
+// Route to get material details by ID
+router.get('/material/:materialId', authenticateToken, async (req, res) => {
   try {
-    const { fileId } = req.params;
-    console.log(`Fetching file with ID: ${fileId}`);
+    const { materialId } = req.params;
+    console.log(`Fetching material details with ID: ${materialId}`);
 
     // Find all courses
     const courses = await Course.find();
-    let fileFound = false;
+    let materialFound = false;
 
-    // Search through all courses and their materials to find the file
+    // Search through all courses and their materials to find the material
     for (const course of courses) {
       if (!course.materials || course.materials.length === 0) continue;
 
-      const material = course.materials.find(m => m.fileId === fileId);
-      if (material && material.fileContent) {
-        console.log(`Found file: ${material.fileName} in course: ${course.title}`);
+      const material = course.materials.find(m => m.id === materialId);
+      if (material) {
+        console.log(`Found material: ${material.title} in course: ${course.title}`);
 
-        // Convert base64 string back to binary data
-        const fileBuffer = Buffer.from(material.fileContent, 'base64');
-
-        // Set appropriate headers
-        res.set('Content-Type', material.mimeType || 'application/octet-stream');
-        res.set('Content-Disposition', `inline; filename="${material.fileName}"`);
-        res.set('Content-Length', fileBuffer.length);
-
-        // Send the file data
-        res.send(fileBuffer);
-        fileFound = true;
-        break;
+        // Return the material details
+        return res.json({
+          success: true,
+          material: {
+            ...material,
+            courseId: course._id,
+            courseTitle: course.title
+          }
+        });
       }
     }
 
-    if (!fileFound) {
-      console.log(`File with ID ${fileId} not found in any course`);
+    if (!materialFound) {
+      console.log(`Material with ID ${materialId} not found in any course`);
       return res.status(404).json({
         success: false,
-        message: 'File not found'
+        message: 'Material not found'
       });
     }
   } catch (error) {
-    console.error('Error serving file from database:', error);
+    console.error('Error fetching material details:', error);
     res.status(500).json({
       success: false,
-      message: 'Error serving file',
+      message: 'Error fetching material details',
       error: error.message
     });
   }
