@@ -15,8 +15,15 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
   };
 
   const formatTime = (timeString) => {
-    const options = { hour: 'numeric', minute: 'numeric', hour12: true };
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString(undefined, options);
+    if (!timeString) return 'N/A';
+
+    try {
+      const options = { hour: 'numeric', minute: 'numeric', hour12: true };
+      return new Date(`2000-01-01T${timeString}`).toLocaleTimeString(undefined, options);
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return timeString; // Return the original string if formatting fails
+    }
   };
 
   const getEventStatus = (eventDate) => {
@@ -35,7 +42,7 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
       setIsDeleting(true);
       setDeleteId(eventId);
       setDeleteError('');
-      
+
       // Call the API endpoint to delete the event
       const response = await fetch(`${API_URL}/api/events/${eventId}?firebaseUID=${user?.uid}&role=${role}`, {
         method: 'DELETE',
@@ -52,7 +59,7 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
 
       // Success message
       alert('Event deleted successfully');
-      
+
       // Redirect to refresh the events list
       navigate(0); // This refreshes the current page
 
@@ -67,11 +74,11 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
 
   const filteredEvents = events.filter((event) => {
     if (!event) return false;
-    
-    const matchesSearch = event.title?.toLowerCase().includes(search.toLowerCase()) || 
-                          event.description?.toLowerCase().includes(search.toLowerCase()) || 
+
+    const matchesSearch = event.title?.toLowerCase().includes(search.toLowerCase()) ||
+                          event.description?.toLowerCase().includes(search.toLowerCase()) ||
                           event.location?.toLowerCase().includes(search.toLowerCase());
-    
+
     const eventDate = event.date ? new Date(event.date) : null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -92,16 +99,16 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
            style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Events</h2>
-          
+
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={() => navigate('/events')}
               className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2"
             >
               <span>Browse Events</span> <span>🔍</span>
             </button>
-            
-            <button 
+
+            <button
               onClick={() => user ? navigate('/create-event') : alert('Please log in to create events')}
               className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-2"
             >
@@ -109,7 +116,7 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
             </button>
           </div>
         </div>
-        
+
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex-1">
             <div className="relative">
@@ -123,13 +130,13 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
               <span className="absolute left-3 top-3 text-gray-400">🔍</span>
             </div>
           </div>
-          
+
           <div className="flex gap-2">
             <button
               onClick={() => setFilter('all')}
               className={`px-3 py-2 rounded-lg ${
-                filter === 'all' 
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400' 
+                filter === 'all'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
               }`}
             >
@@ -138,8 +145,8 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
             <button
               onClick={() => setFilter('upcoming')}
               className={`px-3 py-2 rounded-lg ${
-                filter === 'upcoming' 
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400' 
+                filter === 'upcoming'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
               }`}
             >
@@ -148,8 +155,8 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
             <button
               onClick={() => setFilter('past')}
               className={`px-3 py-2 rounded-lg ${
-                filter === 'past' 
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400' 
+                filter === 'past'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
               }`}
             >
@@ -157,7 +164,7 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
             </button>
           </div>
         </div>
-        
+
         {deleteError && (
           <div className="mb-4 p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg">
             {deleteError}
@@ -175,7 +182,7 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Error loading events</h3>
             <p className="text-gray-600 dark:text-gray-400">{error}</p>
             {error.includes('authentication') && (
-              <button 
+              <button
                 onClick={() => navigate('/login')}
                 className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
               >
@@ -190,7 +197,7 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
                 <div className="text-5xl mb-4">📅</div>
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">You haven't created any events yet</h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">Create your first event to share with the community</p>
-                <button 
+                <button
                   onClick={() => user ? navigate('/create-event') : alert('Please log in to create events')}
                   className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                 >
@@ -209,11 +216,19 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
           <div className="space-y-6">
             {filteredEvents.map((event) => {
               const eventStatus = getEventStatus(event.date);
-              const attendees = event.registeredUsers?.length || 0;
-              
+              // Handle different formats of registeredUsers
+              let attendees = 0;
+              if (event.registeredUsers) {
+                if (Array.isArray(event.registeredUsers)) {
+                  attendees = event.registeredUsers.length;
+                } else if (typeof event.registeredUsers === 'number') {
+                  attendees = event.registeredUsers;
+                }
+              }
+
               return (
-                <div 
-                  key={event._id}
+                <div
+                  key={event._id || `event-${Math.random()}`}
                   className={`bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-6 hover:shadow-lg transition-shadow
                             ${eventStatus === 'past' ? 'opacity-75' : ''}`}
                   style={{ backgroundColor: isDarkMode ? '#0f172a' : 'white' }}
@@ -222,20 +237,20 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
                     <div className="md:w-2/3">
                       <div className="flex items-start gap-4">
                         <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-2xl">
-                          {event.category === 'Networking' ? '🤝' : 
-                           event.category === 'Workshop' ? '🔧' : 
-                           event.category === 'Seminar' ? '🎓' : 
-                           event.category === 'Social' ? '🎉' : 
+                          {event.category === 'Networking' ? '🤝' :
+                           event.category === 'Workshop' ? '🔧' :
+                           event.category === 'Seminar' ? '🎓' :
+                           event.category === 'Social' ? '🎉' :
                            event.category === 'Career Fair' ? '💼' : '📅'}
                         </div>
-                        
+
                         <div className="flex-1">
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
                             <div>
                               <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{event.title}</h3>
                               <p className="text-gray-600 dark:text-gray-400">{event.location}</p>
                             </div>
-                            
+
                             <div className="mt-2 sm:mt-0">
                               <span className={`px-3 py-1 text-xs rounded-full ${
                                 eventStatus === 'past'
@@ -248,23 +263,29 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
                               </span>
                             </div>
                           </div>
-                          
+
                           <div className="mt-4 space-y-2">
                             <div className="flex items-center text-gray-700 dark:text-gray-300">
                               <span className="text-sm mr-2">📅</span>
                               <span className="text-sm">{formatDate(event.date)}</span>
                             </div>
-                            
-                            <div className="flex items-center text-gray-700 dark:text-gray-300">
-                              <span className="text-sm mr-2">⏰</span>
-                              <span className="text-sm">{formatTime(event.startTime)} - {formatTime(event.endTime)}</span>
-                            </div>
-                            
+
+                            {(event.startTime || event.endTime || event.time) && (
+                              <div className="flex items-center text-gray-700 dark:text-gray-300">
+                                <span className="text-sm mr-2">⏰</span>
+                                <span className="text-sm">
+                                  {event.startTime && event.endTime ?
+                                    `${formatTime(event.startTime)} - ${formatTime(event.endTime)}` :
+                                    formatTime(event.time || event.startTime || event.endTime)}
+                                </span>
+                              </div>
+                            )}
+
                             <div className="flex items-center text-gray-700 dark:text-gray-300">
                               <span className="text-sm mr-2">👥</span>
                               <span className="text-sm">{attendees} {attendees === 1 ? 'person' : 'people'} registered</span>
                             </div>
-                            
+
                             {event.category && (
                               <div className="flex items-center text-gray-700 dark:text-gray-300">
                                 <span className="text-sm mr-2">🏷️</span>
@@ -272,7 +293,7 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
                               </div>
                             )}
                           </div>
-                          
+
                           {event.description && (
                             <div className="mt-4">
                               <p className="text-gray-700 dark:text-gray-300 line-clamp-2">{event.description}</p>
@@ -280,18 +301,18 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="mt-6 flex flex-wrap gap-2">
-                        <button 
-                          onClick={() => navigate(`/events/${event._id}`)}
+                        <button
+                          onClick={() => event._id ? navigate(`/events/${event._id}`) : alert('Event details not available')}
                           className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
                         >
                           View Details
                         </button>
                         {user && (
                           <>
-                            <button 
-                              onClick={() => navigate(`/edit-event/${event._id}`)}
+                            <button
+                              onClick={() => event._id ? navigate(`/edit-event/${event._id}`) : alert('Cannot edit this event')}
                               className="px-4 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm text-gray-700 dark:text-gray-300"
                             >
                               Edit Event
@@ -301,8 +322,8 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
                                 Manage Registrations
                               </button>
                             )}
-                            <button 
-                              onClick={() => handleDeleteEvent(event._id)}
+                            <button
+                              onClick={() => event._id ? handleDeleteEvent(event._id) : alert('Cannot delete this event')}
                               disabled={isDeleting && deleteId === event._id}
                               className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors text-sm"
                             >
@@ -312,19 +333,19 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="md:w-1/3 flex flex-col">
                       <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 h-full">
                         <h4 className="font-semibold text-gray-800 dark:text-white mb-3">Event Stats</h4>
-                        
+
                         <div className="space-y-3">
                           <div>
                             <p className="text-sm text-gray-500 dark:text-gray-400">Registrations</p>
                             <div className="flex items-center justify-between">
                               <p className="text-lg font-semibold text-gray-800 dark:text-white">{attendees}</p>
                               <div className="w-2/3 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                <div 
-                                  className="bg-blue-600 h-2.5 rounded-full" 
+                                <div
+                                  className="bg-blue-600 h-2.5 rounded-full"
                                   style={{ width: `${Math.min(100, (attendees / (event.capacity || 50)) * 100)}%` }}
                                 ></div>
                               </div>
@@ -335,14 +356,14 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
                               </p>
                             )}
                           </div>
-                          
+
                           <div>
                             <p className="text-sm text-gray-500 dark:text-gray-400">Page Views</p>
                             <p className="text-lg font-semibold text-gray-800 dark:text-white">
                               {Math.floor(Math.random() * 100) + 30}
                             </p>
                           </div>
-                          
+
                           {eventStatus === 'past' && (
                             <div>
                               <p className="text-sm text-gray-500 dark:text-gray-400">Attendance Rate</p>
@@ -351,7 +372,7 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
                               </p>
                             </div>
                           )}
-                          
+
                           <div className="pt-3">
                             {eventStatus === 'past' ? (
                               <button className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm">
@@ -376,7 +397,7 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
             })}
           </div>
         )}
-        
+
         {filteredEvents.length > 0 && filteredEvents.length < events.length && (
           <div className="mt-6 text-center text-gray-600 dark:text-gray-400">
             Showing {filteredEvents.length} of {events.length} events
@@ -387,4 +408,4 @@ const Events = ({ events, loading, error, isDarkMode, API_URL, user, role }) => 
   );
 };
 
-export default Events; 
+export default Events;
