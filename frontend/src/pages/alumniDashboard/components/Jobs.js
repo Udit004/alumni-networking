@@ -96,25 +96,52 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
       console.log('Auth token:', token);
 
       // Use the proper employer endpoint to fetch real applications
-      const endpoint = `${API_URL}/api/job-applications/employer/${user.uid}?firebaseUID=${user.uid}&role=${role}`;
-      console.log('Fetching applications from endpoint:', endpoint);
+      // Try multiple endpoint formats to ensure compatibility with backend
+      const endpoints = [
+        `${API_URL}/api/job-applications/employer/${user.uid}?firebaseUID=${user.uid}&role=${role}`,
+        `${API_URL}/api/job-applications/user-test/${user.uid}?firebaseUID=${user.uid}&role=${role}`,
+        `${API_URL}/api/job-applications/user/${user.uid}?firebaseUID=${user.uid}&role=${role}`
+      ];
 
-      let response;
-      try {
-        response = await fetch(endpoint, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          credentials: 'include'
-        });
-      } catch (networkError) {
-        console.error('Network error fetching applications:', networkError);
+      let response = null;
+      let successfulEndpoint = null;
+
+      // Try each endpoint until one works
+      for (const endpoint of endpoints) {
+        console.log(`Trying to fetch applications from endpoint: ${endpoint}`);
+
+        try {
+          const tempResponse = await fetch(endpoint, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include'
+          });
+
+          if (tempResponse.ok) {
+            console.log(`Successful response from endpoint: ${endpoint}`);
+            response = tempResponse;
+            successfulEndpoint = endpoint;
+            break;
+          } else {
+            console.log(`Endpoint ${endpoint} returned status ${tempResponse.status}`);
+          }
+        } catch (endpointError) {
+          console.error(`Error with endpoint ${endpoint}:`, endpointError);
+        }
+      }
+
+      if (!response) {
+        console.error('All endpoints failed');
         setApplications([]);
         setError('Failed to connect to server. Please try again later.');
+        setApplicationsLoading(false);
         return;
       }
+
+      console.log(`Using successful endpoint: ${successfulEndpoint}`);
 
       console.log('Response status:', response.status);
 
@@ -1087,9 +1114,6 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
               </div>
             ) : (
               <div>
-                <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 p-4 rounded-lg mb-4">
-                  <p className="text-sm"><strong>Note:</strong> Showing sample job applications for demonstration purposes. These applications are from the database but may not be directly associated with your account.</p>
-                </div>
                 <div className="space-y-4">
                 {applications.map(application => (
                   <div
