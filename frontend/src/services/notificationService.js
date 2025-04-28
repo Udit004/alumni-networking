@@ -15,6 +15,8 @@ import {
   deleteDoc,
   setDoc
 } from 'firebase/firestore';
+import axios from 'axios';
+import { API_URLS } from '../config/apiConfig';
 
 // Ensure collections exist
 const ensureCollections = async () => {
@@ -187,12 +189,9 @@ export const getUserNotifications = async (userId, limitCount = 20) => {
   try {
     // First try to get notifications from the backend API
     try {
+      // Always use the deployed URL
       const baseUrls = [
-        process.env.REACT_APP_API_URL || 'http://localhost:5001',
-        'http://localhost:5002',
-        'http://localhost:5003',
-        'http://localhost:5004',
-        'http://localhost:5000'
+        'https://alumni-networking.onrender.com'
       ];
 
       // Get the auth token first to avoid multiple attempts if not authenticated
@@ -331,12 +330,9 @@ export const markNotificationAsRead = async (notificationId) => {
   try {
     // First try to mark notification as read in the backend API
     try {
+      // Always use the deployed URL
       const baseUrls = [
-        process.env.REACT_APP_API_URL || 'http://localhost:5001',
-        'http://localhost:5002',
-        'http://localhost:5003',
-        'http://localhost:5004',
-        'http://localhost:5000'
+        'https://alumni-networking.onrender.com'
       ];
 
       // Get the auth token
@@ -420,12 +416,9 @@ export const markAllNotificationsAsRead = async (userId) => {
   try {
     // First try to mark all notifications as read in the backend API
     try {
+      // Always use the deployed URL
       const baseUrls = [
-        process.env.REACT_APP_API_URL || 'http://localhost:5001',
-        'http://localhost:5002',
-        'http://localhost:5003',
-        'http://localhost:5004',
-        'http://localhost:5000'
+        'https://alumni-networking.onrender.com'
       ];
 
       // Get the auth token
@@ -600,101 +593,103 @@ export const subscribeToUserNotifications = (userId, callback) => {
 
   console.log(`Setting up notifications subscription for user ${userId}`);
 
-  // First try the optimal query with ordering
-  try {
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', userId),
-      orderBy('timestamp', 'desc'),
-      limit(20)
-    );
+  // Try to fetch notifications from the API first
+  const fetchFromApi = async () => {
+    try {
+      const auth = getAuth();
+      const token = await auth.currentUser?.getIdToken();
 
-    return onSnapshot(q,
-      // Success handler
-      (snapshot) => {
+      if (!token) {
+        console.warn('No auth token available for API notifications');
+        return null;
+      }
+
+      const response = await fetch(`${API_URLS.notifications}?userId=${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(`Found ${data.notifications?.length || 0} notifications from ${response.url}`);
+
+      if (data.notifications) {
+        callback(data.notifications);
+        return true;
+      }
+      return null;
+    } catch (error) {
+      console.warn('Error fetching notifications from API:', error);
+      return null;
+    }
+  };
+
+  // Try Firebase Firestore as a fallback
+  const setupFirebaseListener = () => {
+    try {
+      // Create a simple query without ordering to avoid index issues
+      const q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
+        limit(20)
+      );
+
+      return onSnapshot(q, (snapshot) => {
         const notifications = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
           timestamp: doc.data().timestamp?.toDate() || new Date()
-        }));
+        }))
+        // Sort manually
+        .sort((a, b) => {
+          const timeA = b.timestamp instanceof Date ? b.timestamp : new Date();
+          const timeB = a.timestamp instanceof Date ? a.timestamp : new Date();
+          return timeA - timeB;
+        });
+
         console.log(`Received notification update, count: ${notifications.length}`);
         callback(notifications);
-      },
-      // Error handler
-      (error) => {
-        // Check if this is a missing index error
-        if (error.message && error.message.includes('index')) {
-          console.warn('Missing Firestore index for notifications subscription. Please follow the link in the error to create the index.');
-          console.warn('Using fallback query without ordering until index is created.');
-
-          // Fallback: Use a simpler query without ordering
-          const fallbackQuery = createFallbackQuery(userId);
-
-          // Set up a new listener with the fallback query
-          return onSnapshot(fallbackQuery, (fallbackSnapshot) => {
-            const notifications = fallbackSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data(),
-              timestamp: doc.data().timestamp?.toDate() || doc.data().createdAt ? new Date(doc.data().createdAt) : new Date()
-            }));
-
-            // Sort manually by timestamp descending
-            const sortedNotifications = notifications.sort((a, b) => {
-              // Handle potential missing timestamps
-              const timeA = b.timestamp instanceof Date ? b.timestamp : new Date();
-              const timeB = a.timestamp instanceof Date ? a.timestamp : new Date();
-              return timeA - timeB;
-            }).slice(0, 20);
-
-            console.log(`Received notification update (fallback), count: ${sortedNotifications.length}`);
-            callback(sortedNotifications);
-          },
-          // Error handler for fallback
-          (fallbackError) => {
-            console.error('Error in fallback notifications subscription:', fallbackError);
-            callback([]);
-          });
-        }
-
-        // If it's not an index error, check for permission errors
-        if (error.message && error.message.includes('permission')) {
-          console.warn('Firebase permission error in notifications subscription. This is normal if the user is not authenticated yet.');
-          console.warn('Using local notifications until authentication is complete.');
-          // Return empty array but don't show error to user
-          callback([]);
-        } else {
-          // For other errors, log them
-          console.error('Error in notifications subscription:', error);
-          callback([]);
-        }
-      }
-    );
-  } catch (setupError) {
-    console.error('Error setting up notification subscription:', setupError);
-    // Try with fallback query from the beginning
-    try {
-      const fallbackQuery = createFallbackQuery(userId);
-      return onSnapshot(fallbackQuery, (fallbackSnapshot) => {
-        const notifications = fallbackSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          timestamp: doc.data().timestamp?.toDate() || new Date(doc.data().createdAt || Date.now())
-        }))
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(0, 20);
-
-        console.log(`Received notification update (direct fallback), count: ${notifications.length}`);
-        callback(notifications);
       }, (error) => {
-        console.error('Error in direct fallback notification subscription:', error);
-        callback([]);
+        console.error('Error in Firebase notifications subscription:', error);
+        // If Firebase fails, try API again
+        fetchFromApi().catch(e => {
+          console.error('Both Firebase and API failed for notifications:', e);
+          callback([]);
+        });
       });
-    } catch (finalError) {
-      console.error('Final error setting up notifications, giving up:', finalError);
-      callback([]);
+    } catch (error) {
+      console.error('Error setting up Firebase notification subscription:', error);
       return () => {}; // Empty unsubscribe function
     }
-  }
+  };
+
+  // First try API, then fall back to Firebase
+  fetchFromApi().then(success => {
+    if (!success) {
+      console.log('API notifications failed or returned no data, using Firebase fallback');
+      return setupFirebaseListener();
+    }
+
+    // If API succeeded, set up a polling interval
+    const intervalId = setInterval(() => {
+      fetchFromApi().catch(e => console.warn('Error in notification polling:', e));
+    }, 30000); // Poll every 30 seconds
+
+    // Return a cleanup function
+    return () => clearInterval(intervalId);
+  }).catch(error => {
+    console.error('Error in initial API fetch:', error);
+    return setupFirebaseListener();
+  });
+
+  // Return a dummy unsubscribe function for now
+  // The real one will be returned by the promise chain above
+  return () => {};
 };
 
 // Get unread notifications count

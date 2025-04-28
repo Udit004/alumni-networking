@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const jobApplicationController = require('../controllers/jobApplicationController');
+const jobApplicationController = require('../controllers/jobApplicationControllerWithActivities');
 const { protect } = require('../middleware/authMiddleware');
 
 // Apply for a job
@@ -312,5 +312,14 @@ router.get('/user-test/:userId', (req, res) => {
 
 // Get a specific job application
 router.get('/:id', protect, jobApplicationController.getJobApplication);
+
+// Accept a job application
+router.put('/:id/accept', protect, jobApplicationController.acceptJobApplication);
+
+// Reject a job application
+router.put('/:id/reject', protect, jobApplicationController.rejectJobApplication);
+
+// Update job application status
+router.put('/:id/status', protect, jobApplicationController.updateJobApplicationStatus);
 
 module.exports = router;

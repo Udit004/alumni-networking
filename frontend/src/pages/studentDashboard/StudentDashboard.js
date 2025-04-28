@@ -20,7 +20,8 @@ import { API_URLS, DEFAULT_TIMEOUT } from '../../config/apiConfig';
 import { getUserEvents, getStudentCourses } from '../../services/firestoreFallbackService';
 
 const StudentDashboard = () => {
-  const [isNavExpanded, setIsNavExpanded] = useState(true);
+  const [isNavExpanded, setIsNavExpanded] = useState(window.innerWidth > 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [enrolledCoursesCount, setEnrolledCoursesCount] = useState(0);
   const [activeSection, setActiveSection] = useState("overview");
   const [loading, setLoading] = useState(true);
@@ -71,6 +72,8 @@ const StudentDashboard = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
+  const profileRef = useRef(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   useEffect(() => {
     // Check initial dark mode state
@@ -257,8 +260,27 @@ const StudentDashboard = () => {
     { id: 'network', label: 'Network', icon: '👥' }
   ];
 
+  // Add resize listener to handle mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile && !isNavExpanded) {
+        setIsNavExpanded(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isNavExpanded]);
+
+  // Handle section click - close sidebar on mobile
   const handleSectionClick = (sectionId) => {
     setActiveSection(sectionId);
+    // Close sidebar on mobile when a section is selected
+    if (isMobile) {
+      setIsNavExpanded(false);
+    }
   };
 
   // Close notifications when clicking outside
@@ -274,6 +296,20 @@ const StudentDashboard = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [notificationRef]);
+
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [profileRef]);
 
   // Replace mock notification data loading with actual data fetching
   useEffect(() => {
@@ -365,9 +401,12 @@ const StudentDashboard = () => {
       try {
         // Fetch job applications count
         try {
+          console.log('Fetching job applications count...');
           const token = await currentUser.getIdToken();
+
+          // Try to get applications from the user-specific endpoint
           const jobAppResponse = await axios.get(
-            `${API_URLS.main}/job-applications`,
+            `${API_URLS.main}/api/job-applications/user/${currentUser.uid}`,
             {
               headers: {
                 'Authorization': `Bearer ${token}`,
@@ -377,43 +416,139 @@ const StudentDashboard = () => {
             }
           );
 
-          let applicationData = [];
+          console.log('Job applications response:', jobAppResponse.data);
+
+          // Extract applications data
+          let userApplications = [];
           if (jobAppResponse.data && jobAppResponse.data.success) {
             if (Array.isArray(jobAppResponse.data.data)) {
-              applicationData = jobAppResponse.data.data;
+              userApplications = jobAppResponse.data.data;
             } else if (Array.isArray(jobAppResponse.data.applications)) {
-              applicationData = jobAppResponse.data.applications;
+              userApplications = jobAppResponse.data.applications;
             }
           } else if (Array.isArray(jobAppResponse.data)) {
-            applicationData = jobAppResponse.data;
+            userApplications = jobAppResponse.data;
           }
 
-          // Filter for current user's applications
-          const userApplications = applicationData.filter(app => app.userId === currentUser.uid);
-          setJobApplicationsCount(userApplications.length);
+          // Set the count to the total number of job applications
+          const count = userApplications.length;
+          console.log(`Setting job applications count to ${count} (total applications)`);
+          setJobApplicationsCount(count);
         } catch (jobError) {
           console.error("Error fetching job applications:", jobError);
-          // Set default value if API fails
-          setJobApplicationsCount(0);
+
+          // Try fallback to the general endpoint
+          try {
+            console.log('Using fallback for job applications...');
+            const token = await currentUser.getIdToken();
+            const fallbackResponse = await axios.get(
+              `${API_URLS.main}/api/job-applications`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                timeout: DEFAULT_TIMEOUT
+              }
+            );
+
+            let allApplications = [];
+            if (fallbackResponse.data && fallbackResponse.data.success) {
+              if (Array.isArray(fallbackResponse.data.data)) {
+                allApplications = fallbackResponse.data.data;
+              } else if (Array.isArray(fallbackResponse.data.applications)) {
+                allApplications = fallbackResponse.data.applications;
+              }
+            } else if (Array.isArray(fallbackResponse.data)) {
+              allApplications = fallbackResponse.data;
+            }
+
+            // Filter for current user's applications
+            const userApplications = allApplications.filter(app => app.userId === currentUser.uid);
+            const count = userApplications.length;
+            console.log(`Fallback: Setting job applications count to ${count}`);
+            setJobApplicationsCount(count);
+          } catch (fallbackError) {
+            console.error("Error in fallback for job applications:", fallbackError);
+            // Set default value if both attempts fail
+            setJobApplicationsCount(0);
+          }
         }
 
-        // Fetch mentorships count
+        // Fetch mentorships count - we want to show total applications, not just enrolled
         try {
-          const mentorshipResponse = await axios.get(
-            `${API_URLS.main}/mentorships/user/${currentUser.uid}`,
-            { timeout: DEFAULT_TIMEOUT }
+          console.log('Fetching mentorship applications count...');
+          const token = await currentUser.getIdToken();
+
+          // Fetch mentorship applications for the specific user
+          const mentorshipAppResponse = await axios.get(
+            `${API_URLS.main}/api/mentorship-applications/user/${currentUser.uid}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              timeout: DEFAULT_TIMEOUT
+            }
           );
 
-          const userMentorships = mentorshipResponse.data.success ?
-            (mentorshipResponse.data.mentorships ||
-            mentorshipResponse.data.enrolledMentorships ||
-            []) : [];
+          console.log('Mentorship applications response:', mentorshipAppResponse.data);
 
-          setMentorshipsCount(Array.isArray(userMentorships) ? userMentorships.length : 0);
+          // Extract applications data
+          let userMentorshipApplications = [];
+          if (mentorshipAppResponse.data && mentorshipAppResponse.data.success) {
+            if (Array.isArray(mentorshipAppResponse.data.data)) {
+              userMentorshipApplications = mentorshipAppResponse.data.data;
+            } else if (Array.isArray(mentorshipAppResponse.data.applications)) {
+              userMentorshipApplications = mentorshipAppResponse.data.applications;
+            }
+          } else if (Array.isArray(mentorshipAppResponse.data)) {
+            userMentorshipApplications = mentorshipAppResponse.data;
+          }
+
+          // Set the count to match what will be shown in the "My Applications" section
+          const count = userMentorshipApplications.length;
+          console.log(`Setting mentorship applications count to ${count}`);
+          setMentorshipsCount(count);
         } catch (mentorshipError) {
-          console.error("Error fetching mentorships:", mentorshipError);
-          // Set default value if API fails
-          setMentorshipsCount(0);
+          console.error("Error fetching mentorship applications:", mentorshipError);
+
+          // Try fallback to the general endpoint
+          try {
+            console.log('Using fallback for mentorship applications...');
+            const token = await currentUser.getIdToken();
+            const fallbackResponse = await axios.get(
+              `${API_URLS.main}/api/mentorship-applications`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                timeout: DEFAULT_TIMEOUT
+              }
+            );
+
+            let allApplications = [];
+            if (fallbackResponse.data && fallbackResponse.data.success) {
+              if (Array.isArray(fallbackResponse.data.data)) {
+                allApplications = fallbackResponse.data.data;
+              } else if (Array.isArray(fallbackResponse.data.applications)) {
+                allApplications = fallbackResponse.data.applications;
+              }
+            } else if (Array.isArray(fallbackResponse.data)) {
+              allApplications = fallbackResponse.data;
+            }
+
+            // Filter for current user's applications
+            const userApplications = allApplications.filter(app => app.userId === currentUser.uid);
+            const count = userApplications.length;
+            console.log(`Fallback: Setting mentorship applications count to ${count}`);
+            setMentorshipsCount(count);
+          } catch (fallbackError) {
+            console.error("Error in fallback for mentorship applications:", fallbackError);
+            // Set default value if both attempts fail
+            setMentorshipsCount(0);
+          }
         }
 
         // Fetch enrolled courses count
@@ -544,9 +679,17 @@ const StudentDashboard = () => {
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
       {/* Sidebar */}
       <div
-        className={`h-full transition-all duration-300 bg-white dark:bg-gray-800 shadow-lg
-                  ${isNavExpanded ? 'w-64' : 'w-20'}`}
-        style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
+        className={`h-full transition-all duration-300 shadow-lg
+                   ${isNavExpanded ? 'w-64' : 'w-20'} 
+                   ${isMobile ? 'fixed z-50' : 'relative'}`}
+        style={{ 
+          backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+          top: '0',
+          left: isMobile && !isNavExpanded ? '-100%' : '0',
+          height: '100%',
+          overflow: 'auto',
+          width: isMobile && isNavExpanded ? '100%' : ''
+        }}
       >
         <div className="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
           {isNavExpanded && (
@@ -580,14 +723,33 @@ const StudentDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <header className="bg-white dark:bg-gray-800 shadow-md p-4 sticky top-0 z-10"
+      <div className={`flex-1 overflow-auto ${isMobile ? 'w-full' : ''}`}>
+        <header className="bg-white dark:bg-gray-800 shadow-md p-4 sticky top-0 z-40"
                 style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+            {isMobile && (
+              <button
+                className="p-2 mr-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 z-50"
+                onClick={() => setIsNavExpanded(!isNavExpanded)}
+              >
+                {isNavExpanded ? '✕' : '☰'}
+              </button>
+            )}
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white truncate">
               {menuItems.find(item => item.id === activeSection)?.label}
             </h1>
             <div className="flex items-center gap-4">
+              {/* Dark mode toggle */}
+              <button
+                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                onClick={() => {
+                  document.documentElement.classList.toggle('dark');
+                  setIsDarkMode(!isDarkMode);
+                }}
+              >
+                {isDarkMode ? '☀️' : '🌙'}
+              </button>
+            
               <div className="relative" ref={notificationRef}>
                 <button
                   className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -660,18 +822,61 @@ const StudentDashboard = () => {
                   </div>
                 )}
               </div>
-              <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                {profileData.name ? (
-                  profileData.name.charAt(0).toUpperCase()
-                ) : (
-                  '👤'
+              <div className="relative" ref={profileRef}>
+                <button 
+                  className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white"
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                >
+                  {profileData.name ? (
+                    profileData.name.charAt(0).toUpperCase()
+                  ) : (
+                    '👤'
+                  )}
+                </button>
+                
+                {/* Profile Menu */}
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                    <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                      <p className="font-semibold text-gray-800 dark:text-white">{profileData.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{profileData.email}</p>
+                    </div>
+                    <div className="py-2">
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => {
+                          setActiveSection('profile');
+                          setShowProfileMenu(false);
+                        }}
+                      >
+                        My Profile
+                      </button>
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => {
+                          navigate('/');
+                          setShowProfileMenu(false);
+                        }}
+                      >
+                        Log Out
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
           </div>
         </header>
 
-        <main className="p-6">
+        {/* Mobile sidebar overlay */}
+        {isMobile && isNavExpanded && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setIsNavExpanded(false)}
+          ></div>
+        )}
+
+        <main className="p-3 md:p-6">
           {renderActiveSection()}
           {activeSection === 'profile' && (
             <Profile isDarkMode={isDarkMode} />
@@ -757,9 +962,9 @@ const StudentDashboard = () => {
                       <button className="w-full px-4 py-3 flex items-center text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      </svg>
-                        Account
-                      </button>
+                        </svg>
+                          Account
+                        </button>
                     </div>
                   </div>
                 </div>

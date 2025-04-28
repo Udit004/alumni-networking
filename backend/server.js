@@ -16,6 +16,7 @@ require("./models/EventRegistration");
 require("./models/Course");
 require("./models/CourseApplication");
 require("./models/Announcement");
+require("./models/Activity");
 
 const eventRoutes = require("./routes/eventRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -26,13 +27,15 @@ const mentorshipRoutes = require('./routes/mentorships');
 const jobApplicationRoutes = require('./routes/jobApplicationRoutes');
 const mentorshipApplicationRoutes = require('./routes/mentorshipApplicationRoutes');
 // Chat routes removed
-const courseRoutes = require('./routes/courses');
+const courseRoutes = require('./routes/coursesNew');
 const courseApplicationRoutes = require('./routes/courseApplications');
-const firestoreNotificationRoutes = require('./routes/firestoreNotifications');
+// Firebase notification routes removed
 const announcementRoutes = require('./routes/announcementRoutes');
+const activityRoutes = require('./routes/activityRoutes');
+const materialsRoutes = require('./routes/materialsRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 5001; // Changed to 5001 to avoid conflict
+const PORT = 5000; // Use port 5000 explicitly
 const HOST = "0.0.0.0";
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -65,6 +68,11 @@ app.use(cors({
 
 // Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from the uploads directory
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Debug middleware
 app.use((req, res, next) => {
@@ -84,7 +92,9 @@ app.use('/api/mentorship-applications', mentorshipApplicationRoutes);
 // Chat routes removed
 app.use('/api/courses', courseRoutes);
 app.use('/api/course-applications', courseApplicationRoutes);
-app.use('/api/notifications', firestoreNotificationRoutes);
+// Firebase notification routes removed
+app.use('/api/activities', activityRoutes);
+app.use('/api/materials', materialsRoutes);
 // Register announcement routes
 app.use('/', announcementRoutes);
 // Log the registered routes
@@ -202,39 +212,12 @@ app.use((err, req, res, next) => {
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => {
         console.log("✅ Connected to MongoDB Atlas");
-
-        // Try to start the server on the specified port
-        const server = app.listen(PORT, HOST, () => {
+        app.listen(PORT, HOST, () => {
             console.log(`🚀 Server running at http://localhost:${PORT}`);
             // Log available routes
             console.log("\n✅ Available Routes:");
             const expressListRoutes = require("express-list-routes");
             expressListRoutes(app);
-        }).on('error', (err) => {
-            // If the port is in use, try another port
-            if (err.code === 'EADDRINUSE') {
-                console.log(`Port ${PORT} is already in use, trying port 5003...`);
-                app.listen(5003, HOST, () => {
-                    console.log(`🚀 Server running at http://localhost:5003`);
-                    console.log("\n✅ Available Routes:");
-                    const expressListRoutes = require("express-list-routes");
-                    expressListRoutes(app);
-                }).on('error', (err2) => {
-                    if (err2.code === 'EADDRINUSE') {
-                        console.log(`Port 5003 is also in use, trying port 5004...`);
-                        app.listen(5004, HOST, () => {
-                            console.log(`🚀 Server running at http://localhost:5004`);
-                            console.log("\n✅ Available Routes:");
-                            const expressListRoutes = require("express-list-routes");
-                            expressListRoutes(app);
-                        });
-                    } else {
-                        console.error("❌ Server Error:", err2);
-                    }
-                });
-            } else {
-                console.error("❌ Server Error:", err);
-            }
         });
     })
     .catch(err => {

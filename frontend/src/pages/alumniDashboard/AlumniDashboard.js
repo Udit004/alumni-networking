@@ -18,7 +18,8 @@ import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRea
 import axios from 'axios';
 
 const AlumniDashboard = () => {
-  const [isNavExpanded, setIsNavExpanded] = useState(true);
+  const [isNavExpanded, setIsNavExpanded] = useState(window.innerWidth > 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [activeSection, setActiveSection] = useState(() => {
     // Check localStorage for saved section
     const savedSection = window.localStorage.getItem('alumniActiveSection');
@@ -267,9 +268,13 @@ const AlumniDashboard = () => {
       });
 
       // Use the user-specific endpoint to get events created by this user
+      const token = await currentUser.getIdToken();
       const response = await fetch(`${API_URL}/api/events/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=${role}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       console.log('Events API Response status:', response.status);
@@ -293,9 +298,14 @@ const AlumniDashboard = () => {
       if (!data.createdEvents) {
         console.warn('No createdEvents found in API response:', data);
         // Fallback to data.events if createdEvents doesn't exist
-        const eventsToUse = data.events || [];
-        setEvents(eventsToUse);
+        // If data is an array, use it directly (API might return array instead of object)
+        const eventsToUse = Array.isArray(data) ? data : (data.events || []);
         console.log('Using fallback events array:', eventsToUse);
+
+        // Sort events by date
+        const sortedEvents = eventsToUse.sort((a, b) => new Date(a.date) - new Date(b.date));
+        console.log('Setting sorted events:', sortedEvents);
+        setEvents(sortedEvents);
       } else {
         // Sort events by date
         const sortedEvents = data.createdEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -328,6 +338,10 @@ const AlumniDashboard = () => {
 
   const handleSectionClick = (section) => {
     setActiveSection(section);
+    // Close sidebar on mobile when a section is selected
+    if (isMobile) {
+      setIsNavExpanded(false);
+    }
   };
 
   // Existing effect for fetching alumni profile
@@ -639,37 +653,56 @@ const AlumniDashboard = () => {
     ];
   };
 
-  return (
-    <div className="alumni-dashboard min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="flex flex-col md:flex-row h-full">
-        {/* Sidebar - hidden on mobile, shown as a drawer or on larger screens */}
-        <div className={`fixed inset-0 z-20 transform transition-transform duration-300 ease-in-out md:relative md:flex md:flex-col md:transform-none ${
-          isNavExpanded ? 'translate-x-0' : '-translate-x-full'
-        } md:w-64 lg:w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto`}>
+  // Add resize listener to handle mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile && !isNavExpanded) {
+        setIsNavExpanded(true);
+      }
+    };
 
-          {/* Mobile sidebar header - only visible on mobile */}
-          <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-3">
-              <img src="/assets/alumniLogo.png" alt="Logo" className="w-8 h-8" />
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Alumni Dashboard</h1>
-            </div>
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isNavExpanded]);
+
+  return (
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+      {/* Sidebar */}
+      <div
+        className={`h-full transition-all duration-300 shadow-lg
+                   ${isNavExpanded ? 'w-64' : 'w-20'} 
+                   ${isMobile ? 'fixed z-50' : 'relative'}`}
+        style={{ 
+          backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+          top: '0',
+          left: isMobile && !isNavExpanded ? '-100%' : '0',
+          height: '100%',
+          overflow: 'auto',
+          width: isMobile && isNavExpanded ? '100%' : ''
+        }}
+      >
+        {/* Sidebar content */}
+        <div className="p-4">
+          <div className="flex justify-between items-center mb-6">
+            {isNavExpanded && (
+              <h3 className="text-xl font-bold text-blue-600 dark:text-blue-400">Alumni Dashboard</h3>
+            )}
             <button
-              onClick={() => setIsNavExpanded(false)}
-              className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+              onClick={() => setIsNavExpanded(!isNavExpanded)}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              {isNavExpanded ? '◀' : '▶'}
             </button>
           </div>
 
-          {/* Sidebar content */}
-          <div className="p-4">
-            <div className="mb-8 text-center">
-              <div className="inline-block relative">
-                <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-primary-light flex items-center justify-center text-white text-3xl">
-                  {currentUser?.displayName ? currentUser.displayName[0].toUpperCase() : 'A'}
-                </div>
+          <div className="mb-8 text-center">
+            <div className="inline-block relative">
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-primary-light flex items-center justify-center text-white text-3xl">
+                {currentUser?.displayName ? currentUser.displayName[0].toUpperCase() : 'A'}
+              </div>
+              {isNavExpanded && (
                 <div className="absolute bottom-0 right-0 bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-md border border-gray-200 dark:border-gray-700">
                   <Link to="/profile" className="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -677,191 +710,245 @@ const AlumniDashboard = () => {
                     </svg>
                   </Link>
                 </div>
-              </div>
-              <h2 className="mt-4 font-semibold text-gray-800 dark:text-white">{currentUser?.displayName || 'Alumni'}</h2>
-              <p className="text-gray-500 dark:text-gray-400">{currentUser?.company || currentUser?.college || 'Alumni Member'}</p>
+              )}
             </div>
+            {isNavExpanded && (
+              <>
+                <h2 className="mt-4 font-semibold text-gray-800 dark:text-white">{currentUser?.displayName || 'Alumni'}</h2>
+                <p className="text-gray-500 dark:text-gray-400">{currentUser?.company || currentUser?.college || 'Alumni Member'}</p>
+              </>
+            )}
+          </div>
 
-            <nav className="mt-4 space-y-1">
-              {menuItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleSectionClick(item.id)}
-                  className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${
-                    activeSection === item.id
-                      ? 'bg-primary-light text-gray-800 dark:text-white font-medium'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <span className="text-xl mr-3">{item.icon}</span>
-                  <span>{item.label}</span>
-                  {item.id === 'notifications' && unreadCount > 0 && (
-                    <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </nav>
+          <nav className="mt-4 space-y-1">
+            {menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleSectionClick(item.id)}
+                className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${
+                  activeSection === item.id
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                <span className="text-xl mr-3">{item.icon}</span>
+                {isNavExpanded && (
+                  <span className="font-medium">{item.label}</span>
+                )}
+                {isNavExpanded && item.id === 'notifications' && unreadCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
 
+          {isNavExpanded && (
             <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
               <div className="text-xs text-center text-gray-500 dark:text-gray-400 mt-4">
                 <p>© 2024 Alumni Network</p>
                 <p className="mt-1">Version 1.0.0</p>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* Mobile Header */}
-          <header className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 sticky top-0 z-10">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setIsNavExpanded(true)}
-                className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <div className="flex items-center space-x-2">
-                <img src="/assets/alumniLogo.png" alt="Logo" className="w-8 h-8" />
-                <h1 className="text-lg font-bold text-gray-900 dark:text-white">Alumni Dashboard</h1>
-              </div>
-              <div className="relative">
-                <button
-                  onClick={() => setActiveSection('notifications')}
-                  className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 relative"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  {unreadCount > 0 && (
-                    <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-              </div>
-            </div>
-          </header>
-
-          {/* Main content */}
-          <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
-            {/* Section Header */}
-            <div className="hidden md:flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-                {menuItems.find(item => item.id === activeSection)?.label || 'Dashboard'}
-              </h1>
-              <div className="flex items-center space-x-4">
-                {/* Notification bell on desktop */}
-                <div className="relative">
-                  <button
-                    onClick={() => setActiveSection('notifications')}
-                    className={`p-2 rounded-full ${
-                      activeSection === 'notifications'
-                        ? 'bg-primary-light text-primary'
-                        : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                    </svg>
-                    {unreadCount > 0 && (
-                      <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Section Content */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
-              {activeSection === 'overview' && (
-                <Overview
-                  connections={connections || []}
-                  isDarkMode={isDarkMode}
-                  mentoringCount={mentoringCount}
-                  jobPostingsCount={jobPostingsCount}
-                  activeJobsCount={activeJobsCount}
-                  filledJobsCount={filledJobsCount}
-                  eventsCount={eventsCount}
-                  navigate={navigate}
-                />
-              )}
-
-              {activeSection === 'profile' && (
-                <Profile
-                  profileData={profileData || {}}
-                  currentUser={currentUser}
-                  isDarkMode={isDarkMode}
-                />
-              )}
-
-              {activeSection === 'notifications' && (
-                <Notifications
-                  notifications={notifications}
-                  getNotificationIcon={getNotificationIcon}
-                  formatNotificationTime={formatNotificationTime}
-                  markAsRead={markAsRead}
-                  markAllAsRead={markAllAsRead}
-                  isDarkMode={isDarkMode}
-                />
-              )}
-
-              {activeSection === 'mentorship' && (
-                <Mentorship
-                  isDarkMode={isDarkMode}
-                  API_URL={API_URL}
-                  user={currentUser}
-                  role={role}
-                />
-              )}
-
-              {activeSection === 'jobs' && (
-                <Jobs
-                  isDarkMode={isDarkMode}
-                  API_URL={API_URL}
-                  user={currentUser}
-                  role={role}
-                />
-              )}
-
-              {activeSection === 'events' && (
-                <Events
-                  events={events}
-                  loading={loading}
-                  error={error}
-                  isDarkMode={isDarkMode}
-                  API_URL={API_URL}
-                  user={currentUser}
-                  role={role}
-                />
-              )}
-
-              {activeSection === 'network' && (
-                <div className="network-section">
-                  <AlumniNetwork currentUser={currentUser} isDarkMode={isDarkMode} />
-                </div>
-              )}
-
-              {/* Settings section removed */}
-            </div>
-          </main>
+          )}
         </div>
       </div>
 
-      {/* Backdrop for mobile sidebar */}
-      {isNavExpanded && (
-        <div
-          className="md:hidden fixed inset-0 z-10 bg-black bg-opacity-50"
-          onClick={() => setIsNavExpanded(false)}
-        ></div>
-      )}
+      {/* Main Content */}
+      <div className={`flex-1 overflow-auto ${isMobile ? 'w-full' : ''}`}>
+        <header className="bg-white dark:bg-gray-800 shadow-md p-4 sticky top-0 z-40"
+                style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
+          <div className="flex justify-between items-center">
+            {isMobile && (
+              <button
+                className="p-2 mr-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 z-50"
+                onClick={() => setIsNavExpanded(!isNavExpanded)}
+              >
+                {isNavExpanded ? '✕' : '☰'}
+              </button>
+            )}
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white truncate">
+              {menuItems.find(item => item.id === activeSection)?.label || 'Dashboard'}
+            </h1>
+            <div className="flex items-center gap-4">
+              {/* Dark mode toggle */}
+              <button
+                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                onClick={() => {
+                  document.documentElement.classList.toggle('dark');
+                  setIsDarkMode(!isDarkMode);
+                }}
+              >
+                {isDarkMode ? '☀️' : '🌙'}
+              </button>
+            
+              {/* Notification button */}
+              <div className="relative" ref={notificationRef}>
+                <button
+                  className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                >
+                  <span className="text-xl">🔔</span>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 h-5 w-5 flex items-center justify-center bg-red-500 text-white text-xs rounded-full">{unreadCount}</span>
+                  )}
+                </button>
+
+                {/* Notification Panel */}
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                    <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                      <h3 className="font-semibold text-gray-800 dark:text-white">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button
+                          className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                          onClick={() => markAllAsRead()}
+                        >
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                          No notifications yet
+                        </div>
+                      ) : (
+                        notifications.map(notification => (
+                          <div
+                            key={notification.id}
+                            className={`p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+                              !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                            }`}
+                            onClick={() => handleNotificationClick(notification)}
+                          >
+                            <div className="flex items-start">
+                              <div className="mr-3 mt-1">
+                                <span className="text-lg">{getNotificationIcon(notification.type)}</span>
+                              </div>
+                              <div className="flex-1">
+                                <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-800 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  {formatNotificationTime(notification.timestamp)}
+                                </p>
+                              </div>
+                              {!notification.read && (
+                                <div className="ml-2 h-2 w-2 bg-blue-500 rounded-full"></div>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="p-2 border-t border-gray-200 dark:border-gray-700 text-center">
+                      <button
+                        className="text-sm text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                        onClick={() => {
+                          setActiveSection('notifications');
+                          setShowNotifications(false);
+                        }}
+                      >
+                        View all notifications
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                {currentUser?.displayName ? currentUser.displayName[0].toUpperCase() : 'A'}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Mobile sidebar overlay */}
+        {isMobile && isNavExpanded && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setIsNavExpanded(false)}
+          ></div>
+        )}
+
+        <main className="p-3 md:p-6">
+          {/* Section Content */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+            {activeSection === 'overview' && (
+              <Overview
+                connections={connections || []}
+                isDarkMode={isDarkMode}
+                mentoringCount={mentoringCount}
+                jobPostingsCount={jobPostingsCount}
+                activeJobsCount={activeJobsCount}
+                filledJobsCount={filledJobsCount}
+                eventsCount={eventsCount}
+                navigate={navigate}
+              />
+            )}
+
+            {activeSection === 'profile' && (
+              <Profile
+                profileData={profileData || {}}
+                currentUser={currentUser}
+                isDarkMode={isDarkMode}
+              />
+            )}
+
+            {activeSection === 'notifications' && (
+              <Notifications
+                notifications={notifications}
+                getNotificationIcon={getNotificationIcon}
+                formatNotificationTime={formatNotificationTime}
+                markAsRead={markAsRead}
+                markAllAsRead={markAllAsRead}
+                isDarkMode={isDarkMode}
+              />
+            )}
+
+            {activeSection === 'mentorship' && (
+              <Mentorship
+                isDarkMode={isDarkMode}
+                API_URL={API_URL}
+                user={currentUser}
+                role={role}
+              />
+            )}
+
+            {activeSection === 'jobs' && (
+              <Jobs
+                isDarkMode={isDarkMode}
+                API_URL={API_URL}
+                user={currentUser}
+                role={role}
+              />
+            )}
+
+            {activeSection === 'events' && (
+              <Events
+                events={events}
+                loading={loading}
+                error={error}
+                isDarkMode={isDarkMode}
+                API_URL={API_URL}
+                user={currentUser}
+                role={role}
+              />
+            )}
+
+            {activeSection === 'network' && (
+              <div className="network-section">
+                <AlumniNetwork currentUser={currentUser} isDarkMode={isDarkMode} />
+              </div>
+            )}
+
+            {/* Settings section removed */}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

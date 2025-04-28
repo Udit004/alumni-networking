@@ -30,11 +30,12 @@ const Courses = ({ isDarkMode, profileData }) => {
     }
   });
 
-  // Define base URLs for API endpoints
+  // Define base URLs for API endpoints with explicit port for the first URL
   const baseUrls = [
-    process.env.REACT_APP_API_URL || 'http://localhost:5001',
-    'http://localhost:5002',
-    'http://localhost:5000'
+    process.env.REACT_APP_API_URL || 'http://localhost:5000',
+    'http://localhost:5000',
+    'http://localhost:5001',
+    'http://localhost:5002'
   ];
 
   // Fetch courses on component mount
@@ -54,6 +55,7 @@ const Courses = ({ isDarkMode, profileData }) => {
 
       let success = false;
       let responseData = null;
+      let lastError = null;
 
       for (const baseUrl of baseUrls) {
         try {
@@ -65,7 +67,8 @@ const Courses = ({ isDarkMode, profileData }) => {
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-              }
+              },
+              timeout: 5000 // Add timeout to avoid long waits
             }
           );
 
@@ -75,16 +78,18 @@ const Courses = ({ isDarkMode, profileData }) => {
           break; // Exit the loop if successful
         } catch (err) {
           console.log(`Failed to connect to ${baseUrl}:`, err.message);
+          lastError = err;
         }
       }
 
-      if (success && responseData.success) {
+      if (success && responseData?.success) {
         setCourses(responseData.courses || []);
       } else if (success) {
-        setError('Failed to fetch courses: ' + (responseData.message || 'Unknown error'));
+        setError('Failed to fetch courses: ' + (responseData?.message || 'Unknown error'));
         setCourses([]);
       } else {
-        setError('Failed to connect to any server. Please check if the backend is running.');
+        console.error('All connection attempts failed:', lastError);
+        setError('Failed to connect to the server. Please check if the backend is running on port 5000.');
         setCourses([]);
       }
     } catch (err) {
@@ -117,6 +122,7 @@ const Courses = ({ isDarkMode, profileData }) => {
 
       let success = false;
       let responseData = null;
+      let lastError = null;
 
       for (const baseUrl of baseUrls) {
         try {
@@ -128,7 +134,8 @@ const Courses = ({ isDarkMode, profileData }) => {
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-              }
+              },
+              timeout: 5000 // Add timeout to avoid long waits
             }
           );
 
@@ -138,18 +145,20 @@ const Courses = ({ isDarkMode, profileData }) => {
           break; // Exit the loop if successful
         } catch (err) {
           console.log(`Failed to connect to ${baseUrl}:`, err.message);
+          lastError = err;
         }
       }
 
-      if (success && responseData.success) {
+      if (success && responseData?.success) {
         setCourses([...courses, responseData.course]);
         setShowModal(false);
         resetForm();
         alert('Course created successfully!');
       } else if (success) {
-        setError('Failed to create course: ' + (responseData.message || 'Unknown error'));
+        setError('Failed to create course: ' + (responseData?.message || 'Unknown error'));
       } else {
-        setError('Failed to connect to any server. Please check if the backend is running.');
+        console.error('All connection attempts failed:', lastError);
+        setError('Failed to connect to the server. Please check if the backend is running on port 5000.');
       }
     } catch (err) {
       console.error('Error creating course:', err);
@@ -178,6 +187,7 @@ const Courses = ({ isDarkMode, profileData }) => {
 
       let success = false;
       let responseData = null;
+      let lastError = null;
 
       for (const baseUrl of baseUrls) {
         try {
@@ -189,7 +199,8 @@ const Courses = ({ isDarkMode, profileData }) => {
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-              }
+              },
+              timeout: 5000 // Add timeout to avoid long waits
             }
           );
 
@@ -199,10 +210,11 @@ const Courses = ({ isDarkMode, profileData }) => {
           break; // Exit the loop if successful
         } catch (err) {
           console.log(`Failed to connect to ${baseUrl}:`, err.message);
+          lastError = err;
         }
       }
 
-      if (success && responseData.success) {
+      if (success && responseData?.success) {
         setCourses(courses.map(course =>
           course._id === editingCourse._id ? responseData.course : course
         ));
@@ -211,9 +223,10 @@ const Courses = ({ isDarkMode, profileData }) => {
         resetForm();
         alert('Course updated successfully!');
       } else if (success) {
-        setError('Failed to update course: ' + (responseData.message || 'Unknown error'));
+        setError('Failed to update course: ' + (responseData?.message || 'Unknown error'));
       } else {
-        setError('Failed to connect to any server. Please check if the backend is running.');
+        console.error('All connection attempts failed:', lastError);
+        setError('Failed to connect to the server. Please check if the backend is running on port 5000.');
       }
     } catch (err) {
       console.error('Error updating course:', err);
@@ -239,6 +252,7 @@ const Courses = ({ isDarkMode, profileData }) => {
 
       let success = false;
       let responseData = null;
+      let lastError = null;
 
       for (const baseUrl of baseUrls) {
         try {
@@ -249,7 +263,8 @@ const Courses = ({ isDarkMode, profileData }) => {
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-              }
+              },
+              timeout: 5000 // Add timeout to avoid long waits
             }
           );
 
@@ -259,16 +274,18 @@ const Courses = ({ isDarkMode, profileData }) => {
           break; // Exit the loop if successful
         } catch (err) {
           console.log(`Failed to connect to ${baseUrl}:`, err.message);
+          lastError = err;
         }
       }
 
-      if (success && responseData.success) {
+      if (success && responseData?.success) {
         setCourses(courses.filter(course => course._id !== courseId));
         alert('Course deleted successfully!');
       } else if (success) {
-        setError('Failed to delete course: ' + (responseData.message || 'Unknown error'));
+        setError('Failed to delete course: ' + (responseData?.message || 'Unknown error'));
       } else {
-        setError('Failed to connect to any server. Please check if the backend is running.');
+        console.error('All connection attempts failed:', lastError);
+        setError('Failed to connect to the server. Please check if the backend is running on port 5000.');
       }
     } catch (err) {
       console.error('Error deleting course:', err);

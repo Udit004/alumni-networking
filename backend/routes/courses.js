@@ -97,6 +97,31 @@ router.get('/teacher/:teacherId', authenticateToken, async (req, res) => {
   }
 });
 
+// Get all courses for the authenticated teacher
+router.get('/teacher-courses', authenticateToken, async (req, res) => {
+  try {
+    const teacherId = req.user.uid;
+
+    // Verify user is a teacher
+    if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only teachers can access their created courses'
+      });
+    }
+
+    const courses = await Course.find({ teacherId });
+    res.json({ success: true, data: courses });
+  } catch (error) {
+    console.error('Error fetching teacher courses:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch teacher courses',
+      error: error.message
+    });
+  }
+});
+
 // Get courses by student ID (enrolled courses)
 router.get('/student/:studentId', authenticateToken, async (req, res) => {
   try {
@@ -112,6 +137,109 @@ router.get('/student/:studentId', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching student courses:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch student courses', error: error.message });
+  }
+});
+
+// Get students enrolled in a specific course (teacher only)
+router.get('/:id/students', authenticateToken, async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const teacherId = req.user.uid;
+
+    // Get the course
+    const course = await Course.findById(courseId);
+
+    // Check if course exists
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    // Verify the user is the course teacher or an admin
+    if (course.teacherId !== teacherId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized to view students in this course'
+      });
+    }
+
+    // Get student details for each enrolled student
+    const User = require('../models/user');
+    const CourseApplication = require('../models/CourseApplication');
+
+    // Get all approved applications for this course
+    const applications = await CourseApplication.find({
+      courseId: courseId,
+      status: 'approved'
+    });
+
+    // If no applications found, check the course.students array
+    if (applications.length === 0 && course.students && course.students.length > 0) {
+      // Get student details from the course.students array
+      const studentPromises = course.students.map(async (student) => {
+        try {
+          const userDoc = await User.findOne({ firebaseUID: student.studentId });
+          if (!userDoc) return null;
+
+          return {
+            studentId: student.studentId,
+            studentName: student.studentName || userDoc.name || 'Unknown Student',
+            studentEmail: userDoc.email || 'No email available',
+            program: 'Not specified',
+            currentYear: 'Not specified',
+            enrolledAt: student.enrolledAt || new Date(),
+            performance: Math.floor(Math.random() * 30) + 70 // Random performance between 70-100 for demo
+          };
+        } catch (err) {
+          console.error(`Error fetching student ${student.studentId}:`, err);
+          return null;
+        }
+      });
+
+      const students = (await Promise.all(studentPromises)).filter(student => student !== null);
+
+      return res.json({
+        success: true,
+        data: students
+      });
+    }
+
+    // Get student details for each application
+    const studentPromises = applications.map(async (application) => {
+      try {
+        const userDoc = await User.findOne({ firebaseUID: application.studentId });
+        if (!userDoc) return null;
+
+        return {
+          studentId: application.studentId,
+          studentName: userDoc.name || 'Unknown Student',
+          studentEmail: userDoc.email || 'No email available',
+          program: application.program || 'Not specified',
+          currentYear: application.currentYear || 'Not specified',
+          enrolledAt: application.updatedAt || application.createdAt || new Date(),
+          performance: Math.floor(Math.random() * 30) + 70 // Random performance between 70-100 for demo
+        };
+      } catch (err) {
+        console.error(`Error fetching student for application ${application._id}:`, err);
+        return null;
+      }
+    });
+
+    const students = (await Promise.all(studentPromises)).filter(student => student !== null);
+
+    res.json({
+      success: true,
+      data: students
+    });
+  } catch (error) {
+    console.error('Error fetching course students:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch course students',
+      error: error.message
+    });
   }
 });
 

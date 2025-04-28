@@ -29,6 +29,8 @@ import JobApplication from './pages/JobApplication';
 import CourseDetail from './pages/CourseDetail';
 import './App.css';
 import { initializeFirestoreCollections } from './utils/firestoreInit';
+import StudentEditProfile from './pages/StudentEditProfile';
+import TestConnection from './TestConnection';
 
 function App() {
   const [firestoreInitialized, setFirestoreInitialized] = useState(false);
@@ -75,6 +77,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/events" element={<Events />} />
+              <Route path="/test-connection" element={<TestConnection />} />
               <Route path="/jobs" element={
                 <PrivateRoute>
                   <Jobs />
@@ -171,6 +174,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <StudentDashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/student-edit-profile"
+                element={
+                  <PrivateRoute>
+                    <StudentEditProfile />
                   </PrivateRoute>
                 }
               />

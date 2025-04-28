@@ -299,9 +299,18 @@ router.post('/', upload.single('file'), async (req, res) => {
       // This will be handled by a special route that serves the file from the database
       const protocol = req.protocol;
       const host = req.get('host');
+<<<<<<< HEAD
 
       // Always use the actual host from the request to ensure URLs work from any device
       const baseUrl = `${protocol}://${host}`;
+=======
+      let baseUrl;
+      if (process.env.NODE_ENV === 'production') {
+        baseUrl = `${protocol}://${host}`;
+      } else {
+        baseUrl = 'http://localhost:5000';
+      }
+>>>>>>> 919b4aa6f3c511a0b715ec102006171ffe67b495
 
       // The URL will point to a route that retrieves the file from the database
       newMaterial.fileUrl = `${baseUrl}/api/materials/file/${fileId}`;
@@ -706,4 +715,8 @@ router.get('/file/:fileId', async (req, res) => {
   }
 });
 
+<<<<<<< HEAD
 module.exports = router;
+=======
+module.exports = router;
+>>>>>>> 919b4aa6f3c511a0b715ec102006171ffe67b495

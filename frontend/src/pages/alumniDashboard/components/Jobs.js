@@ -36,166 +36,8 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchJobs();
-  }, [user]);
-
-  // Fetch applications when active tab changes to applications
-  useEffect(() => {
-    if (activeTab === 'applications' && user) {
-      fetchApplications();
-    }
-  }, [activeTab, user]);
-
-  // Fetch job applications for all the job postings created by the alumni
-  const fetchApplications = useCallback(async () => {
-    if (!user) {
-      console.log('No user found');
-      return;
-    }
-
-    try {
-      setApplicationsLoading(true);
-
-      const token = await user.getIdToken();
-      console.log('Auth token:', token);
-      // Use the test endpoint which has hardcoded data that we know works
-      // We're using a specific user ID that we know has applications in the database
-      const testEndpoint = `${API_URL}/api/job-applications/user-test/4EOWySj0hHfLOCWFxi3JeJYsqTj2?firebaseUID=${user.uid}&role=${role}`;
-      console.log('Fetching applications from test endpoint:', testEndpoint);
-
-      let response;
-      try {
-        response = await fetch(testEndpoint, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          credentials: 'include'
-        });
-      } catch (networkError) {
-        console.error('Network error fetching applications:', networkError);
-        setApplications([]);
-        setError('Failed to connect to server. Please try again later.');
-        return;
-      }
-
-      console.log('Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to fetch applications:', response.status, errorText);
-        setApplications([]);
-        setError('Failed to load applications. Please try again.');
-        return;
-      }
-
-      const data = await response.json();
-      console.log('Applications data:', data);
-
-      // Handle different response formats
-      let applicationsData = [];
-      if (Array.isArray(data)) {
-        applicationsData = data;
-      } else if (data && data.success === false) {
-        console.error('Backend error:', data.message);
-        setError(data.message || 'Failed to load applications');
-      } else {
-        // The employer endpoint returns data in the 'data' property
-        applicationsData = data.data || data.applications || [];
-      }
-
-      // Add debug logging for jobs and applications
-      console.log('Current jobs:', jobs);
-      console.log('Raw applications data:', applicationsData);
-
-      // Log the applications data for debugging
-      console.log('Applications data from test endpoint:', applicationsData);
-
-      // Enhance application data with job details and normalize fields
-      const enhancedApplications = applicationsData.map(app => {
-        // Start with the original application
-        let enhancedApp = { ...app };
-
-        // If the application has a jobId that's an object, extract job details
-        if (app.jobId && typeof app.jobId === 'object') {
-          enhancedApp.jobTitle = app.jobId.title || 'Unknown Job';
-          enhancedApp.company = app.jobId.company || 'Unknown Company';
-        }
-
-        // If jobId is a string, try to find the job in our jobs array
-        if (typeof app.jobId === 'string' && jobs.length > 0) {
-          const matchingJob = jobs.find(job => job._id === app.jobId);
-          if (matchingJob) {
-            enhancedApp.jobTitle = matchingJob.title;
-            enhancedApp.company = matchingJob.company;
-          } else {
-            // Try to find the job by substring match
-            const partialMatchJob = jobs.find(job =>
-              app.jobId.includes(job._id) || job._id.includes(app.jobId)
-            );
-            if (partialMatchJob) {
-              enhancedApp.jobTitle = partialMatchJob.title;
-              enhancedApp.company = partialMatchJob.company;
-            } else {
-              // Special case handling for known job IDs from the test data
-              if (app.jobId === '67f7c12800974b02743f6da3') {
-                enhancedApp.jobTitle = 'Python';
-                enhancedApp.company = 'Google';
-              } else if (app.jobId === '67f133c955e741d8ab42b6cb') {
-                enhancedApp.jobTitle = 'Excel Specialist';
-                enhancedApp.company = 'Microsoft';
-              } else if (app.jobId === '67f043f4e6c88c45191e2188') {
-                enhancedApp.jobTitle = 'iOS Developer';
-                enhancedApp.company = 'Apple';
-              } else {
-                // If we still can't find a matching job, use default values
-                enhancedApp.jobTitle = enhancedApp.jobTitle || 'Unknown Job';
-                enhancedApp.company = enhancedApp.company || 'Unknown Company';
-              }
-            }
-          }
-        }
-
-        // Normalize skills field to always be an array
-        if (typeof app.skills === 'string') {
-          // If skills is a comma-separated string, split it
-          if (app.skills.includes(',')) {
-            enhancedApp.skills = app.skills.split(',').map(skill => skill.trim());
-          } else {
-            // Otherwise treat it as a single skill
-            enhancedApp.skills = [app.skills];
-          }
-        } else if (!Array.isArray(app.skills)) {
-          enhancedApp.skills = [];
-        }
-
-        // Ensure cover letter field exists with proper name
-        enhancedApp.coverLetter = app.coverLetter || app.coverletter || app.whyInterested || '';
-
-        return enhancedApp;
-      });
-
-      console.log('Setting applications:', enhancedApplications);
-      setApplications(enhancedApplications);
-
-      if (applicationsData.length === 0) {
-        console.log('No applications found for this user');
-      }
-
-    } catch (error) {
-      console.error('Unexpected error fetching job applications:', error);
-      setApplications([]);
-      setError('An unexpected error occurred. Please try again.');
-    } finally {
-      setApplicationsLoading(false);
-    }
-  }, [API_URL, user, role, jobs]);
-
-
   // Modified fetchJobs without mock data
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -238,7 +80,178 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_URL, user, role]);
+
+  // Fetch job applications for all the job postings created by the alumni
+  const fetchApplications = useCallback(async () => {
+    if (!user) {
+      console.log('No user found');
+      return;
+    }
+
+    try {
+      setApplicationsLoading(true);
+
+      const token = await user.getIdToken();
+      console.log('Auth token:', token);
+
+      // Use the proper employer endpoint to fetch real applications
+      // Try multiple endpoint formats to ensure compatibility with backend
+      const endpoints = [
+        `${API_URL}/api/job-applications/employer/${user.uid}?firebaseUID=${user.uid}&role=${role}`,
+        `${API_URL}/api/job-applications/user-test/${user.uid}?firebaseUID=${user.uid}&role=${role}`,
+        `${API_URL}/api/job-applications/user/${user.uid}?firebaseUID=${user.uid}&role=${role}`
+      ];
+
+      let response = null;
+      let successfulEndpoint = null;
+
+      // Try each endpoint until one works
+      for (const endpoint of endpoints) {
+        console.log(`Trying to fetch applications from endpoint: ${endpoint}`);
+
+        try {
+          const tempResponse = await fetch(endpoint, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include'
+          });
+
+          if (tempResponse.ok) {
+            console.log(`Successful response from endpoint: ${endpoint}`);
+            response = tempResponse;
+            successfulEndpoint = endpoint;
+            break;
+          } else {
+            console.log(`Endpoint ${endpoint} returned status ${tempResponse.status}`);
+          }
+        } catch (endpointError) {
+          console.error(`Error with endpoint ${endpoint}:`, endpointError);
+        }
+      }
+
+      if (!response) {
+        console.error('All endpoints failed');
+        setApplications([]);
+        setError('Failed to connect to server. Please try again later.');
+        setApplicationsLoading(false);
+        return;
+      }
+
+      console.log(`Using successful endpoint: ${successfulEndpoint}`);
+
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to fetch applications:', response.status, errorText);
+        setApplications([]);
+        setError('Failed to load applications. Please try again.');
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Applications data:', data);
+
+      // Handle different response formats
+      let applicationsData = [];
+      if (Array.isArray(data)) {
+        applicationsData = data;
+      } else if (data && data.success === false) {
+        console.error('Backend error:', data.message);
+        setError(data.message || 'Failed to load applications');
+      } else {
+        // The employer endpoint returns data in the 'data' property
+        applicationsData = data.data || data.applications || [];
+      }
+
+      // Add debug logging for jobs and applications
+      console.log('Current jobs:', jobs);
+      console.log('Raw applications data:', applicationsData);
+
+      // Enhance application data with job details and normalize fields
+      const enhancedApplications = applicationsData.map(app => {
+        // Start with the original application
+        let enhancedApp = { ...app };
+
+        // If the application has a jobId that's an object, extract job details
+        if (app.jobId && typeof app.jobId === 'object') {
+          enhancedApp.jobTitle = app.jobId.title || 'Unknown Job';
+          enhancedApp.company = app.jobId.company || 'Unknown Company';
+        }
+
+        // If jobId is a string, try to find the job in our jobs array
+        if (typeof app.jobId === 'string' && jobs.length > 0) {
+          const matchingJob = jobs.find(job => job._id === app.jobId);
+          if (matchingJob) {
+            enhancedApp.jobTitle = matchingJob.title;
+            enhancedApp.company = matchingJob.company;
+          } else {
+            // Try to find the job by substring match
+            const partialMatchJob = jobs.find(job =>
+              app.jobId.includes(job._id) || job._id.includes(app.jobId)
+            );
+            if (partialMatchJob) {
+              enhancedApp.jobTitle = partialMatchJob.title;
+              enhancedApp.company = partialMatchJob.company;
+            } else {
+              // If we still can't find a matching job, use default values
+              enhancedApp.jobTitle = enhancedApp.jobTitle || 'Unknown Job';
+              enhancedApp.company = enhancedApp.company || 'Unknown Company';
+            }
+          }
+        }
+
+        // Normalize skills field to always be an array
+        if (typeof app.skills === 'string') {
+          // If skills is a comma-separated string, split it
+          if (app.skills.includes(',')) {
+            enhancedApp.skills = app.skills.split(',').map(skill => skill.trim());
+          } else {
+            // Otherwise treat it as a single skill
+            enhancedApp.skills = [app.skills];
+          }
+        } else if (!Array.isArray(app.skills)) {
+          enhancedApp.skills = [];
+        }
+
+        // Ensure cover letter field exists with proper name
+        enhancedApp.coverLetter = app.coverLetter || app.coverletter || app.whyInterested || '';
+
+        return enhancedApp;
+      });
+
+      console.log('Setting applications:', enhancedApplications);
+      setApplications(enhancedApplications);
+
+      if (applicationsData.length === 0) {
+        console.log('No applications found for this user');
+      }
+
+    } catch (error) {
+      console.error('Unexpected error fetching job applications:', error);
+      setApplications([]);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setApplicationsLoading(false);
+    }
+  }, [API_URL, user, role, jobs]);
+
+
+  // Add useEffect hooks to fetch data
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+
+  // Fetch applications when active tab changes to applications
+  useEffect(() => {
+    if (activeTab === 'applications' && user) {
+      fetchApplications();
+    }
+  }, [activeTab, user, fetchApplications]);
 
   const handleCreateJob = async (e) => {
     e.preventDefault();
@@ -458,52 +471,145 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
     setShowApplicationDetails(true);
   };
 
-  const handleUpdateApplicationStatus = async (application, newStatus) => {
+  const handleAcceptApplication = async (application) => {
     try {
       setProcessingApplication(application._id);
 
+      // Log the request details and application object for debugging
+      console.log('Accepting job application:', {
+        applicationId: application._id,
+        userId: user.uid,
+        role: role,
+        API_URL: API_URL
+      });
+      console.log('Application object:', application);
+
       const token = await user.getIdToken();
-      const response = await fetch(`${API_URL}/api/job-applications/${application._id}/status?firebaseUID=${user.uid}&role=${role}`, {
+
+      // Use the correct endpoint format
+      const endpoint = `${API_URL}/api/job-applications/${application._id}/accept`;
+      console.log('Using endpoint:', endpoint);
+
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({
+          firebaseUID: user.uid,
+          role: role
+        })
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to update application status to ${newStatus}`);
+        const errorText = await response.text();
+        console.error('Error response content:', errorText);
+        throw new Error('Failed to accept application');
       }
+
+      const result = await response.json();
+      console.log('Accept application response:', result);
 
       // Update application status in state
       const updatedApplications = applications.map(app =>
-        app._id === application._id ? { ...app, status: newStatus, updatedAt: new Date().toISOString() } : app
+        app._id === application._id ? { ...app, status: 'accepted', updatedAt: new Date().toISOString() } : app
       );
 
       setApplications(updatedApplications);
 
       // If showing details, update the selected application
       if (selectedApplication && selectedApplication._id === application._id) {
-        setSelectedApplication({ ...selectedApplication, status: newStatus, updatedAt: new Date().toISOString() });
+        setSelectedApplication({ ...selectedApplication, status: 'accepted', updatedAt: new Date().toISOString() });
       }
 
       // Show success message
-      alert(`Application status updated to ${newStatus}.`);
+      alert(`Application from ${application.name || 'the applicant'} has been accepted successfully.`);
 
     } catch (error) {
-      console.error(`Error updating application status to ${newStatus}:`, error);
-      alert(`Failed to update application status: ${error.message}`);
+      console.error('Error accepting application:', error);
+      alert(`Failed to accept application: ${error.message}`);
     } finally {
       setProcessingApplication(null);
     }
   };
 
+  const handleRejectApplication = async (application) => {
+    try {
+      setProcessingApplication(application._id);
+
+      // Log the request details
+      console.log('Rejecting job application:', {
+        applicationId: application._id,
+        userId: user.uid,
+        role: role,
+        API_URL: API_URL
+      });
+
+      const token = await user.getIdToken();
+      const endpoint = `${API_URL}/api/job-applications/${application._id}/reject`;
+      console.log('Using endpoint:', endpoint);
+
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          firebaseUID: user.uid,
+          role: role
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response content:', errorText);
+        throw new Error('Failed to reject application');
+      }
+
+      const result = await response.json();
+      console.log('Reject application response:', result);
+
+      // Update application status in state
+      const updatedApplications = applications.map(app =>
+        app._id === application._id ? { ...app, status: 'rejected', updatedAt: new Date().toISOString() } : app
+      );
+
+      setApplications(updatedApplications);
+
+      // If showing details, update the selected application
+      if (selectedApplication && selectedApplication._id === application._id) {
+        setSelectedApplication({ ...selectedApplication, status: 'rejected', updatedAt: new Date().toISOString() });
+      }
+
+      // Show success message
+      alert(`Application from ${application.name || 'the applicant'} has been rejected.`);
+
+    } catch (error) {
+      console.error('Error rejecting application:', error);
+      alert(`Failed to reject application: ${error.message}`);
+    } finally {
+      setProcessingApplication(null);
+    }
+  };
+
+  // For backward compatibility - only supports accepted and rejected now
+  const handleUpdateApplicationStatus = async (application, newStatus) => {
+    if (newStatus === 'accepted') {
+      return handleAcceptApplication(application);
+    } else if (newStatus === 'rejected') {
+      return handleRejectApplication(application);
+    } else {
+      console.warn(`Status ${newStatus} is no longer supported. Only 'accepted' and 'rejected' are valid.`);
+      alert(`Status ${newStatus} is no longer supported. Only 'accepted' and 'rejected' are valid.`);
+    }
+  };
+
   // Application statistics
   const pendingApplications = applications.filter(app => app.status === 'pending');
-  const shortlistedApplications = applications.filter(app => app.status === 'shortlisted');
+  const acceptedApplications = applications.filter(app => app.status === 'accepted');
   const rejectedApplications = applications.filter(app => app.status === 'rejected');
-  const hiredApplications = applications.filter(app => app.status === 'hired');
 
   const filteredJobs = jobs.filter((job) => {
     // Search filter
@@ -986,14 +1092,11 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                 <div className="px-3 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg text-sm">
                   Pending: {pendingApplications.length}
                 </div>
-                <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-lg text-sm">
-                  Shortlisted: {shortlistedApplications.length}
+                <div className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-sm">
+                  Accepted: {acceptedApplications.length}
                 </div>
                 <div className="px-3 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg text-sm">
                   Rejected: {rejectedApplications.length}
-                </div>
-                <div className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-lg text-sm">
-                  Hired: {hiredApplications.length}
                 </div>
               </div>
             </div>
@@ -1011,9 +1114,6 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
               </div>
             ) : (
               <div>
-                <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 p-4 rounded-lg mb-4">
-                  <p className="text-sm"><strong>Note:</strong> Showing sample job applications for demonstration purposes. These applications are from the database but may not be directly associated with your account.</p>
-                </div>
                 <div className="space-y-4">
                 {applications.map(application => (
                   <div
@@ -1040,9 +1140,7 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                         <span className={`px-3 py-1 rounded-full text-xs ${
                           application.status === 'pending'
                             ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
-                            : application.status === 'shortlisted'
-                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
-                            : application.status === 'hired'
+                            : application.status === 'accepted'
                             ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                             : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                         }`}>
@@ -1062,35 +1160,15 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                       {application.status === 'pending' && (
                         <>
                           <button
-                            onClick={() => handleUpdateApplicationStatus(application, 'shortlisted')}
-                            disabled={processingApplication === application._id}
-                            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {processingApplication === application._id ? 'Processing...' : 'Shortlist'}
-                          </button>
-
-                          <button
-                            onClick={() => handleUpdateApplicationStatus(application, 'rejected')}
-                            disabled={processingApplication === application._id}
-                            className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {processingApplication === application._id ? 'Processing...' : 'Reject'}
-                          </button>
-                        </>
-                      )}
-
-                      {application.status === 'shortlisted' && (
-                        <>
-                          <button
-                            onClick={() => handleUpdateApplicationStatus(application, 'hired')}
+                            onClick={() => handleAcceptApplication(application)}
                             disabled={processingApplication === application._id}
                             className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {processingApplication === application._id ? 'Processing...' : 'Hire'}
+                            {processingApplication === application._id ? 'Processing...' : 'Accept'}
                           </button>
 
                           <button
-                            onClick={() => handleUpdateApplicationStatus(application, 'rejected')}
+                            onClick={() => handleRejectApplication(application)}
                             disabled={processingApplication === application._id}
                             className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -1098,6 +1176,8 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                           </button>
                         </>
                       )}
+
+
                     </div>
                   </div>
                 ))}
@@ -1130,9 +1210,7 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                     <span className={`px-3 py-1 rounded-full text-xs ${
                       selectedApplication.status === 'pending'
                         ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
-                        : selectedApplication.status === 'shortlisted'
-                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
-                        : selectedApplication.status === 'hired'
+                        : selectedApplication.status === 'accepted'
                         ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                         : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                     }`}>
@@ -1234,44 +1312,18 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                     <div className="flex gap-3 mt-6">
                       <button
                         onClick={() => {
-                          handleUpdateApplicationStatus(selectedApplication, 'shortlisted');
-                          setShowApplicationDetails(false);
-                        }}
-                        disabled={processingApplication === selectedApplication._id}
-                        className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {processingApplication === selectedApplication._id ? 'Processing...' : 'Shortlist Candidate'}
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          handleUpdateApplicationStatus(selectedApplication, 'rejected');
-                          setShowApplicationDetails(false);
-                        }}
-                        disabled={processingApplication === selectedApplication._id}
-                        className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {processingApplication === selectedApplication._id ? 'Processing...' : 'Reject Application'}
-                      </button>
-                    </div>
-                  )}
-
-                  {selectedApplication.status === 'shortlisted' && (
-                    <div className="flex gap-3 mt-6">
-                      <button
-                        onClick={() => {
-                          handleUpdateApplicationStatus(selectedApplication, 'hired');
+                          handleAcceptApplication(selectedApplication);
                           setShowApplicationDetails(false);
                         }}
                         disabled={processingApplication === selectedApplication._id}
                         className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {processingApplication === selectedApplication._id ? 'Processing...' : 'Hire Candidate'}
+                        {processingApplication === selectedApplication._id ? 'Processing...' : 'Accept Application'}
                       </button>
 
                       <button
                         onClick={() => {
-                          handleUpdateApplicationStatus(selectedApplication, 'rejected');
+                          handleRejectApplication(selectedApplication);
                           setShowApplicationDetails(false);
                         }}
                         disabled={processingApplication === selectedApplication._id}
@@ -1281,6 +1333,8 @@ const Jobs = ({ isDarkMode, API_URL, user, role }) => {
                       </button>
                     </div>
                   )}
+
+
 
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <button
