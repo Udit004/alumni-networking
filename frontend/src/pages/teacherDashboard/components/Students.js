@@ -99,47 +99,80 @@ const mockStudentsByCourse = {
 // Helper functions for API calls
 const getTeacherCourses = async (token) => {
   try {
+    // Get the current user's UID
+    const { currentUser } = require('../../../context/AuthContext').useAuth();
+    const userId = currentUser?.uid;
+
+    if (!userId) {
+      console.error('No user ID available for fetching courses');
+      return [];
+    }
+
+    // Use the correct endpoint with the teacher's user ID
     const response = await axios.get(
-      `${API_URLS.courses}/my-courses`,
+      `${API_URLS.courses}/teacher/${userId}?firebaseUID=${userId}&role=teacher`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 10000
       }
     );
 
+    console.log('Teacher courses response:', response.data);
+
     if (response.data && response.data.success) {
-      return response.data.data || [];
+      return response.data.courses || [];
+    } else if (response.data && Array.isArray(response.data)) {
+      // Handle case where API returns array directly
+      return response.data;
     }
 
     return [];
   } catch (error) {
     console.error('Error fetching teacher courses:', error);
-    return [];
+    // Return mock data as fallback
+    return mockCourses;
   }
 };
 
 const getCourseStudents = async (token, courseId) => {
   try {
+    // Get the current user's UID
+    const { currentUser } = require('../../../context/AuthContext').useAuth();
+    const userId = currentUser?.uid;
+
+    if (!userId) {
+      console.error('No user ID available for fetching course students');
+      return [];
+    }
+
     const response = await axios.get(
-      `${API_URLS.courses}/${courseId}/students`,
+      `${API_URLS.courses}/${courseId}/students?firebaseUID=${userId}&role=teacher`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 10000
       }
     );
 
+    console.log(`Students for course ${courseId} response:`, response.data);
+
     if (response.data && response.data.success) {
-      return response.data.data || [];
+      return response.data.students || [];
+    } else if (response.data && Array.isArray(response.data)) {
+      // Handle case where API returns array directly
+      return response.data;
     }
 
     return [];
   } catch (error) {
     console.error(`Error fetching students for course ${courseId}:`, error);
-    return [];
+    // Return mock data as fallback
+    return mockStudentsByCourse[courseId] || [];
   }
 };
 
@@ -162,38 +195,58 @@ const Students = ({ isDarkMode }) => {
       try {
         setLoading(true);
         setError(null);
+        console.log('Fetching teacher courses and students data...');
 
-        // In a real app, we would fetch from the API
-        // For now, use mock data
+        // Initialize with empty data
         let coursesData = [];
         let studentsData = {};
 
         if (currentUser) {
           try {
+            console.log('Current user found, fetching with token');
             // Get token
             const token = await currentUser.getIdToken();
 
             // Fetch courses
+            console.log('Fetching teacher courses...');
             coursesData = await getTeacherCourses(token);
+            console.log('Courses data received:', coursesData);
 
-            // Fetch students for each course
-            for (const course of coursesData) {
-              const students = await getCourseStudents(token, course._id);
-              studentsData[course._id] = students;
+            if (Array.isArray(coursesData) && coursesData.length > 0) {
+              // Fetch students for each course
+              console.log('Fetching students for each course...');
+              for (const course of coursesData) {
+                if (course && course._id) {
+                  console.log(`Fetching students for course: ${course._id}`);
+                  const students = await getCourseStudents(token, course._id);
+                  studentsData[course._id] = students;
+                  console.log(`Students for course ${course._id}:`, students.length);
+                } else {
+                  console.warn('Invalid course object:', course);
+                }
+              }
+            } else {
+              console.log('No courses found or invalid courses data, using mock data');
+              coursesData = mockCourses;
+              studentsData = mockStudentsByCourse;
             }
           } catch (apiError) {
             console.error('API error:', apiError);
             // Fall back to mock data
+            console.log('Falling back to mock data due to API error');
             coursesData = mockCourses;
             studentsData = mockStudentsByCourse;
           }
         } else {
           // Use mock data if no user
+          console.log('No current user, using mock data');
           coursesData = mockCourses;
           studentsData = mockStudentsByCourse;
         }
 
+        console.log('Setting courses data:', coursesData);
         setCourses(coursesData);
+        console.log('Setting course students data:', studentsData);
         setCourseStudents(studentsData);
 
         // Initialize expanded state for all courses
@@ -206,6 +259,9 @@ const Students = ({ isDarkMode }) => {
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load courses and students. Please try again later.');
+        // Fall back to mock data even on general error
+        setCourses(mockCourses);
+        setCourseStudents(mockStudentsByCourse);
       } finally {
         setLoading(false);
       }
@@ -270,7 +326,9 @@ const Students = ({ isDarkMode }) => {
     return studentCourses;
   };
 
-  // Define getPerformanceColor function
+  // This function can be used in the future for student performance indicators
+  // Currently not used but kept for future implementation
+  /*
   const getPerformanceColor = (performance) => {
     if (!performance) return 'bg-gray-500';
     if (performance >= 90) return 'bg-green-500';
@@ -278,6 +336,7 @@ const Students = ({ isDarkMode }) => {
     if (performance >= 70) return 'bg-yellow-500';
     return 'bg-red-500';
   };
+  */
 
   // Loading state
   if (loading) {
