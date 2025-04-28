@@ -17,7 +17,12 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const { currentUser } = useAuth();
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  // Define API_URL array for fallback
+  const baseUrls = [
+    process.env.REACT_APP_API_URL || 'http://localhost:5000',
+    'http://localhost:5000',
+    'http://localhost:5001'
+  ];
 
   // Use both props and state for materials
   useEffect(() => {
@@ -49,66 +54,45 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
         throw new Error("Failed to get authentication token");
       }
 
-      // Try to fetch materials from the API
-      try {
-        const response = await fetch(`${API_URL}/api/materials`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+      // Try each base URL until one works
+      let success = false;
+      let responseData = null;
+      let lastError = null;
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch materials: ${response.status} ${response.statusText}`);
-        }
+      for (const baseUrl of baseUrls) {
+        try {
+          console.log(`Trying to fetch materials from ${baseUrl}...`);
 
-        const data = await response.json();
-        console.log("Materials fetched directly:", data);
-
-        if (data.success) {
-          setMaterials(data.materials || []);
-        } else {
-          console.error("Failed to fetch materials:", data.message);
-        }
-      } catch (fetchError) {
-        console.error("Error fetching materials from API:", fetchError);
-
-        // Fallback to fetching materials from courses
-        console.log("Falling back to fetching materials from courses");
-
-        // Fetch courses first
-        const coursesResponse = await fetch(`${API_URL}/api/courses/teacher/${currentUser.uid}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!coursesResponse.ok) {
-          throw new Error(`Failed to fetch courses: ${coursesResponse.status} ${coursesResponse.statusText}`);
-        }
-
-        const coursesData = await coursesResponse.json();
-        console.log("Courses response:", coursesData);
-
-        if (coursesData.success && coursesData.courses) {
-          // Extract materials from all courses
-          const allMaterials = [];
-
-          coursesData.courses.forEach(course => {
-            if (course.materials && course.materials.length > 0) {
-              // Add course info to each material
-              const courseMaterials = course.materials.map(material => ({
-                ...material,
-                courseId: course._id,
-                courseTitle: course.title
-              }));
-
-              allMaterials.push(...courseMaterials);
-            }
+          const response = await fetch(`${baseUrl}/api/materials`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            timeout: 5000
           });
 
-          console.log(`Extracted ${allMaterials.length} materials from courses`);
-          setMaterials(allMaterials);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch materials: ${response.status} ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          console.log(`Materials fetched from ${baseUrl}:`, data);
+
+          if (data.success) {
+            responseData = data;
+            success = true;
+            break; // Exit the loop if successful
+          }
+        } catch (err) {
+          console.log(`Failed to connect to ${baseUrl}:`, err.message);
+          lastError = err;
         }
+      }
+
+      if (success && responseData?.success) {
+        setMaterials(responseData.materials || []);
+      } else {
+        console.error("Failed to fetch materials from any endpoint:", lastError);
+        setErrorMessage("Failed to load materials. Please check if the backend is running on port 5000.");
       }
     } catch (error) {
       console.error("Error fetching materials:", error);
@@ -136,53 +120,49 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
           console.error("Error getting auth token:", tokenError);
         }
 
-        // First try with token
-        if (token) {
-          console.log("Got auth token, making request with authorization header");
+        // Try each base URL until one works
+        let success = false;
+        let responseData = null;
+        let lastError = null;
 
-          const response = await fetch(`${API_URL}/api/courses/teacher/${currentUser.uid}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
+        for (const baseUrl of baseUrls) {
+          try {
+            console.log(`Trying to fetch courses from ${baseUrl}...`);
+
+            const response = await fetch(`${baseUrl}/api/courses/teacher/${currentUser.uid}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              },
+              timeout: 5000
+            });
+
+            if (!response.ok) {
+              throw new Error(`Failed to fetch courses: ${response.status} ${response.statusText}`);
             }
-          });
 
-          if (!response.ok) {
-            throw new Error(`Failed to fetch courses: ${response.status} ${response.statusText}`);
+            const data = await response.json();
+            console.log(`Courses response from ${baseUrl}:`, data);
+
+            if (data.success) {
+              responseData = data;
+              success = true;
+              break; // Exit the loop if successful
+            }
+          } catch (err) {
+            console.log(`Failed to connect to ${baseUrl}:`, err.message);
+            lastError = err;
           }
+        }
 
-          const data = await response.json();
-          console.log("Courses response:", data);
-
-          if (data.success) {
-            setCourses(data.courses || []);
-            // Set default courseId if courses exist
-            if (data.courses && data.courses.length > 0) {
-              setNewMaterial(prev => ({ ...prev, courseId: data.courses[0]._id }));
-            }
-            return; // Exit if successful
+        if (success && responseData?.success) {
+          setCourses(responseData.courses || []);
+          // Set default courseId if courses exist
+          if (responseData.courses && responseData.courses.length > 0) {
+            setNewMaterial(prev => ({ ...prev, courseId: responseData.courses[0]._id }));
           }
         } else {
-          // Fallback without token (for development/testing)
-          console.log("No token available, trying fallback method");
-          const fallbackResponse = await fetch(`${API_URL}/api/courses/teacher/${currentUser.uid}`);
-
-          if (!fallbackResponse.ok) {
-            throw new Error(`Fallback request failed: ${fallbackResponse.status} ${fallbackResponse.statusText}`);
-          }
-
-          const fallbackData = await fallbackResponse.json();
-          console.log("Fallback courses response:", fallbackData);
-
-          if (fallbackData.success) {
-            setCourses(fallbackData.courses || []);
-            // Set default courseId if courses exist
-            if (fallbackData.courses && fallbackData.courses.length > 0) {
-              setNewMaterial(prev => ({ ...prev, courseId: fallbackData.courses[0]._id }));
-            }
-          } else {
-            console.error("Failed to fetch courses:", fallbackData.message);
-            setErrorMessage("Failed to load courses. Please try again.");
-          }
+          console.error("Failed to fetch courses from any endpoint:", lastError);
+          setErrorMessage("Failed to load courses. Please check if the backend is running on port 5000.");
         }
       } catch (error) {
         console.error('Error fetching courses:', error);
@@ -191,7 +171,7 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
     };
 
     fetchTeacherCourses();
-  }, [currentUser, API_URL]);
+  }, [currentUser, baseUrls]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -246,28 +226,49 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
         throw new Error("Failed to get authentication token");
       }
 
-      const response = await fetch(`${API_URL}/api/materials/${materialId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Try each base URL until one works
+      let success = false;
+      let responseData = null;
+      let lastError = null;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Server error (${response.status}): ${errorData.message || 'Unknown error'}`);
+      for (const baseUrl of baseUrls) {
+        try {
+          console.log(`Trying to delete material on ${baseUrl}...`);
+
+          const response = await fetch(`${baseUrl}/api/materials/${materialId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            timeout: 5000
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`Server error (${response.status}): ${errorData.message || 'Unknown error'}`);
+          }
+
+          const data = await response.json();
+          console.log(`Delete response from ${baseUrl}:`, data);
+
+          if (data.success) {
+            responseData = data;
+            success = true;
+            break; // Exit the loop if successful
+          }
+        } catch (err) {
+          console.log(`Failed to connect to ${baseUrl}:`, err.message);
+          lastError = err;
+        }
       }
 
-      const data = await response.json();
-      console.log("Delete response:", data);
-
-      if (data.success) {
+      if (success) {
         // Remove material from state
         setMaterials(prevMaterials => prevMaterials.filter(m => m.id !== materialId));
         setSuccessMessage("Resource deleted successfully");
         setTimeout(() => setSuccessMessage(""), 3000);
       } else {
-        throw new Error(data.message || "Failed to delete material");
+        throw new Error(lastError?.message || "Failed to delete material from any endpoint");
       }
     } catch (error) {
       console.error("Error deleting material:", error);
@@ -309,6 +310,12 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
         console.log("Adding file to form data:", newMaterial.file.name);
       }
 
+      // Debug the contents of the FormData
+      console.log("FormData entries:");
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + (pair[0] === 'file' ? pair[1].name : pair[1]));
+      }
+
       // Get a fresh token
       let token = null;
       try {
@@ -323,103 +330,73 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
         throw new Error('Failed to get authentication token');
       }
 
-      // Try to upload to the materials API endpoint
-      try {
-        console.log("Uploading material to API");
-        const response = await fetch(`${API_URL}/api/materials`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
+      // Try uploading to each API URL until one works
+      let success = false;
+      let responseData = null;
+      let lastError = null;
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(`Server error (${response.status}): ${errorData.message || 'Unknown error'}`);
-        }
+      for (const baseUrl of baseUrls) {
+        try {
+          console.log(`Trying to upload material to ${baseUrl}...`);
 
-        const data = await response.json();
-        console.log("Upload response:", data);
-
-        if (data.success) {
-          setSuccessMessage('Resource added successfully!');
-
-          // Reset form
-          setNewMaterial({
-            title: '',
-            description: '',
-            type: 'notes',
-            courseId: courses.length > 0 ? courses[0]._id : '',
-            file: null
+          const response = await fetch(`${baseUrl}/api/materials`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+              // Note: Do NOT set Content-Type for FormData uploads - browser sets it automatically with boundary
+            },
+            body: formData,
+            timeout: 10000  // Longer timeout for file uploads
           });
 
-          // Add the new material to state immediately
-          if (data.material) {
-            setMaterials(prevMaterials => [...prevMaterials, data.material]);
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`Server error (${response.status}): ${errorData.message || 'Unknown error'}`);
           }
 
-          // Close modal after a short delay
-          setTimeout(() => {
-            setShowAddModal(false);
-            // Refresh materials instead of reloading page
-            fetchMaterials();
-          }, 1500);
-        } else {
-          throw new Error(data.message || 'Failed to add material');
+          const data = await response.json();
+          console.log(`Upload response from ${baseUrl}:`, data);
+
+          if (data.success) {
+            responseData = data;
+            success = true;
+            break; // Exit the loop if successful
+          }
+        } catch (err) {
+          console.log(`Failed to connect to ${baseUrl}:`, err.message);
+          lastError = err;
         }
-      } catch (uploadError) {
-        console.error("Error uploading to materials API:", uploadError);
+      }
 
-        // Fallback to using the course materials endpoint
-        console.log("Falling back to course materials endpoint");
+      if (success && responseData?.success) {
+        setSuccessMessage('Resource added successfully!');
 
-        // Try the course-specific materials endpoint
-        const courseResponse = await fetch(`${API_URL}/api/courses/${newMaterial.courseId}/materials`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            title: newMaterial.title,
-            description: newMaterial.description || '',
-            type: newMaterial.type || 'notes',
-            // We can't upload files this way, but at least we can add the material
-            icon: getIconForType(newMaterial.type || 'notes'),
-            color: getColorForType(newMaterial.type || 'notes')
-          })
+        // Reset form
+        setNewMaterial({
+          title: '',
+          description: '',
+          type: 'notes',
+          courseId: courses.length > 0 ? courses[0]._id : '',
+          file: null
         });
 
-        if (!courseResponse.ok) {
-          const errorData = await courseResponse.json().catch(() => ({}));
-          throw new Error(`Server error (${courseResponse.status}): ${errorData.message || 'Unknown error'}`);
+        // Reset the file input
+        const fileInput = document.querySelector('input[type="file"]');
+        if (fileInput) fileInput.value = '';
+
+        // Add the new material to state immediately
+        if (responseData.material) {
+          setMaterials(prevMaterials => [...prevMaterials, responseData.material]);
         }
 
-        const courseData = await courseResponse.json();
-        console.log("Course materials upload response:", courseData);
-
-        if (courseData.success) {
-          setSuccessMessage('Resource added successfully! (Note: File upload is not available at this time)');
-
-          // Reset form
-          setNewMaterial({
-            title: '',
-            description: '',
-            type: 'notes',
-            courseId: courses.length > 0 ? courses[0]._id : '',
-            file: null
-          });
-
-          // Close modal after a short delay
-          setTimeout(() => {
-            setShowAddModal(false);
-            // Refresh materials instead of reloading page
-            fetchMaterials();
-          }, 1500);
-        } else {
-          throw new Error(courseData.message || 'Failed to add material');
-        }
+        // Close modal after a short delay
+        setTimeout(() => {
+          setShowAddModal(false);
+          // Refresh materials instead of reloading page
+          fetchMaterials();
+        }, 1500);
+      } else {
+        throw new Error(lastError?.message || 'Failed to add material to any endpoint');
       }
     } catch (error) {
       console.error('Error adding material:', error);
