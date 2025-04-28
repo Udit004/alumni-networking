@@ -74,6 +74,26 @@ app.use(express.urlencoded({ extended: true }));
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Add a redirect for old file URLs to the new API endpoint
+app.get('/uploads/:filename', (req, res) => {
+  const filename = req.params.filename;
+  console.log(`Redirecting old file URL: /uploads/${filename} to API endpoint`);
+
+  // Extract the fileId from the filename if possible
+  const fileIdMatch = filename.match(/(\d+)-\d+\.\w+$/);
+  if (fileIdMatch && fileIdMatch[1]) {
+    const possibleFileId = fileIdMatch[1];
+    res.redirect(`/api/materials/file/${possibleFileId}`);
+  } else {
+    // If we can't extract a fileId, just return a 404 with helpful message
+    res.status(404).json({
+      success: false,
+      message: 'File not found. Files are now stored in the database and must be accessed through the API.',
+      suggestedEndpoint: '/api/materials/file/:fileId'
+    });
+  }
+});
+
 // Debug middleware
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.path}`);
