@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { FaSearch, FaUserGraduate, FaBook, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import axios from 'axios';
-import API_URLS from '../../../config/apiConfig';
+import { API_URLS } from '../../../config/apiConfig';
 
 // Mock data for courses
 const mockCourses = [
@@ -104,11 +104,20 @@ const getTeacherCourses = async (token, userId) => {
       return [];
     }
 
+    // Debug API URL
+    console.log('API_URLS object:', API_URLS);
+    console.log('Courses API URL:', API_URLS.courses);
+
+    const apiUrl = API_URLS.courses || 'https://alumni-networking.onrender.com/api/courses';
+    console.log(`Using API URL: ${apiUrl}`);
     console.log(`Fetching courses for teacher with ID: ${userId}`);
 
     // Use the correct endpoint with the teacher's user ID
+    const fullUrl = `${apiUrl}/teacher/${userId}?firebaseUID=${userId}&role=teacher`;
+    console.log(`Full request URL: ${fullUrl}`);
+
     const response = await axios.get(
-      `${API_URLS.courses}/teacher/${userId}?firebaseUID=${userId}&role=teacher`,
+      fullUrl,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -130,6 +139,7 @@ const getTeacherCourses = async (token, userId) => {
     return [];
   } catch (error) {
     console.error('Error fetching teacher courses:', error);
+    console.log('Falling back to mock data');
     // Return mock data as fallback
     return mockCourses;
   }
@@ -142,10 +152,20 @@ const getCourseStudents = async (token, courseId, userId) => {
       return [];
     }
 
+    // Debug API URL
+    console.log('API_URLS object for students:', API_URLS);
+    console.log('Courses API URL for students:', API_URLS.courses);
+
+    const apiUrl = API_URLS.courses || 'https://alumni-networking.onrender.com/api/courses';
+    console.log(`Using API URL for students: ${apiUrl}`);
     console.log(`Fetching students for course ${courseId} with teacher ID: ${userId}`);
 
+    // Use the correct endpoint with the course ID
+    const fullUrl = `${apiUrl}/${courseId}/students?firebaseUID=${userId}&role=teacher`;
+    console.log(`Full request URL for students: ${fullUrl}`);
+
     const response = await axios.get(
-      `${API_URLS.courses}/${courseId}/students?firebaseUID=${userId}&role=teacher`,
+      fullUrl,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -167,6 +187,7 @@ const getCourseStudents = async (token, courseId, userId) => {
     return [];
   } catch (error) {
     console.error(`Error fetching students for course ${courseId}:`, error);
+    console.log(`Falling back to mock data for course ${courseId}`);
     // Return mock data as fallback
     return mockStudentsByCourse[courseId] || [];
   }
