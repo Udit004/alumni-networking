@@ -14,7 +14,7 @@ const getApiBaseUrl = () => {
 const BASE_URL = getApiBaseUrl();
 
 // Default timeout for API requests (in milliseconds)
-export const DEFAULT_TIMEOUT = 10000;
+export const DEFAULT_TIMEOUT = 30000; // Increased to 30 seconds for better reliability
 
 // Debug logging for API configuration
 console.log('🔧 API Configuration:', {
@@ -39,12 +39,15 @@ export const API_URLS = {
 
   // Course endpoints
   courses: `${BASE_URL}/api/courses`,
+  courseApplications: `${BASE_URL}/api/course-applications`,
 
   // Mentorship endpoints
   mentorships: `${BASE_URL}/api/mentorships`,
+  mentorshipApplications: `${BASE_URL}/api/mentorship-applications`,
 
   // Job endpoints
   jobs: `${BASE_URL}/api/jobs`,
+  jobApplications: `${BASE_URL}/api/job-applications`,
 
   // Notification endpoints
   notifications: `${BASE_URL}/api/notifications`,
@@ -55,8 +58,60 @@ export const API_URLS = {
   // Announcement endpoints
   announcements: `${BASE_URL}/api/announcements`,
 
-  // Activity endpoints
+  // Activity endpoints (deprecated)
   activities: `${BASE_URL}/api/activities`
 };
 
-export default API_URLS;
+// Specific endpoint functions
+export const ENDPOINTS = {
+  // Auth
+  login: '/api/auth/login',
+  register: '/api/auth/register',
+
+  // User
+  userProfile: '/api/users/profile',
+
+  // Events
+  events: '/api/events',
+  eventsByUser: (userId) => `/api/events/user/${userId}`,
+  eventById: (eventId) => `/api/events/${eventId}`,
+
+  // Jobs
+  jobs: '/api/jobs',
+  jobsByUser: (userId) => `/api/jobs/user/${userId}`,
+  jobById: (jobId) => `/api/jobs/${jobId}`,
+  jobApplications: '/api/job-applications',
+  jobApplicationsByUser: (userId) => `/api/job-applications/user/${userId}`,
+
+  // Mentorships
+  mentorships: '/api/mentorships',
+  mentorshipsByUser: (userId) => `/api/mentorships/user/${userId}`,
+  mentorshipById: (mentorshipId) => `/api/mentorships/${mentorshipId}`,
+  mentorshipApplications: '/api/mentorship-applications',
+  mentorshipApplicationsByUser: (userId) => `/api/mentorship-applications/user/${userId}`,
+
+  // Courses
+  courses: '/api/courses',
+  coursesByUser: (userId) => `/api/courses/user/${userId}`,
+  courseById: (courseId) => `/api/courses/${courseId}`,
+  courseApplications: '/api/course-applications',
+  courseApplicationsByUser: (userId) => `/api/course-applications/user/${userId}`,
+
+  // Announcements
+  announcements: '/api/announcements',
+  announcementsByUser: (userId) => `/api/announcements/user/${userId}`,
+
+  // Connections
+  connections: '/api/connections',
+  connectionsByUser: (userId) => `/api/connections/user/${userId}`,
+
+  // Notifications
+  notifications: '/api/notifications',
+  notificationsByUser: (userId) => `/api/notifications/user/${userId}`,
+};
+
+export default {
+  API_URLS,
+  DEFAULT_TIMEOUT,
+  ENDPOINTS
+};

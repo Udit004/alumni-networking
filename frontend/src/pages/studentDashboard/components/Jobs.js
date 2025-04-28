@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { getWithAuth } from '../../../utils/apiHelper';
 
 const Jobs = ({ isDarkMode }) => {
   const { currentUser } = useAuth();
@@ -13,25 +13,25 @@ const Jobs = ({ isDarkMode }) => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-  useEffect(() => {
-    fetchJobs();
-    fetchJobApplications();
-  }, []);
-
-  const fetchJobs = async () => {
+  // Define fetch functions
+  const fetchJobs = useCallback(async () => {
     try {
       setLoading(true);
       console.log('Fetching jobs...');
-      const response = await axios.get(`${API_URL}/api/jobs`);
-      console.log('Raw Jobs API Response:', response);
-      console.log('Jobs API Response Data:', response.data);
 
-      const jobsArray = response.data.success ? response.data.jobs : [];
+      const jobsData = await getWithAuth({
+        endpoint: '/api/jobs',
+        getToken: () => currentUser.getIdToken()
+      });
+      console.log('Jobs API Response Data:', jobsData);
+
+      // Process jobs data
+      const jobsArray = jobsData.success ? jobsData.jobs :
+                       (Array.isArray(jobsData) ? jobsData : []);
       console.log('Jobs array before processing:', jobsArray);
 
-      const processedJobs = Array.isArray(jobsArray) ? jobsArray.map(job => ({
+      const processedJobs = jobsArray.map(job => ({
         ...job,
         title: job.title || 'Untitled Job',
         company: job.company || 'Unknown Company',
@@ -41,7 +41,7 @@ const Jobs = ({ isDarkMode }) => {
         salary: job.salary || null,
         status: job.status || 'active',
         applicants: Array.isArray(job.applicants) ? job.applicants : []
-      })) : [];
+      }));
 
       console.log('Final processed jobs:', processedJobs);
       setJobs(processedJobs);
@@ -52,91 +52,132 @@ const Jobs = ({ isDarkMode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser]);
 
-  const fetchJobApplications = async () => {
+  const fetchJobApplications = useCallback(async () => {
     try {
       setApplicationsLoading(true);
-      const token = await currentUser.getIdToken();
-
       console.log('Fetching job applications...');
 
-      // Try the real endpoint first, fall back to test endpoint if it fails
-      let response;
+      // Try the user-specific endpoint first
       try {
-        response = await axios.get(
-          `${API_URL}/api/job-applications/user/${currentUser.uid}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-        console.log('Real API job applications response:', response);
-      } catch (userError) {
-        console.error('Error fetching from real endpoint:', userError);
-        console.log('Falling back to test endpoint...');
-        // Fallback to the test endpoint
-        response = await axios.get(
-          `${API_URL}/api/job-applications/user-test/${currentUser.uid}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-      }
+        const applicationsData = await getWithAuth({
+          endpoint: `/api/job-applications/user/${currentUser.uid}`,
+          getToken: () => currentUser.getIdToken()
+        });
+        console.log('Job applications response:', applicationsData);
 
-      console.log('Raw Job Applications API Response:', response);
-      console.log('Job Applications API Response Data:', response.data);
+        // Process applications data
+        let processedApplications = [];
 
-      let applicationsData = [];
-      if (response.data && response.data.success) {
-        console.log('Response has success flag');
-        if (Array.isArray(response.data.data)) {
-          console.log('Using response.data.data array');
-          applicationsData = response.data.data;
-        } else if (Array.isArray(response.data.applications)) {
-          console.log('Using response.data.applications array');
-          applicationsData = response.data.applications;
+        if (applicationsData.success && Array.isArray(applicationsData.data)) {
+          processedApplications = applicationsData.data;
+        } else if (Array.isArray(applicationsData)) {
+          processedApplications = applicationsData;
+        } else if (applicationsData.applications && Array.isArray(applicationsData.applications)) {
+          processedApplications = applicationsData.applications;
         }
-      } else if (Array.isArray(response.data)) {
-        console.log('Using direct response.data array');
-        applicationsData = response.data;
+
+        // Filter for current user's applications if needed
+        const userApplications = processedApplications.filter(app =>
+          !app.userId || app.userId === currentUser.uid || app.firebaseUID === currentUser.uid
+        );
+
+        // Normalize application data
+        const normalizedApplications = userApplications.map(app => ({
+          ...app,
+          jobId: app.jobId,
+          skills: Array.isArray(app.skills) ? app.skills :
+                 (typeof app.skills === 'string' ? app.skills.split(',').map(s => s.trim()) : []),
+          status: app.status || 'pending',
+          name: app.name || currentUser?.displayName || 'Unknown',
+          appliedAt: app.appliedAt || new Date().toISOString()
+        }));
+
+        console.log('Processed applications:', normalizedApplications);
+        setApplications(normalizedApplications);
+      } catch (userError) {
+        console.error('Error fetching from user endpoint:', userError);
+
+        // Try the test endpoint as fallback
+        console.log('Falling back to test endpoint...');
+        const testData = await getWithAuth({
+          endpoint: `/api/job-applications/user-test/${currentUser.uid}`,
+          getToken: () => currentUser.getIdToken()
+        });
+
+        console.log('Test endpoint response:', testData);
+
+        // Process test data
+        let testApplications = [];
+        if (testData.success && Array.isArray(testData.data)) {
+          testApplications = testData.data;
+        } else if (Array.isArray(testData)) {
+          testApplications = testData;
+        }
+
+        // Normalize test application data
+        const normalizedTestApplications = testApplications.map(app => ({
+          ...app,
+          jobId: app.jobId,
+          skills: Array.isArray(app.skills) ? app.skills :
+                 (typeof app.skills === 'string' ? app.skills.split(',').map(s => s.trim()) : []),
+          status: app.status || 'pending',
+          name: app.name || currentUser?.displayName || 'Unknown',
+          appliedAt: app.appliedAt || new Date().toISOString()
+        }));
+
+        console.log('Processed test applications:', normalizedTestApplications);
+        setApplications(normalizedTestApplications);
       }
-
-      console.log('Applications data before filtering:', applicationsData);
-
-      // Filter for current user's applications
-      const userApplications = applicationsData.filter(app => {
-        console.log('Checking application:', app);
-        console.log('Current user ID:', currentUser.uid);
-        console.log('Application user ID:', app.userId);
-        return app.userId === currentUser.uid;
-      });
-      console.log('Filtered user applications:', userApplications);
-
-      const processedApplications = userApplications.map(app => ({
-        ...app,
-        jobId: app.jobId,
-        skills: app.skills ? [app.skills] : [],
-        status: app.status || 'pending',
-        name: app.name || currentUser?.displayName || 'Unknown',
-        appliedAt: app.appliedAt || new Date().toISOString()
-      }));
-
-      console.log('Processed applications:', processedApplications);
-      setApplications(processedApplications);
     } catch (err) {
       console.error('Error fetching job applications:', err);
-      // Set empty array
-      setApplications([]);
+
+      // Try general endpoint as a last resort
+      try {
+        console.log('Trying general applications endpoint as last resort...');
+        const generalData = await getWithAuth({
+          endpoint: '/api/job-applications',
+          getToken: () => currentUser.getIdToken()
+        });
+
+        // Filter for current user's applications
+        let userApplications = [];
+        if (generalData.success && Array.isArray(generalData.data)) {
+          userApplications = generalData.data.filter(app => app.userId === currentUser.uid);
+        } else if (Array.isArray(generalData)) {
+          userApplications = generalData.filter(app => app.userId === currentUser.uid);
+        }
+
+        // Normalize application data
+        const normalizedApplications = userApplications.map(app => ({
+          ...app,
+          jobId: app.jobId,
+          skills: Array.isArray(app.skills) ? app.skills :
+                 (typeof app.skills === 'string' ? app.skills.split(',').map(s => s.trim()) : []),
+          status: app.status || 'pending',
+          name: app.name || currentUser?.displayName || 'Unknown',
+          appliedAt: app.appliedAt || new Date().toISOString()
+        }));
+
+        console.log('Processed general applications:', normalizedApplications);
+        setApplications(normalizedApplications);
+      } catch (generalError) {
+        console.error('Error in general applications fetch:', generalError);
+        setApplications([]);
+      }
     } finally {
       setApplicationsLoading(false);
     }
-  };
+  }, [currentUser]);
+
+  // Set up effect to fetch data when component mounts
+  useEffect(() => {
+    if (currentUser) {
+      fetchJobs();
+      fetchJobApplications();
+    }
+  }, [currentUser, fetchJobs, fetchJobApplications]);
 
   const handleApplyJob = (jobId) => {
     if (!currentUser) {

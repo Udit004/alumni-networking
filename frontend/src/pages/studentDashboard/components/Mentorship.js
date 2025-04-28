@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { getWithAuth } from '../../../utils/apiHelper';
 
 const Mentorship = ({ isDarkMode }) => {
   const { currentUser } = useAuth();
@@ -24,17 +24,27 @@ const Mentorship = ({ isDarkMode }) => {
   const fetchMentorships = async () => {
     try {
       setLoading(true);
-      console.log('Fetching mentorships from:', `${API_URL}/api/mentorships`);
-      const response = await axios.get(`${API_URL}/api/mentorships`);
-      console.log('Mentorships response:', response.data);
+      console.log('Fetching mentorships...');
 
-      console.log('Fetching user mentorships from:', `${API_URL}/api/mentorships/user/${currentUser.uid}`);
-      const userMentorshipsResponse = await axios.get(`${API_URL}/api/mentorships/user/${currentUser.uid}`);
-      console.log('User mentorships response:', userMentorshipsResponse.data);
+      // Get all mentorships
+      const mentorshipsData = await getWithAuth({
+        endpoint: '/api/mentorships',
+        getToken: () => currentUser.getIdToken()
+      });
+      console.log('Mentorships response:', mentorshipsData);
 
-      const mentorshipsArray = response.data.success ? response.data.mentorships : [];
+      // Get user's enrolled mentorships
+      const userMentorshipsData = await getWithAuth({
+        endpoint: `/api/mentorships/user/${currentUser.uid}`,
+        getToken: () => currentUser.getIdToken()
+      });
+      console.log('User mentorships response:', userMentorshipsData);
 
-      const processedMentorships = Array.isArray(mentorshipsArray) ? mentorshipsArray.map(mentorship => ({
+      // Process mentorships data
+      const mentorshipsArray = mentorshipsData.success ? mentorshipsData.mentorships :
+                              (Array.isArray(mentorshipsData) ? mentorshipsData : []);
+
+      const processedMentorships = mentorshipsArray.map(mentorship => ({
         ...mentorship,
         skills: Array.isArray(mentorship.skills) ? mentorship.skills : [],
         title: mentorship.title || 'Untitled Mentorship',
@@ -42,21 +52,23 @@ const Mentorship = ({ isDarkMode }) => {
         duration: mentorship.duration || 'Not specified',
         description: mentorship.description || '',
         mentees: Array.isArray(mentorship.mentees) ? mentorship.mentees : []
-      })) : [];
+      }));
 
       setMentorships(processedMentorships);
 
-      const userMentorships = userMentorshipsResponse.data.success ?
-                             (userMentorshipsResponse.data.mentorships ||
-                              userMentorshipsResponse.data.enrolledMentorships ||
-                              []) : [];
-      setEnrolledMentorships(Array.isArray(userMentorships) ? userMentorships : []);
+      // Process user mentorships data
+      const userMentorships = userMentorshipsData.success ?
+                             (userMentorshipsData.mentorships ||
+                              userMentorshipsData.enrolledMentorships ||
+                              []) :
+                             (Array.isArray(userMentorshipsData) ? userMentorshipsData : []);
 
-      setLoading(false);
+      setEnrolledMentorships(Array.isArray(userMentorships) ? userMentorships : []);
     } catch (err) {
       console.error('Error fetching mentorships:', err);
       setError('Failed to load mentorships. Please try again.');
       setMentorships([]);
+    } finally {
       setLoading(false);
     }
   };
@@ -64,39 +76,69 @@ const Mentorship = ({ isDarkMode }) => {
   const fetchApplications = async () => {
     try {
       setApplicationsLoading(true);
-      // Get the current user's token
-      const token = await currentUser.getIdToken();
+      console.log('Fetching mentorship applications...');
 
-      console.log('Fetching applications from:', `${API_URL}/api/mentorship-applications`);
-      const response = await axios.get(
-        `${API_URL}/api/mentorship-applications`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+      // Get user-specific applications
+      const applicationsData = await getWithAuth({
+        endpoint: `/api/mentorship-applications/user/${currentUser.uid}`,
+        getToken: () => currentUser.getIdToken()
+      });
+      console.log('Applications response:', applicationsData);
+
+      // Process applications data
+      let processedApplications = [];
+
+      if (applicationsData.success && Array.isArray(applicationsData.data)) {
+        processedApplications = applicationsData.data;
+      } else if (Array.isArray(applicationsData)) {
+        processedApplications = applicationsData;
+      }
+
+      // Normalize application data
+      const normalizedApplications = processedApplications.map(app => ({
+        ...app,
+        skills: Array.isArray(app.skills) ? app.skills :
+               (typeof app.skills === 'string' ? app.skills.split(',').map(s => s.trim()) : []),
+        name: app.name || 'Unnamed Applicant',
+        program: app.program || 'Not specified',
+        status: app.status || 'pending'
+      }));
+
+      setApplications(normalizedApplications);
+    } catch (err) {
+      console.error('Error fetching mentorship applications:', err);
+
+      // Try fallback to general endpoint if user-specific endpoint fails
+      try {
+        console.log('Trying fallback to general applications endpoint...');
+        const fallbackData = await getWithAuth({
+          endpoint: '/api/mentorship-applications',
+          getToken: () => currentUser.getIdToken()
+        });
+
+        // Filter for current user's applications
+        let userApplications = [];
+        if (fallbackData.success && Array.isArray(fallbackData.data)) {
+          userApplications = fallbackData.data.filter(app => app.userId === currentUser.uid);
+        } else if (Array.isArray(fallbackData)) {
+          userApplications = fallbackData.filter(app => app.userId === currentUser.uid);
         }
-      );
 
-      console.log('Applications response:', response.data);
-
-      if (response.data.success) {
-        const processedApplications = Array.isArray(response.data.data) ? response.data.data.map(app => ({
+        // Normalize application data
+        const normalizedApplications = userApplications.map(app => ({
           ...app,
-          skills: Array.isArray(app.skills) ? app.skills : [],
+          skills: Array.isArray(app.skills) ? app.skills :
+                 (typeof app.skills === 'string' ? app.skills.split(',').map(s => s.trim()) : []),
           name: app.name || 'Unnamed Applicant',
           program: app.program || 'Not specified',
           status: app.status || 'pending'
-        })) : [];
+        }));
 
-        setApplications(processedApplications);
-      } else {
-        console.error('Failed to fetch applications:', response.data.message);
+        setApplications(normalizedApplications);
+      } catch (fallbackErr) {
+        console.error('Error in fallback mentorship applications fetch:', fallbackErr);
         setApplications([]);
       }
-    } catch (err) {
-      console.error('Error fetching mentorship applications:', err);
-      setApplications([]);
     } finally {
       setApplicationsLoading(false);
     }
