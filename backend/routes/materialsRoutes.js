@@ -5,7 +5,15 @@ const Course = require('../models/Course');
 const admin = require('../config/firebase-admin');
 const path = require('path');
 const fs = require('fs');
-const { upload } = require('../services/gridfsStorage');
+const multer = require('multer');
+
+// Configure multer for memory storage (files stored in memory, not on disk)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // Limit file size to 10MB
+  }
+});
 
 // Helper functions for material types
 const getIconForType = (type) => {
@@ -264,38 +272,40 @@ router.post('/', upload.single('file'), async (req, res) => {
     if (req.file) {
       console.log(`Processing uploaded file: ${req.file.originalname} (${req.file.mimetype}, ${req.file.size} bytes)`);
 
-      // Generate server URL from request
+      // Store file metadata
+      newMaterial.fileName = req.file.originalname;
+      newMaterial.fileSize = req.file.size;
+      newMaterial.mimeType = req.file.mimetype;
+
+      // Store the actual file content as base64 string
+      // This allows us to store the file directly in the database
+      newMaterial.fileContent = req.file.buffer.toString('base64');
+
+      // Generate a unique ID for the file
+      const fileId = new mongoose.Types.ObjectId().toString();
+      newMaterial.fileId = fileId;
+
+      // Create a virtual URL for accessing the file
+      // This will be handled by a special route that serves the file from the database
       const protocol = req.protocol;
       const host = req.get('host');
-
-      // Use the correct host for the environment
-      // In development, use localhost:5000
-      // In production, use the actual host from the request
       let baseUrl;
       if (process.env.NODE_ENV === 'production') {
         baseUrl = `${protocol}://${host}`;
       } else {
-        // For local development, hardcode the URL to ensure it works
         baseUrl = 'http://localhost:5000';
       }
 
-      // For GridFS, we use the file.filename which is the hex string generated in gridfsStorage.js
-      newMaterial.fileName = req.file.originalname;
-      newMaterial.fileUrl = `${baseUrl}/api/files/${req.file.filename}`;
-      newMaterial.fileId = req.file.id; // Store the GridFS file ID
-      newMaterial.fileSize = req.file.size;
-      newMaterial.mimeType = req.file.mimetype;
+      // The URL will point to a route that retrieves the file from the database
+      newMaterial.fileUrl = `${baseUrl}/api/materials/file/${fileId}`;
 
-      console.log(`File URL will be: ${newMaterial.fileUrl}`);
-
-      // Log additional information for debugging
+      console.log(`File stored directly in database. Virtual URL: ${newMaterial.fileUrl}`);
       console.log(`File details:
         - Original name: ${req.file.originalname}
-        - Saved as: ${req.file.filename}
-        - GridFS ID: ${req.file.id}
         - Size: ${req.file.size} bytes
         - Type: ${req.file.mimetype}
-        - Full URL: ${newMaterial.fileUrl}
+        - Content stored as base64 in database
+        - Virtual URL: ${newMaterial.fileUrl}
       `);
     }
 
@@ -443,18 +453,9 @@ router.delete('/:materialId', authenticateToken, async (req, res) => {
       console.log(`Course now has ${updatedCourse.materials.length} materials`);
     }
 
-    // Remove the file from GridFS if it exists
-    if (foundMaterial && foundMaterial.fileId) {
-      try {
-        const { deleteFileByFilename } = require('../services/gridfsStorage');
-        console.log(`Removing file from GridFS: ${foundMaterial.fileId}`);
-        await deleteFileByFilename(foundMaterial.fileId);
-        console.log('File deleted from GridFS successfully');
-      } catch (deleteError) {
-        console.error('Error deleting file from GridFS:', deleteError);
-        // Continue with the response even if file deletion fails
-      }
-    }
+    // No need to delete the file separately since it's stored directly in the course document
+    // When we remove the material from the course, the file content is automatically removed
+    console.log('File content will be removed with the material');
 
     console.log('Material deleted successfully');
     res.json({ success: true, message: 'Material deleted successfully' });
@@ -637,6 +638,54 @@ router.get('/student/course/:courseId', authenticateToken, async (req, res) => {
   }
 });
 
-// Helper functions are already defined at the top of the file
+// Route to serve file content directly from the database
+router.get('/file/:fileId', async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    console.log(`Fetching file with ID: ${fileId}`);
+
+    // Find all courses
+    const courses = await Course.find();
+    let fileFound = false;
+
+    // Search through all courses and their materials to find the file
+    for (const course of courses) {
+      if (!course.materials || course.materials.length === 0) continue;
+
+      const material = course.materials.find(m => m.fileId === fileId);
+      if (material && material.fileContent) {
+        console.log(`Found file: ${material.fileName} in course: ${course.title}`);
+
+        // Convert base64 string back to binary data
+        const fileBuffer = Buffer.from(material.fileContent, 'base64');
+
+        // Set appropriate headers
+        res.set('Content-Type', material.mimeType || 'application/octet-stream');
+        res.set('Content-Disposition', `inline; filename="${material.fileName}"`);
+        res.set('Content-Length', fileBuffer.length);
+
+        // Send the file data
+        res.send(fileBuffer);
+        fileFound = true;
+        break;
+      }
+    }
+
+    if (!fileFound) {
+      console.log(`File with ID ${fileId} not found in any course`);
+      return res.status(404).json({
+        success: false,
+        message: 'File not found'
+      });
+    }
+  } catch (error) {
+    console.error('Error serving file from database:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error serving file',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router;
