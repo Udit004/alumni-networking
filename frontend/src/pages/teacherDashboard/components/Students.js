@@ -97,16 +97,14 @@ const mockStudentsByCourse = {
 };
 
 // Helper functions for API calls
-const getTeacherCourses = async (token) => {
+const getTeacherCourses = async (token, userId) => {
   try {
-    // Get the current user's UID
-    const { currentUser } = require('../../../context/AuthContext').useAuth();
-    const userId = currentUser?.uid;
-
     if (!userId) {
       console.error('No user ID available for fetching courses');
       return [];
     }
+
+    console.log(`Fetching courses for teacher with ID: ${userId}`);
 
     // Use the correct endpoint with the teacher's user ID
     const response = await axios.get(
@@ -137,16 +135,14 @@ const getTeacherCourses = async (token) => {
   }
 };
 
-const getCourseStudents = async (token, courseId) => {
+const getCourseStudents = async (token, courseId, userId) => {
   try {
-    // Get the current user's UID
-    const { currentUser } = require('../../../context/AuthContext').useAuth();
-    const userId = currentUser?.uid;
-
     if (!userId) {
       console.error('No user ID available for fetching course students');
       return [];
     }
+
+    console.log(`Fetching students for course ${courseId} with teacher ID: ${userId}`);
 
     const response = await axios.get(
       `${API_URLS.courses}/${courseId}/students?firebaseUID=${userId}&role=teacher`,
@@ -201,15 +197,16 @@ const Students = ({ isDarkMode }) => {
         let coursesData = [];
         let studentsData = {};
 
-        if (currentUser) {
+        if (currentUser && currentUser.uid) {
           try {
-            console.log('Current user found, fetching with token');
+            const userId = currentUser.uid;
+            console.log(`Current user found with ID: ${userId}, fetching with token`);
             // Get token
             const token = await currentUser.getIdToken();
 
             // Fetch courses
-            console.log('Fetching teacher courses...');
-            coursesData = await getTeacherCourses(token);
+            console.log(`Fetching courses for teacher with ID: ${userId}`);
+            coursesData = await getTeacherCourses(token, userId);
             console.log('Courses data received:', coursesData);
 
             if (Array.isArray(coursesData) && coursesData.length > 0) {
@@ -218,7 +215,7 @@ const Students = ({ isDarkMode }) => {
               for (const course of coursesData) {
                 if (course && course._id) {
                   console.log(`Fetching students for course: ${course._id}`);
-                  const students = await getCourseStudents(token, course._id);
+                  const students = await getCourseStudents(token, course._id, userId);
                   studentsData[course._id] = students;
                   console.log(`Students for course ${course._id}:`, students.length);
                 } else {
@@ -239,7 +236,7 @@ const Students = ({ isDarkMode }) => {
           }
         } else {
           // Use mock data if no user
-          console.log('No current user, using mock data');
+          console.log('No current user or missing user ID, using mock data');
           coursesData = mockCourses;
           studentsData = mockStudentsByCourse;
         }
