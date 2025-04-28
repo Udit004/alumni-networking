@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './TeacherDashboard.css';
 import { db } from "../../firebaseConfig";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { Overview, Profile, Notifications, Courses, Events, Resources, Students, Announcements } from './components';
 import TeacherNetwork from './components/Network';
 import { getConnectionRequests, sendConnectionRequest } from '../../services/connectionService';
@@ -100,9 +100,104 @@ const TeacherDashboard = () => {
     return () => observer.disconnect();
   }, []);
 
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+
+      console.log('Fetching events for teacher:', {
+        userUid: user?.uid,
+        role: role,
+        apiUrl: API_URL,
+        endpoint: `${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`
+      });
+
+      // Define base URLs for API fallback
+      const baseUrls = [
+        API_URL,
+        'http://localhost:5000',
+        'http://localhost:5001'
+      ];
+
+      let success = false;
+      let responseData = null;
+      let lastError = null;
+
+      for (const baseUrl of baseUrls) {
+        try {
+          console.log(`Trying to fetch events from ${baseUrl}...`);
+          const token = await user.getIdToken();
+
+          // Use the user-specific endpoint to get events created by this user, including role
+          const response = await fetch(`${baseUrl}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include', // Added for proper authentication
+            timeout: 5000
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          console.log(`Events response from ${baseUrl}:`, data);
+          responseData = data;
+          success = true;
+          break; // Exit the loop if successful
+        } catch (err) {
+          console.log(`Failed to connect to ${baseUrl}:`, err.message);
+          lastError = err;
+        }
+      }
+
+      if (success) {
+        // Use the createdEvents array directly from the API response
+        console.log('Teacher events received from API:', {
+          response: 'success',
+          createdEvents: responseData.createdEvents?.length || 0,
+          createdEventsData: responseData.createdEvents,
+          registeredEvents: responseData.registeredEvents?.length || 0,
+          data: responseData
+        });
+
+        // Check if createdEvents exists in the response
+        if (!responseData.createdEvents) {
+          console.warn('No createdEvents found in API response:', responseData);
+          // Fallback to data.events if createdEvents doesn't exist
+          // If data is an array, use it directly (API might return array instead of object)
+          const eventsToUse = Array.isArray(responseData) ? responseData : (responseData.events || []);
+          console.log('Using fallback events array:', eventsToUse);
+
+          // Sort events by date
+          const sortedEvents = eventsToUse.sort((a, b) => new Date(a.date) - new Date(b.date));
+          console.log('Setting sorted events:', sortedEvents);
+          setEvents(sortedEvents);
+        } else {
+          // Sort events by date
+          const sortedEvents = responseData.createdEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+          console.log('Setting sorted events:', sortedEvents);
+          setEvents(sortedEvents);
+        }
+      } else {
+        throw new Error(lastError?.message || 'Failed to connect to any server');
+      }
+    } catch (err) {
+      setError(`Failed to load events: ${err.message}`);
+      console.error('Error fetching events:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Memoize fetchEvents to avoid dependency issues
+  const memoizedFetchEvents = useCallback(fetchEvents, [user, role, API_URL]);
+
   useEffect(() => {
     if (activeSection === 'events') {
-      fetchEvents();
+      memoizedFetchEvents();
     }
 
     // Refresh profile data when user navigates to profile section
@@ -177,7 +272,7 @@ const TeacherDashboard = () => {
 
       refreshProfileData();
     }
-  }, [activeSection, user]);
+  }, [activeSection, user, memoizedFetchEvents]);
 
   useEffect(() => {
     const fetchTeacherProfile = async () => {
@@ -358,70 +453,6 @@ const TeacherDashboard = () => {
   const studentConnections = connections.filter(conn => conn.role === "student");
   const alumniConnections = connections.filter(conn => conn.role === "alumni");
   const teacherConnections = connections.filter(conn => conn.role === "teacher");
-
-  const fetchEvents = async () => {
-    try {
-      setLoading(true);
-
-      console.log('Fetching events for teacher:', {
-        userUid: user?.uid,
-        role: role,
-        apiUrl: API_URL,
-        endpoint: `${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`
-      });
-
-      // Use the user-specific endpoint to get events created by this user, including role
-      const token = await user.getIdToken();
-      const response = await fetch(`${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      // Use the createdEvents array directly from the API response
-      console.log('Teacher events received from API:', {
-        response: 'success',
-        responseStatus: response.status,
-        createdEvents: data.createdEvents?.length || 0,
-        createdEventsData: data.createdEvents,
-        registeredEvents: data.registeredEvents?.length || 0,
-        data: data
-      });
-
-      // Check if createdEvents exists in the response
-      if (!data.createdEvents) {
-        console.warn('No createdEvents found in API response:', data);
-        // Fallback to data.events if createdEvents doesn't exist
-        // If data is an array, use it directly (API might return array instead of object)
-        const eventsToUse = Array.isArray(data) ? data : (data.events || []);
-        console.log('Using fallback events array:', eventsToUse);
-
-        // Sort events by date
-        const sortedEvents = eventsToUse.sort((a, b) => new Date(a.date) - new Date(b.date));
-        console.log('Setting sorted events:', sortedEvents);
-        setEvents(sortedEvents);
-      } else {
-        // Sort events by date
-        const sortedEvents = data.createdEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
-        console.log('Setting sorted events:', sortedEvents);
-        setEvents(sortedEvents);
-      }
-    } catch (err) {
-      setError(`Failed to load events: ${err.message}`);
-      console.error('Error fetching events:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getEventStatus = (eventDate) => {
     const today = new Date();
