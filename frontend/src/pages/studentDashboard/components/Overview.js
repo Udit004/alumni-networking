@@ -1,17 +1,10 @@
 import React from 'react';
-import ActivityList from '../../../components/ActivityList';
 
 const Overview = ({ connections = [], courseCount = 0, isDarkMode, navigate, jobApplicationsCount = 0, mentorshipsCount = 0, upcomingEventsCount = 0 }) => {
   // Filter connections by role
   const alumniConnections = connections?.filter(conn => conn.role === "alumni") || [];
   const teacherConnections = connections?.filter(conn => conn.role === "teacher") || [];
   const studentConnections = connections?.filter(conn => conn.role === "student") || [];
-
-  // Debug logs for all counters
-  console.log('Overview - Job Applications Count:', jobApplicationsCount);
-  console.log('Overview - Mentorship Applications Count:', mentorshipsCount);
-  console.log('Overview - Course Count:', courseCount);
-  console.log('Overview - Upcoming Events Count:', upcomingEventsCount);
 
   return (
     <div>
@@ -46,7 +39,7 @@ const Overview = ({ connections = [], courseCount = 0, isDarkMode, navigate, job
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-500 dark:text-purple-300 text-xl mr-4">🎓</div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Mentorships Applied</h3>
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Mentorship Courses</h3>
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{mentorshipsCount}</p>
             </div>
           </div>
@@ -287,14 +280,39 @@ const Overview = ({ connections = [], courseCount = 0, isDarkMode, navigate, job
            style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
         <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Recent Activities</h2>
 
-        {/* Use the ActivityList component */}
-        <ActivityList
-          limit={5}
-          showMarkAllRead={true}
-          showEmpty={true}
-          emptyMessage="No recent activities yet. Start exploring courses, jobs, and events!"
-          className="mt-2"
-        />
+        <ul className="space-y-4">
+          <li className="border-l-4 border-blue-500 pl-4 py-1">
+            <div className="flex justify-between">
+              <p className="text-gray-800 dark:text-white font-medium">New assignment added to Web Development</p>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Today</span>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Due in 5 days</p>
+          </li>
+
+          <li className="border-l-4 border-green-500 pl-4 py-1">
+            <div className="flex justify-between">
+              <p className="text-gray-800 dark:text-white font-medium">Your assignment was graded</p>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Yesterday</span>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Data Structures - Score: 92/100</p>
+          </li>
+
+          <li className="border-l-4 border-purple-500 pl-4 py-1">
+            <div className="flex justify-between">
+              <p className="text-gray-800 dark:text-white font-medium">New event: Tech Career Fair</p>
+              <span className="text-sm text-gray-500 dark:text-gray-400">2 days ago</span>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">April 15, 2023 - Campus Main Hall</p>
+          </li>
+
+          <li className="border-l-4 border-yellow-500 pl-4 py-1">
+            <div className="flex justify-between">
+              <p className="text-gray-800 dark:text-white font-medium">Mentor request accepted</p>
+              <span className="text-sm text-gray-500 dark:text-gray-400">3 days ago</span>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Dr. James Wilson will be your mentor</p>
+          </li>
+        </ul>
       </div>
     </div>
   );
