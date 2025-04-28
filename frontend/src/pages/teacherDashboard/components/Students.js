@@ -179,15 +179,31 @@ const getCourseStudents = async (token, courseId, userId) => {
 
     console.log(`Students for course ${courseId} response:`, response.data);
 
+    let studentsData = [];
+
     if (response.data && response.data.success) {
       // The backend returns students in the 'data' property, not 'students'
-      return response.data.data || [];
+      studentsData = response.data.data || [];
     } else if (response.data && Array.isArray(response.data)) {
       // Handle case where API returns array directly
-      return response.data;
+      studentsData = response.data;
     }
 
-    return [];
+    // Process and normalize student data to ensure consistent format
+    const normalizedStudents = studentsData.map(student => {
+      // Create a normalized student object with all required fields
+      return {
+        studentId: student.studentId || student._id || student.id || student.userId || 'unknown',
+        studentName: student.studentName || student.name || 'Unknown Student',
+        studentEmail: student.studentEmail || student.email || 'No email available',
+        program: student.program || 'Not specified',
+        currentYear: student.currentYear || 'Not specified',
+        enrolledAt: student.enrolledAt || student.appliedAt || new Date()
+      };
+    });
+
+    console.log(`Normalized students for course ${courseId}:`, normalizedStudents);
+    return normalizedStudents;
   } catch (error) {
     console.error(`Error fetching students for course ${courseId}:`, error);
     console.log(`Falling back to mock data for course ${courseId}`);
@@ -315,36 +331,44 @@ const Students = ({ isDarkMode }) => {
         if (!studentId) return;
 
         // Check if student already exists in the array
-        const existingStudent = allStudents.find(s =>
-          (s.studentId && s.studentId === studentId) ||
-          (s._id && s._id === studentId) ||
-          (s.id && s.id === studentId)
-        );
+        const existingStudent = allStudents.find(s => s.studentId === studentId);
 
         if (!existingStudent) {
           allStudents.push(student);
         }
       });
     });
+    console.log('All students across courses:', allStudents);
     return allStudents;
   };
 
   // Filter students based on search term and selected course
   const getFilteredStudents = () => {
+    const searchTermLower = searchTerm.toLowerCase();
+
+    // Helper function to check if a student matches the search term
+    const studentMatchesSearch = (student) => {
+      // Check if any of the student's fields match the search term
+      return (
+        (student.studentName && student.studentName.toLowerCase().includes(searchTermLower)) ||
+        (student.studentEmail && student.studentEmail.toLowerCase().includes(searchTermLower)) ||
+        (student.studentId && student.studentId.toLowerCase().includes(searchTermLower)) ||
+        (student.program && student.program.toLowerCase().includes(searchTermLower)) ||
+        (student.currentYear && student.currentYear.toLowerCase().includes(searchTermLower))
+      );
+    };
+
     if (selectedCourse === 'all') {
       // Filter all students
-      return getAllStudents().filter(student =>
-        student.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.studentEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.studentId?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const filteredStudents = getAllStudents().filter(studentMatchesSearch);
+      console.log('Filtered all students:', filteredStudents);
+      return filteredStudents;
     } else {
       // Filter students from the selected course
-      return (courseStudents[selectedCourse] || []).filter(student =>
-        student.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.studentEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.studentId?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const courseStudentsList = courseStudents[selectedCourse] || [];
+      const filteredStudents = courseStudentsList.filter(studentMatchesSearch);
+      console.log(`Filtered students for course ${selectedCourse}:`, filteredStudents);
+      return filteredStudents;
     }
   };
 
@@ -352,19 +376,39 @@ const Students = ({ isDarkMode }) => {
 
   // Get courses for a specific student
   const getStudentCourses = (studentId) => {
+    if (!studentId) {
+      console.warn('No student ID provided to getStudentCourses');
+      return [];
+    }
+
+    console.log(`Finding courses for student with ID: ${studentId}`);
+
     const studentCourses = [];
     courses.forEach(course => {
       // Handle both _id and id fields
       const courseId = course._id || course.id;
       if (!courseId) return;
 
-      const isEnrolled = courseStudents[courseId]?.some(student =>
-        student.studentId === studentId || student._id === studentId || student.id === studentId
-      );
+      // Get the students for this course
+      const courseStudentsList = courseStudents[courseId] || [];
+      console.log(`Checking course ${courseId} with ${courseStudentsList.length} students`);
+
+      // Check if the student is enrolled in this course
+      const isEnrolled = courseStudentsList.some(student => {
+        const studentIdToCheck = student.studentId || student._id || student.id || student.userId;
+        const isMatch = studentIdToCheck === studentId;
+        if (isMatch) {
+          console.log(`Student ${studentId} is enrolled in course ${courseId}`);
+        }
+        return isMatch;
+      });
+
       if (isEnrolled) {
         studentCourses.push(course);
       }
     });
+
+    console.log(`Found ${studentCourses.length} courses for student ${studentId}:`, studentCourses);
     return studentCourses;
   };
 
