@@ -11,9 +11,12 @@ const multer = require('multer');
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // Limit file size to 10MB
+    fileSize: 5 * 1024 * 1024, // Limit file size to 5MB to ensure it fits in MongoDB document
   }
 });
+
+// MongoDB has a document size limit of 16MB, but we need to leave room for other fields
+// and account for base64 encoding which increases size by ~33%
 
 // Helper functions for material types
 const getIconForType = (type) => {
@@ -279,7 +282,14 @@ router.post('/', upload.single('file'), async (req, res) => {
 
       // Store the actual file content as base64 string
       // This allows us to store the file directly in the database
-      newMaterial.fileContent = req.file.buffer.toString('base64');
+      // Check if buffer exists before trying to convert it
+      if (req.file.buffer) {
+        console.log(`Converting file buffer (${req.file.buffer.length} bytes) to base64`);
+        newMaterial.fileContent = req.file.buffer.toString('base64');
+      } else {
+        console.error('No buffer found in uploaded file');
+        throw new Error('File upload failed: No file data received');
+      }
 
       // Generate a unique ID for the file
       const fileId = new mongoose.Types.ObjectId().toString();
@@ -363,16 +373,27 @@ router.post('/', upload.single('file'), async (req, res) => {
       throw saveError; // Rethrow for the outer catch block
     }
   } catch (error) {
-    // Remove uploaded file if error occurs
-    if (req.file) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (unlinkError) {
-        console.error('Error removing file after failed upload:', unlinkError);
-      }
-    }
+    // No need to remove files since they're not stored on disk anymore
+
+    // Log detailed error information
     console.error('Error adding material:', error);
-    res.status(500).json({ success: false, message: 'Failed to add material', error: error.message });
+    console.error('Error stack:', error.stack);
+
+    // Log request information for debugging
+    console.log('Request body:', req.body);
+    console.log('File information:', req.file ? {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      buffer: req.file.buffer ? 'Buffer present' : 'No buffer'
+    } : 'No file');
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add material',
+      error: error.message,
+      details: error.stack
+    });
   }
 });
 
