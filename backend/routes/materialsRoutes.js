@@ -5,6 +5,7 @@ const Course = require('../models/Course');
 const admin = require('../config/firebase-admin');
 const path = require('path');
 const fs = require('fs');
+const { upload } = require('../services/gridfsStorage');
 
 // Helper functions for material types
 const getIconForType = (type) => {
@@ -30,37 +31,6 @@ const getColorForType = (type) => {
     default: return 'gray';
   }
 };
-
-// Try to load multer, but don't fail if it's not available
-let upload;
-try {
-  const multer = require('multer');
-  const storage = multer.diskStorage({
-    destination: function(req, file, cb) {
-      const uploadDir = path.join(__dirname, '../uploads');
-      // Create directory if it doesn't exist
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      cb(null, uploadDir);
-    },
-    filename: function(req, file, cb) {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, uniqueSuffix + '-' + file.originalname);
-    }
-  });
-  upload = multer({ storage: storage });
-  console.log('Multer loaded successfully');
-} catch (err) {
-  console.warn('Multer not available, file uploads will be disabled:', err.message);
-  // Create a mock upload middleware that does nothing
-  upload = {
-    single: () => (req, res, next) => {
-      console.log('Mock upload middleware called - file uploads are disabled');
-      next();
-    }
-  };
-}
 
 // Authentication middleware
 const authenticateToken = async (req, res, next) => {
@@ -309,9 +279,10 @@ router.post('/', upload.single('file'), async (req, res) => {
         baseUrl = 'http://localhost:5000';
       }
 
+      // For GridFS, we use the file.filename which is the hex string generated in gridfsStorage.js
       newMaterial.fileName = req.file.originalname;
-      newMaterial.fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
-      newMaterial.filePath = req.file.path;
+      newMaterial.fileUrl = `${baseUrl}/api/files/${req.file.filename}`;
+      newMaterial.fileId = req.file.id; // Store the GridFS file ID
       newMaterial.fileSize = req.file.size;
       newMaterial.mimeType = req.file.mimetype;
 
@@ -321,7 +292,7 @@ router.post('/', upload.single('file'), async (req, res) => {
       console.log(`File details:
         - Original name: ${req.file.originalname}
         - Saved as: ${req.file.filename}
-        - Path: ${req.file.path}
+        - GridFS ID: ${req.file.id}
         - Size: ${req.file.size} bytes
         - Type: ${req.file.mimetype}
         - Full URL: ${newMaterial.fileUrl}
@@ -472,10 +443,17 @@ router.delete('/:materialId', authenticateToken, async (req, res) => {
       console.log(`Course now has ${updatedCourse.materials.length} materials`);
     }
 
-    // Remove the file if it exists
-    if (filePath && fs.existsSync(filePath)) {
-      console.log(`Removing file: ${filePath}`);
-      fs.unlinkSync(filePath);
+    // Remove the file from GridFS if it exists
+    if (foundMaterial && foundMaterial.fileId) {
+      try {
+        const { deleteFileByFilename } = require('../services/gridfsStorage');
+        console.log(`Removing file from GridFS: ${foundMaterial.fileId}`);
+        await deleteFileByFilename(foundMaterial.fileId);
+        console.log('File deleted from GridFS successfully');
+      } catch (deleteError) {
+        console.error('Error deleting file from GridFS:', deleteError);
+        // Continue with the response even if file deletion fails
+      }
     }
 
     console.log('Material deleted successfully');
