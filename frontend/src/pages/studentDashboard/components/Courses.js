@@ -157,10 +157,66 @@ const Courses = ({ isDarkMode }) => {
   };
 
   // Function to handle materials button click
-  const handleMaterialsClick = (e, course) => {
+  const handleMaterialsClick = async (e, course) => {
     e.stopPropagation(); // Prevent triggering the card's click event
-    setSelectedCourse(course);
-    setShowMaterialsModal(true);
+
+    try {
+      setLoading(true);
+      const token = await currentUser.getIdToken();
+
+      // Try to fetch the latest materials for this course
+      let success = false;
+      let responseData = null;
+
+      for (const baseUrl of baseUrls) {
+        try {
+          console.log(`Trying to fetch materials from ${baseUrl} for course ${course._id}...`);
+          const response = await axios.get(
+            `${baseUrl}/api/materials/student/course/${course._id}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+
+          console.log(`Materials response from ${baseUrl}:`, response.data);
+          responseData = response.data;
+          success = true;
+          break; // Exit the loop if successful
+        } catch (err) {
+          console.log(`Failed to connect to ${baseUrl} for materials:`, err.message);
+        }
+      }
+
+      if (success && responseData.success) {
+        // Update the course with the latest materials
+        const updatedCourse = {
+          ...course,
+          materials: responseData.materials
+        };
+
+        // Update the course in the courses array
+        setCourses(prevCourses =>
+          prevCourses.map(c => c._id === course._id ? updatedCourse : c)
+        );
+
+        // Set the selected course with updated materials
+        setSelectedCourse(updatedCourse);
+      } else {
+        // If API call fails, use the materials from the course object
+        setSelectedCourse(course);
+        console.warn('Could not fetch latest materials, using cached data');
+      }
+    } catch (error) {
+      console.error('Error fetching course materials:', error);
+      // Still show the modal with whatever materials are in the course object
+      setSelectedCourse(course);
+    } finally {
+      setLoading(false);
+      setShowMaterialsModal(true);
+    }
   };
 
   // Function to close the materials modal
@@ -249,8 +305,13 @@ const Courses = ({ isDarkMode }) => {
                   </svg>
                 </button>
               </div>
-              
-              {selectedCourse.materials && selectedCourse.materials.length > 0 ? (
+
+              {loading ? (
+                <div className="p-8 flex flex-col items-center justify-center">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600 mb-4"></div>
+                  <p className="text-gray-600 dark:text-gray-400">Loading course materials...</p>
+                </div>
+              ) : selectedCourse.materials && selectedCourse.materials.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {selectedCourse.materials.map((material) => (
                     <div key={material.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
@@ -287,7 +348,7 @@ const Courses = ({ isDarkMode }) => {
                   <p className="text-gray-500 dark:text-gray-400">No materials available for this course.</p>
                 </div>
               )}
-              
+
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => {

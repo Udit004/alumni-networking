@@ -493,7 +493,7 @@ router.put('/:materialId', authenticateToken, async (req, res) => {
   }
 });
 
-// Get all materials for a specific course
+// Get all materials for a specific course (for teachers)
 router.get('/course/:courseId', authenticateToken, async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -522,6 +522,48 @@ router.get('/course/:courseId', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching course materials:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch course materials', error: error.message });
+  }
+});
+
+// Get all materials for a specific course (for students)
+router.get('/student/course/:courseId', authenticateToken, async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const studentId = req.user.uid;
+
+    console.log(`Fetching materials for course ${courseId} (student ${studentId})`);
+
+    // Find the course and verify the student is enrolled
+    const course = await Course.findOne({
+      _id: courseId,
+      'students.studentId': studentId
+    });
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found or you are not enrolled in this course'
+      });
+    }
+
+    const materials = course.materials || [];
+    console.log(`Found ${materials.length} materials for course ${course.title} for student ${studentId}`);
+
+    // Add course info to each material
+    const materialsWithCourseInfo = materials.map(material => ({
+      ...material.toObject(),
+      courseId: course._id,
+      courseTitle: course.title
+    }));
+
+    res.json({ success: true, materials: materialsWithCourseInfo });
+  } catch (error) {
+    console.error('Error fetching course materials for student:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch course materials',
+      error: error.message
+    });
   }
 });
 
