@@ -28,47 +28,93 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
       fetchMaterials();
     }
   }, [initialMaterials]);
-  
+
   // Function to fetch materials directly
   const fetchMaterials = async () => {
     if (!currentUser) return;
-    
+
     try {
       setLoading(true);
       console.log("Fetching materials directly from API");
-      
+
       let token = null;
       try {
         token = await currentUser.getIdToken();
+        console.log("Got auth token, making request with authorization header");
       } catch (tokenError) {
         console.error("Error getting auth token for materials fetch:", tokenError);
       }
-      
+
       if (!token) {
         throw new Error("Failed to get authentication token");
       }
-      
-      const response = await fetch(`${API_URL}/api/materials`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+
+      // Try to fetch materials from the API
+      try {
+        const response = await fetch(`${API_URL}/api/materials`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch materials: ${response.status} ${response.statusText}`);
         }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch materials: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log("Materials fetched directly:", data);
-      
-      if (data.success) {
-        setMaterials(data.materials || []);
-      } else {
-        console.error("Failed to fetch materials:", data.message);
+
+        const data = await response.json();
+        console.log("Materials fetched directly:", data);
+
+        if (data.success) {
+          setMaterials(data.materials || []);
+        } else {
+          console.error("Failed to fetch materials:", data.message);
+        }
+      } catch (fetchError) {
+        console.error("Error fetching materials from API:", fetchError);
+
+        // Fallback to fetching materials from courses
+        console.log("Falling back to fetching materials from courses");
+
+        // Fetch courses first
+        const coursesResponse = await fetch(`${API_URL}/api/courses/teacher/${currentUser.uid}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!coursesResponse.ok) {
+          throw new Error(`Failed to fetch courses: ${coursesResponse.status} ${coursesResponse.statusText}`);
+        }
+
+        const coursesData = await coursesResponse.json();
+        console.log("Courses response:", coursesData);
+
+        if (coursesData.success && coursesData.courses) {
+          // Extract materials from all courses
+          const allMaterials = [];
+
+          coursesData.courses.forEach(course => {
+            if (course.materials && course.materials.length > 0) {
+              // Add course info to each material
+              const courseMaterials = course.materials.map(material => ({
+                ...material,
+                courseId: course._id,
+                courseTitle: course.title
+              }));
+
+              allMaterials.push(...courseMaterials);
+            }
+          });
+
+          console.log(`Extracted ${allMaterials.length} materials from courses`);
+          setMaterials(allMaterials);
+        }
       }
     } catch (error) {
       console.error("Error fetching materials:", error);
       setErrorMessage("Failed to load materials: " + error.message);
+      // Set empty materials array to avoid showing loading spinner indefinitely
+      setMaterials([]);
     } finally {
       setLoading(false);
     }
@@ -78,35 +124,35 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
   useEffect(() => {
     const fetchTeacherCourses = async () => {
       if (!currentUser) return;
-      
+
       try {
         console.log("Fetching courses for teacher:", currentUser.uid);
         setErrorMessage('');
-        
+
         let token = null;
         try {
           token = await currentUser.getIdToken();
         } catch (tokenError) {
           console.error("Error getting auth token:", tokenError);
         }
-        
+
         // First try with token
         if (token) {
           console.log("Got auth token, making request with authorization header");
-          
+
           const response = await fetch(`${API_URL}/api/courses/teacher/${currentUser.uid}`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
           });
-          
+
           if (!response.ok) {
             throw new Error(`Failed to fetch courses: ${response.status} ${response.statusText}`);
           }
-          
+
           const data = await response.json();
           console.log("Courses response:", data);
-          
+
           if (data.success) {
             setCourses(data.courses || []);
             // Set default courseId if courses exist
@@ -119,14 +165,14 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
           // Fallback without token (for development/testing)
           console.log("No token available, trying fallback method");
           const fallbackResponse = await fetch(`${API_URL}/api/courses/teacher/${currentUser.uid}`);
-          
+
           if (!fallbackResponse.ok) {
             throw new Error(`Fallback request failed: ${fallbackResponse.status} ${fallbackResponse.statusText}`);
           }
-          
+
           const fallbackData = await fallbackResponse.json();
           console.log("Fallback courses response:", fallbackData);
-          
+
           if (fallbackData.success) {
             setCourses(fallbackData.courses || []);
             // Set default courseId if courses exist
@@ -143,7 +189,7 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
         setErrorMessage("Error loading courses: " + error.message);
       }
     };
-    
+
     fetchTeacherCourses();
   }, [currentUser, API_URL]);
 
@@ -158,8 +204,8 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
     const file = e.target.files[0];
     if (file) {
       console.log("File selected:", file.name, file.type, file.size);
-      setNewMaterial(prev => ({ 
-        ...prev, 
+      setNewMaterial(prev => ({
+        ...prev,
         file: file
       }));
       // Clear any error messages when user selects a file
@@ -174,20 +220,20 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
       handleDeleteMaterial(materialId);
       return;
     }
-    
+
     // Custom implementation
     if (!currentUser) {
       setErrorMessage("You must be logged in to delete materials");
       return;
     }
-    
+
     if (!window.confirm("Are you sure you want to delete this resource?")) {
       return;
     }
-    
+
     try {
       console.log(`Deleting material with ID ${materialId}`);
-      
+
       let token = null;
       try {
         token = await currentUser.getIdToken(true);
@@ -195,26 +241,26 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
         console.error("Error getting token for delete operation:", tokenError);
         throw new Error("Authentication error: " + tokenError.message);
       }
-      
+
       if (!token) {
         throw new Error("Failed to get authentication token");
       }
-      
+
       const response = await fetch(`${API_URL}/api/materials/${materialId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(`Server error (${response.status}): ${errorData.message || 'Unknown error'}`);
       }
-      
+
       const data = await response.json();
       console.log("Delete response:", data);
-      
+
       if (data.success) {
         // Remove material from state
         setMaterials(prevMaterials => prevMaterials.filter(m => m.id !== materialId));
@@ -231,38 +277,38 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
 
   const handleAddMaterial = async (e) => {
     e.preventDefault();
-    
+
     // Reset messages
     setErrorMessage('');
     setSuccessMessage('');
-    
+
     // Validation
     if (!newMaterial.title || !newMaterial.courseId) {
       setErrorMessage('Please fill out all required fields.');
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       // Check if the user is authenticated
       if (!currentUser) {
         throw new Error('You must be logged in to add materials');
       }
-      
+
       // Prepare form data for multipart file upload
       const formData = new FormData();
       formData.append('courseId', newMaterial.courseId);
       formData.append('title', newMaterial.title);
       formData.append('description', newMaterial.description || '');
       formData.append('type', newMaterial.type || 'notes');
-      
+
       // Add file if selected
       if (newMaterial.file) {
         formData.append('file', newMaterial.file);
         console.log("Adding file to form data:", newMaterial.file.name);
       }
-      
+
       // Get a fresh token
       let token = null;
       try {
@@ -272,60 +318,139 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
         console.error("Error getting token:", tokenError);
         throw new Error('Authentication error: ' + tokenError.message);
       }
-      
+
       if (!token) {
         throw new Error('Failed to get authentication token');
       }
-      
-      // Upload to API
-      console.log("Uploading material to API");
-      const response = await fetch(`${API_URL}/api/materials`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Server error (${response.status}): ${errorData.message || 'Unknown error'}`);
-      }
-      
-      const data = await response.json();
-      console.log("Upload response:", data);
-      
-      if (data.success) {
-        setSuccessMessage('Resource added successfully!');
-        
-        // Reset form
-        setNewMaterial({
-          title: '',
-          description: '',
-          type: 'notes',
-          courseId: courses.length > 0 ? courses[0]._id : '',
-          file: null
+
+      // Try to upload to the materials API endpoint
+      try {
+        console.log("Uploading material to API");
+        const response = await fetch(`${API_URL}/api/materials`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
         });
-        
-        // Add the new material to state immediately
-        if (data.material) {
-          setMaterials(prevMaterials => [...prevMaterials, data.material]);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`Server error (${response.status}): ${errorData.message || 'Unknown error'}`);
         }
-        
-        // Close modal after a short delay
-        setTimeout(() => {
-          setShowAddModal(false);
-          // Refresh materials instead of reloading page
-          fetchMaterials();
-        }, 1500);
-      } else {
-        throw new Error(data.message || 'Failed to add material');
+
+        const data = await response.json();
+        console.log("Upload response:", data);
+
+        if (data.success) {
+          setSuccessMessage('Resource added successfully!');
+
+          // Reset form
+          setNewMaterial({
+            title: '',
+            description: '',
+            type: 'notes',
+            courseId: courses.length > 0 ? courses[0]._id : '',
+            file: null
+          });
+
+          // Add the new material to state immediately
+          if (data.material) {
+            setMaterials(prevMaterials => [...prevMaterials, data.material]);
+          }
+
+          // Close modal after a short delay
+          setTimeout(() => {
+            setShowAddModal(false);
+            // Refresh materials instead of reloading page
+            fetchMaterials();
+          }, 1500);
+        } else {
+          throw new Error(data.message || 'Failed to add material');
+        }
+      } catch (uploadError) {
+        console.error("Error uploading to materials API:", uploadError);
+
+        // Fallback to using the course materials endpoint
+        console.log("Falling back to course materials endpoint");
+
+        // Try the course-specific materials endpoint
+        const courseResponse = await fetch(`${API_URL}/api/courses/${newMaterial.courseId}/materials`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            title: newMaterial.title,
+            description: newMaterial.description || '',
+            type: newMaterial.type || 'notes',
+            // We can't upload files this way, but at least we can add the material
+            icon: getIconForType(newMaterial.type || 'notes'),
+            color: getColorForType(newMaterial.type || 'notes')
+          })
+        });
+
+        if (!courseResponse.ok) {
+          const errorData = await courseResponse.json().catch(() => ({}));
+          throw new Error(`Server error (${courseResponse.status}): ${errorData.message || 'Unknown error'}`);
+        }
+
+        const courseData = await courseResponse.json();
+        console.log("Course materials upload response:", courseData);
+
+        if (courseData.success) {
+          setSuccessMessage('Resource added successfully! (Note: File upload is not available at this time)');
+
+          // Reset form
+          setNewMaterial({
+            title: '',
+            description: '',
+            type: 'notes',
+            courseId: courses.length > 0 ? courses[0]._id : '',
+            file: null
+          });
+
+          // Close modal after a short delay
+          setTimeout(() => {
+            setShowAddModal(false);
+            // Refresh materials instead of reloading page
+            fetchMaterials();
+          }, 1500);
+        } else {
+          throw new Error(courseData.message || 'Failed to add material');
+        }
       }
     } catch (error) {
       console.error('Error adding material:', error);
       setErrorMessage(error.message || 'An error occurred while adding the material.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Helper functions for material types
+  const getIconForType = (type) => {
+    switch(type) {
+      case 'notes': return '📝';
+      case 'assignment': return '📋';
+      case 'template': return '🎯';
+      case 'quiz': return '✍️';
+      case 'lab': return '🔬';
+      case 'guide': return '📖';
+      default: return '📄';
+    }
+  };
+
+  const getColorForType = (type) => {
+    switch(type) {
+      case 'notes': return 'blue';
+      case 'assignment': return 'green';
+      case 'template': return 'purple';
+      case 'quiz': return 'red';
+      case 'lab': return 'yellow';
+      case 'guide': return 'indigo';
+      default: return 'gray';
     }
   };
 
@@ -337,19 +462,19 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
           {successMessage}
         </div>
       )}
-      
+
       {/* Error message outside modal */}
       {!showAddModal && errorMessage && (
         <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg">
           {errorMessage}
         </div>
       )}
-      
+
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 md:p-6 mb-6"
            style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-3 md:mb-0">Teaching Resources</h2>
-          <button 
+          <button
             className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors w-full md:w-auto"
             onClick={() => {
               setShowAddModal(true);
@@ -377,13 +502,13 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
                     <h3 className="font-semibold text-gray-800 dark:text-white text-center sm:text-left">{material.title}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 text-center sm:text-left">{material.courseTitle || material.course}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{material.description}</p>
-                    
+
                     {/* Show file details if available */}
                     {material.fileUrl && (
                       <div className="mb-3 text-sm">
-                        <a 
-                          href={material.fileUrl} 
-                          target="_blank" 
+                        <a
+                          href={material.fileUrl}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center justify-center sm:justify-start text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                         >
@@ -394,7 +519,7 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
                         </a>
                       </div>
                     )}
-                    
+
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-gray-500 dark:text-gray-400">
                         {new Date(material.createdAt).toLocaleDateString()}
@@ -403,7 +528,7 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
                   </div>
                 </div>
                 <div className="mt-3 flex justify-end">
-                  <button 
+                  <button
                     className="text-sm text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
                     onClick={() => handleMaterialDelete(material.id)}
                   >
@@ -426,21 +551,21 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 md:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
                style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
             <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Add Teaching Resource</h2>
-            
+
             {/* Success message */}
             {successMessage && (
               <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg">
                 {successMessage}
               </div>
             )}
-            
+
             {/* Error message */}
             {errorMessage && (
               <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg">
                 {errorMessage}
               </div>
             )}
-            
+
             <form onSubmit={handleAddMaterial}>
               <div className="mb-4">
                 <label className="block text-gray-700 dark:text-gray-300 mb-2">Course</label>
@@ -459,7 +584,7 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
                   ))}
                 </select>
               </div>
-              
+
               <div className="mb-4">
                 <label className="block text-gray-700 dark:text-gray-300 mb-2">Resource Type</label>
                 <select
@@ -476,7 +601,7 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
                   <option value="guide">Study Guide</option>
                 </select>
               </div>
-              
+
               <div className="mb-4">
                 <label className="block text-gray-700 dark:text-gray-300 mb-2">Title</label>
                 <input
@@ -488,7 +613,7 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
                   required
                 />
               </div>
-              
+
               <div className="mb-4">
                 <label className="block text-gray-700 dark:text-gray-300 mb-2">Description</label>
                 <textarea
@@ -499,7 +624,7 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
                   rows="3"
                 ></textarea>
               </div>
-              
+
               <div className="mb-6">
                 <label className="block text-gray-700 dark:text-gray-300 mb-2">Upload File (Optional)</label>
                 <input
@@ -511,7 +636,7 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
                   Supported files: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, JPG, PNG, MP4, MP3
                 </p>
               </div>
-              
+
               <div className="flex flex-col md:flex-row justify-end gap-3 mt-6">
                 <button
                   type="button"
@@ -547,4 +672,4 @@ const Resources = ({ materials: initialMaterials, handleDeleteMaterial, loading:
   );
 };
 
-export default Resources; 
+export default Resources;

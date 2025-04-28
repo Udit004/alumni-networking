@@ -32,6 +32,7 @@ const courseApplicationRoutes = require('./routes/courseApplications');
 // Firebase notification routes removed
 const announcementRoutes = require('./routes/announcementRoutes');
 const activityRoutes = require('./routes/activityRoutes');
+const materialsRoutes = require('./routes/materialsRoutes');
 
 const app = express();
 const PORT = 5000; // Use port 5000 explicitly
@@ -88,6 +89,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/course-applications', courseApplicationRoutes);
 // Firebase notification routes removed
 app.use('/api/activities', activityRoutes);
+app.use('/api/materials', materialsRoutes);
 // Register announcement routes
 app.use('/', announcementRoutes);
 // Log the registered routes
