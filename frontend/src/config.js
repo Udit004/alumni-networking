@@ -1,25 +1,20 @@
 // API Configuration
 import axios from 'axios';
 
-// Determine API base URL based on environment
+// Always use the deployed URL
 const getApiBaseUrl = () => {
-  // For production environments
-  if (process.env.NODE_ENV === 'production') {
-    return 'https://alumni-networking.onrender.com';
-  }
-  // For development
-  return 'http://localhost:5000';
+  // Always use the deployed URL regardless of environment
+  return 'https://alumni-networking.onrender.com';
 };
 
 const API_BASE_URL = getApiBaseUrl();
 
 // Debug logging for API configuration
-if (process.env.NODE_ENV === 'development') {
-  console.log('🔧 API Configuration:', {
-    environment: process.env.NODE_ENV,
-    API_BASE_URL
-  });
-}
+console.log('🔧 API Configuration:', {
+  environment: process.env.NODE_ENV,
+  API_BASE_URL,
+  note: 'Using deployed API URL for all environments'
+});
 
 const config = {
   apiUrl: API_BASE_URL,
