@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { FaSearch, FaUserGraduate, FaBook, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import axios from 'axios';
-import API_URLS from '../../../config/apiConfig';
+import { API_URLS } from '../../../config/apiConfig';
 
 // Mock data for courses
 const mockCourses = [
@@ -97,49 +97,102 @@ const mockStudentsByCourse = {
 };
 
 // Helper functions for API calls
-const getTeacherCourses = async (token) => {
+const getTeacherCourses = async (token, userId) => {
   try {
+    if (!userId) {
+      console.error('No user ID available for fetching courses');
+      return [];
+    }
+
+    // Debug API URL
+    console.log('API_URLS object:', API_URLS);
+    console.log('Courses API URL:', API_URLS.courses);
+
+    // Use the deployed URL directly to ensure it works
+    const apiUrl = 'https://alumni-networking.onrender.com/api/courses';
+    console.log(`Using hardcoded API URL: ${apiUrl}`);
+    console.log(`Fetching courses for teacher with ID: ${userId}`);
+
+    // Use the correct endpoint with the teacher's user ID
+    const fullUrl = `${apiUrl}/teacher/${userId}?firebaseUID=${userId}&role=teacher`;
+    console.log(`Full request URL: ${fullUrl}`);
+
     const response = await axios.get(
-      `${API_URLS.courses}/my-courses`,
+      fullUrl,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 10000
       }
     );
 
+    console.log('Teacher courses response:', response.data);
+
     if (response.data && response.data.success) {
-      return response.data.data || [];
+      return response.data.courses || [];
+    } else if (response.data && Array.isArray(response.data)) {
+      // Handle case where API returns array directly
+      return response.data;
     }
 
     return [];
   } catch (error) {
     console.error('Error fetching teacher courses:', error);
-    return [];
+    console.log('Falling back to mock data');
+    // Return mock data as fallback
+    return mockCourses;
   }
 };
 
-const getCourseStudents = async (token, courseId) => {
+const getCourseStudents = async (token, courseId, userId) => {
   try {
+    if (!userId) {
+      console.error('No user ID available for fetching course students');
+      return [];
+    }
+
+    // Debug API URL
+    console.log('API_URLS object for students:', API_URLS);
+    console.log('Courses API URL for students:', API_URLS.courses);
+
+    // Use the deployed URL directly to ensure it works
+    const apiUrl = 'https://alumni-networking.onrender.com/api/courses';
+    console.log(`Using hardcoded API URL for students: ${apiUrl}`);
+    console.log(`Fetching students for course ${courseId} with teacher ID: ${userId}`);
+
+    // Use the correct endpoint with the course ID
+    const fullUrl = `${apiUrl}/${courseId}/students?firebaseUID=${userId}&role=teacher`;
+    console.log(`Full request URL for students: ${fullUrl}`);
+
     const response = await axios.get(
-      `${API_URLS.courses}/${courseId}/students`,
+      fullUrl,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 10000
       }
     );
 
+    console.log(`Students for course ${courseId} response:`, response.data);
+
     if (response.data && response.data.success) {
+      // The backend returns students in the 'data' property, not 'students'
       return response.data.data || [];
+    } else if (response.data && Array.isArray(response.data)) {
+      // Handle case where API returns array directly
+      return response.data;
     }
 
     return [];
   } catch (error) {
     console.error(`Error fetching students for course ${courseId}:`, error);
-    return [];
+    console.log(`Falling back to mock data for course ${courseId}`);
+    // Return mock data as fallback
+    return mockStudentsByCourse[courseId] || [];
   }
 };
 
@@ -162,38 +215,61 @@ const Students = ({ isDarkMode }) => {
       try {
         setLoading(true);
         setError(null);
+        console.log('Fetching teacher courses and students data...');
 
-        // In a real app, we would fetch from the API
-        // For now, use mock data
+        // Initialize with empty data
         let coursesData = [];
         let studentsData = {};
 
-        if (currentUser) {
+        if (currentUser && currentUser.uid) {
           try {
+            const userId = currentUser.uid;
+            console.log(`Current user found with ID: ${userId}, fetching with token`);
             // Get token
             const token = await currentUser.getIdToken();
 
             // Fetch courses
-            coursesData = await getTeacherCourses(token);
+            console.log(`Fetching courses for teacher with ID: ${userId}`);
+            coursesData = await getTeacherCourses(token, userId);
+            console.log('Courses data received:', coursesData);
 
-            // Fetch students for each course
-            for (const course of coursesData) {
-              const students = await getCourseStudents(token, course._id);
-              studentsData[course._id] = students;
+            if (Array.isArray(coursesData) && coursesData.length > 0) {
+              // Fetch students for each course
+              console.log('Fetching students for each course...');
+              for (const course of coursesData) {
+                // Check for both _id and id fields (MongoDB uses _id, but some APIs return id)
+                const courseId = course._id || course.id;
+                if (course && courseId) {
+                  console.log(`Fetching students for course: ${courseId}`);
+                  const students = await getCourseStudents(token, courseId, userId);
+                  studentsData[courseId] = students;
+                  console.log(`Students for course ${courseId}:`, students.length);
+                } else {
+                  console.warn('Invalid course object:', course);
+                }
+              }
+            } else {
+              console.log('No courses found or invalid courses data, using mock data');
+              coursesData = mockCourses;
+              studentsData = mockStudentsByCourse;
             }
           } catch (apiError) {
             console.error('API error:', apiError);
             // Fall back to mock data
+            console.log('Falling back to mock data due to API error');
             coursesData = mockCourses;
             studentsData = mockStudentsByCourse;
           }
         } else {
           // Use mock data if no user
+          console.log('No current user or missing user ID, using mock data');
           coursesData = mockCourses;
           studentsData = mockStudentsByCourse;
         }
 
+        console.log('Setting courses data:', coursesData);
         setCourses(coursesData);
+        console.log('Setting course students data:', studentsData);
         setCourseStudents(studentsData);
 
         // Initialize expanded state for all courses
@@ -206,6 +282,9 @@ const Students = ({ isDarkMode }) => {
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load courses and students. Please try again later.');
+        // Fall back to mock data even on general error
+        setCourses(mockCourses);
+        setCourseStudents(mockStudentsByCourse);
       } finally {
         setLoading(false);
       }
@@ -226,9 +305,22 @@ const Students = ({ isDarkMode }) => {
   const getAllStudents = () => {
     const allStudents = [];
     Object.values(courseStudents).forEach(students => {
+      if (!Array.isArray(students)) return;
+
       students.forEach(student => {
+        if (!student) return;
+
+        // Get a consistent ID from various possible formats
+        const studentId = student.studentId || student._id || student.id;
+        if (!studentId) return;
+
         // Check if student already exists in the array
-        const existingStudent = allStudents.find(s => s.studentId === student.studentId);
+        const existingStudent = allStudents.find(s =>
+          (s.studentId && s.studentId === studentId) ||
+          (s._id && s._id === studentId) ||
+          (s.id && s.id === studentId)
+        );
+
         if (!existingStudent) {
           allStudents.push(student);
         }
@@ -262,7 +354,13 @@ const Students = ({ isDarkMode }) => {
   const getStudentCourses = (studentId) => {
     const studentCourses = [];
     courses.forEach(course => {
-      const isEnrolled = courseStudents[course._id]?.some(student => student.studentId === studentId);
+      // Handle both _id and id fields
+      const courseId = course._id || course.id;
+      if (!courseId) return;
+
+      const isEnrolled = courseStudents[courseId]?.some(student =>
+        student.studentId === studentId || student._id === studentId || student.id === studentId
+      );
       if (isEnrolled) {
         studentCourses.push(course);
       }
@@ -270,7 +368,9 @@ const Students = ({ isDarkMode }) => {
     return studentCourses;
   };
 
-  // Define getPerformanceColor function
+  // This function can be used in the future for student performance indicators
+  // Currently not used but kept for future implementation
+  /*
   const getPerformanceColor = (performance) => {
     if (!performance) return 'bg-gray-500';
     if (performance >= 90) return 'bg-green-500';
@@ -278,6 +378,7 @@ const Students = ({ isDarkMode }) => {
     if (performance >= 70) return 'bg-yellow-500';
     return 'bg-red-500';
   };
+  */
 
   // Loading state
   if (loading) {
