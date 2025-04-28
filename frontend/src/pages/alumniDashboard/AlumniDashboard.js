@@ -268,9 +268,13 @@ const AlumniDashboard = () => {
       });
 
       // Use the user-specific endpoint to get events created by this user
+      const token = await currentUser.getIdToken();
       const response = await fetch(`${API_URL}/api/events/user/${currentUser.uid}?firebaseUID=${currentUser.uid}&role=${role}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       console.log('Events API Response status:', response.status);
@@ -294,9 +298,14 @@ const AlumniDashboard = () => {
       if (!data.createdEvents) {
         console.warn('No createdEvents found in API response:', data);
         // Fallback to data.events if createdEvents doesn't exist
-        const eventsToUse = data.events || [];
-        setEvents(eventsToUse);
+        // If data is an array, use it directly (API might return array instead of object)
+        const eventsToUse = Array.isArray(data) ? data : (data.events || []);
         console.log('Using fallback events array:', eventsToUse);
+
+        // Sort events by date
+        const sortedEvents = eventsToUse.sort((a, b) => new Date(a.date) - new Date(b.date));
+        console.log('Setting sorted events:', sortedEvents);
+        setEvents(sortedEvents);
       } else {
         // Sort events by date
         const sortedEvents = data.createdEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
