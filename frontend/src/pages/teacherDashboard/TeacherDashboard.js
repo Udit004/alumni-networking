@@ -104,34 +104,34 @@ const TeacherDashboard = () => {
     if (activeSection === 'events') {
       fetchEvents();
     }
-    
+
     // Refresh profile data when user navigates to profile section
     if (activeSection === 'profile') {
       const refreshProfileData = async () => {
         if (!user) return;
-        
+
         try {
           const userDocRef = doc(db, "users", user.uid);
           const userDoc = await getDoc(userDocRef);
-          
+
           if (userDoc.exists()) {
             const userData = userDoc.data();
             console.log("Refreshing profile data for section view:", userData);
-            
+
             // Process expertise data
             const expertiseData = userData.expertise ?
               (typeof userData.expertise === 'string' ?
                 userData.expertise.split(',').map(item => item.trim()) :
                 userData.expertise) :
               [];
-              
+
             // Process skills data
             const skillsData = userData.skills ?
               (typeof userData.skills === 'string' ?
                 userData.skills.split(',').map(skill => skill.trim()) :
                 userData.skills) :
               [];
-              
+
             // Format office hours data
             let officeHoursData = userData.officeHours || [];
             if (typeof officeHoursData === 'string') {
@@ -145,7 +145,7 @@ const TeacherDashboard = () => {
                 officeHoursData = [];
               }
             }
-            
+
             // Update profile data
             setProfileData(prev => ({
               ...prev,
@@ -174,7 +174,7 @@ const TeacherDashboard = () => {
           console.error("Error refreshing profile data:", error);
         }
       };
-      
+
       refreshProfileData();
     }
   }, [activeSection, user]);
@@ -266,16 +266,16 @@ const TeacherDashboard = () => {
     };
 
     fetchTeacherProfile();
-    
+
     // Function to refresh profile data when coming back to the dashboard
     const refreshProfileData = () => {
       console.log("Refreshing profile data on focus");
       fetchTeacherProfile();
     };
-    
+
     // Add event listener to refresh profile when window gets focus
     window.addEventListener('focus', refreshProfileData);
-    
+
     // Cleanup function
     return () => {
       window.removeEventListener('focus', refreshProfileData);
@@ -371,9 +371,14 @@ const TeacherDashboard = () => {
       });
 
       // Use the user-specific endpoint to get events created by this user, including role
+      const token = await user.getIdToken();
       const response = await fetch(`${API_URL}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -396,9 +401,14 @@ const TeacherDashboard = () => {
       if (!data.createdEvents) {
         console.warn('No createdEvents found in API response:', data);
         // Fallback to data.events if createdEvents doesn't exist
-        const eventsToUse = data.events || [];
-        setEvents(eventsToUse);
+        // If data is an array, use it directly (API might return array instead of object)
+        const eventsToUse = Array.isArray(data) ? data : (data.events || []);
         console.log('Using fallback events array:', eventsToUse);
+
+        // Sort events by date
+        const sortedEvents = eventsToUse.sort((a, b) => new Date(a.date) - new Date(b.date));
+        console.log('Setting sorted events:', sortedEvents);
+        setEvents(sortedEvents);
       } else {
         // Sort events by date
         const sortedEvents = data.createdEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -450,7 +460,7 @@ const TeacherDashboard = () => {
 
   const handleDeleteMaterial = async (materialId) => {
     if (!user) return;
-    
+
     try {
       const response = await fetch(`${API_URL}/api/materials/${materialId}`, {
         method: 'DELETE',
@@ -458,9 +468,9 @@ const TeacherDashboard = () => {
           'Authorization': `Bearer ${await user.getIdToken()}`
         }
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         // Remove deleted material from state
         setMaterials(materials.filter(m => m.id !== materialId));
@@ -657,56 +667,99 @@ const TeacherDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
-      
+
       try {
         setLoading(true);
         setError('');
-        
-        // Fetch profile data
-        const profileRes = await fetch(`${API_URL}/api/teachers/${user.uid}`, {
-          headers: {
-            'Authorization': `Bearer ${await user.getIdToken()}`
-          }
-        });
-        
-        const profileData = await profileRes.json();
-        
-        if (profileData.success) {
-          setProfileData(profileData.teacher);
-        } else {
-          throw new Error(profileData.message || 'Failed to fetch profile');
+
+        // Use Firestore as the primary data source
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log("Using Firestore data for teacher profile:", userData);
+
+          // Process expertise data
+          const expertiseData = userData.expertise ?
+            (typeof userData.expertise === 'string' ?
+              userData.expertise.split(',').map(item => item.trim()) :
+              userData.expertise) :
+            [];
+
+          // Process skills data
+          const skillsData = userData.skills ?
+            (typeof userData.skills === 'string' ?
+              userData.skills.split(',').map(skill => skill.trim()) :
+              userData.skills) :
+            [];
+
+          // Process office hours data
+          const officeHoursData = userData.officeHours || [];
+
+          // Update profile data from Firestore
+          setProfileData({
+            _id: user.uid,
+            firebaseUID: user.uid,
+            name: userData.name || "",
+            email: userData.email || "",
+            role: userData.role || "teacher",
+            department: userData.department || "",
+            institution: userData.institution || "",
+            designation: userData.designation || "",
+            expertise: expertiseData,
+            skills: skillsData,
+            bio: userData.bio || "",
+            officeHours: officeHoursData,
+            officeLocation: userData.officeLocation || "",
+            researchInterests: userData.researchInterests || "",
+            coursesTaught: userData.coursesTaught || "",
+            certifications: userData.certifications || []
+          });
         }
-        
-        // Fetch courses
-        const coursesRes = await fetch(`${API_URL}/api/courses/teacher/${user.uid}`, {
-          headers: {
-            'Authorization': `Bearer ${await user.getIdToken()}`
+
+        // Try to fetch courses from API
+        try {
+          const token = await user.getIdToken();
+          const coursesRes = await fetch(`${API_URL}/api/courses/teacher/${user.uid}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (coursesRes.ok) {
+            const coursesData = await coursesRes.json();
+            if (coursesData.success) {
+              console.log("Courses data from API:", coursesData);
+              setMaterials(coursesData.courses || []);
+            }
           }
-        });
-        
-        const coursesData = await coursesRes.json();
-        
-        if (coursesData.success) {
-          setMaterials(coursesData.courses || []);
-        } else {
-          throw new Error(coursesData.message || 'Failed to fetch courses');
+        } catch (courseError) {
+          console.warn("Could not fetch courses from API:", courseError);
+          // Continue without throwing error
         }
-        
-        // Fetch materials
-        const materialsRes = await fetch(`${API_URL}/api/materials`, {
-          headers: {
-            'Authorization': `Bearer ${await user.getIdToken()}`
+
+        // Try to fetch materials from API
+        try {
+          const token = await user.getIdToken();
+          const materialsRes = await fetch(`${API_URL}/api/materials`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (materialsRes.ok) {
+            const materialsData = await materialsRes.json();
+            if (materialsData.success) {
+              console.log("Materials data from API:", materialsData);
+              setMaterials(materialsData.materials || []);
+            }
           }
-        });
-        
-        const materialsData = await materialsRes.json();
-        
-        if (materialsData.success) {
-          setMaterials(materialsData.materials || []);
-        } else {
-          throw new Error(materialsData.message || 'Failed to fetch materials');
+        } catch (materialsError) {
+          console.warn("Could not fetch materials from API:", materialsError);
+          // Continue without throwing error
         }
-        
+
       } catch (err) {
         console.error('Error fetching teacher data:', err);
         setError('Failed to load data. Please try again later.');
@@ -714,7 +767,115 @@ const TeacherDashboard = () => {
         setLoading(false);
       }
     };
-    
+
+    fetchData();
+  }, [user, API_URL]);
+
+  // Fetch teacher data
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+
+      try {
+        setLoading(true);
+        setError('');
+
+        // Use Firestore as the primary data source
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log("Using Firestore data for teacher profile:", userData);
+
+          // Process expertise data
+          const expertiseData = userData.expertise ?
+            (typeof userData.expertise === 'string' ?
+              userData.expertise.split(',').map(item => item.trim()) :
+              userData.expertise) :
+            [];
+
+          // Process skills data
+          const skillsData = userData.skills ?
+            (typeof userData.skills === 'string' ?
+              userData.skills.split(',').map(skill => skill.trim()) :
+              userData.skills) :
+            [];
+
+          // Process office hours data
+          const officeHoursData = userData.officeHours || [];
+
+          // Update profile data from Firestore
+          setProfileData({
+            _id: user.uid,
+            firebaseUID: user.uid,
+            name: userData.name || "",
+            email: userData.email || "",
+            role: userData.role || "teacher",
+            department: userData.department || "",
+            institution: userData.institution || "",
+            designation: userData.designation || "",
+            expertise: expertiseData,
+            skills: skillsData,
+            bio: userData.bio || "",
+            officeHours: officeHoursData,
+            officeLocation: userData.officeLocation || "",
+            researchInterests: userData.researchInterests || "",
+            coursesTaught: userData.coursesTaught || "",
+            certifications: userData.certifications || []
+          });
+        }
+
+        // Try to fetch courses from API
+        try {
+          const token = await user.getIdToken();
+          const coursesRes = await fetch(`${API_URL}/api/courses/teacher/${user.uid}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (coursesRes.ok) {
+            const coursesData = await coursesRes.json();
+            if (coursesData.success) {
+              console.log("Courses data from API:", coursesData);
+              setMaterials(coursesData.courses || []);
+            }
+          }
+        } catch (courseError) {
+          console.warn("Could not fetch courses from API:", courseError);
+          // Continue without throwing error
+        }
+
+        // Try to fetch materials from API
+        try {
+          const token = await user.getIdToken();
+          const materialsRes = await fetch(`${API_URL}/api/materials`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (materialsRes.ok) {
+            const materialsData = await materialsRes.json();
+            if (materialsData.success) {
+              console.log("Materials data from API:", materialsData);
+              setMaterials(materialsData.materials || []);
+            }
+          }
+        } catch (materialsError) {
+          console.warn("Could not fetch materials from API:", materialsError);
+          // Continue without throwing error
+        }
+
+      } catch (err) {
+        console.error('Error fetching teacher data:', err);
+        setError('Failed to load data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchData();
   }, [user, API_URL]);
 
@@ -722,7 +883,7 @@ const TeacherDashboard = () => {
   useEffect(() => {
     const fetchMaterials = async () => {
       if (!user) return;
-      
+
       try {
         // Fetch materials
         const materialsRes = await fetch(`${API_URL}/api/materials`, {
@@ -730,9 +891,9 @@ const TeacherDashboard = () => {
             'Authorization': `Bearer ${await user.getIdToken()}`
           }
         });
-        
+
         const materialsData = await materialsRes.json();
-        
+
         if (materialsData.success) {
           setMaterials(materialsData.materials || []);
         } else {
@@ -742,7 +903,7 @@ const TeacherDashboard = () => {
         console.error('Error fetching materials:', err);
       }
     };
-    
+
     // Only fetch materials when on the resources tab
     if (activeSection === 'resources') {
       fetchMaterials();
@@ -768,9 +929,9 @@ const TeacherDashboard = () => {
       {/* Sidebar */}
       <div
         className={`h-full transition-all duration-300 shadow-lg
-                   ${isNavExpanded ? 'w-64' : 'w-20'} 
+                   ${isNavExpanded ? 'w-64' : 'w-20'}
                    ${isMobile ? 'fixed z-50' : 'relative'}`}
-        style={{ 
+        style={{
           backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(255, 255, 255, 0.98)',
           top: '0',
           left: isMobile && !isNavExpanded ? '-100%' : '0',
@@ -843,7 +1004,7 @@ const TeacherDashboard = () => {
               >
                 {isDarkMode ? '☀️' : '🌙'}
               </button>
-            
+
               <div className="relative" ref={notificationRef}>
                 <button
                   className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -935,7 +1096,7 @@ const TeacherDashboard = () => {
 
         {/* Mobile sidebar overlay */}
         {isMobile && isNavExpanded && (
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40"
             onClick={() => setIsNavExpanded(false)}
           ></div>
@@ -1001,8 +1162,8 @@ const TeacherDashboard = () => {
           )}
 
           {activeSection === 'resources' && (
-            <Resources 
-              materials={materials} 
+            <Resources
+              materials={materials}
               handleDeleteMaterial={handleDeleteMaterial}
               loading={loading}
               isDarkMode={isDarkMode}
