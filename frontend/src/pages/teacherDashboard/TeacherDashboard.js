@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import './TeacherDashboard.css';
 import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
@@ -10,15 +10,77 @@ import { getConnectionRequests, sendConnectionRequest } from '../../services/con
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
 
 const TeacherDashboard = () => {
-  const location = useLocation();
-  const [isNavExpanded, setIsNavExpanded] = useState(window.innerWidth > 768);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [activeSection, setActiveSection] = useState(
-    // Check if we have a section in the location state, otherwise default to 'overview'
-    location.state?.activeSection || 'overview'
-  );
+  const [isNavExpanded, setIsNavExpanded] = useState(true);
+  const [activeSection, setActiveSection] = useState('overview');
   const [events, setEvents] = useState([]);
-  const [materials, setMaterials] = useState([]);
+  const [materials, setMaterials] = useState([
+    {
+      id: 1,
+      title: 'Data Structures Notes',
+      course: 'CS101 - Week 1',
+      description: 'Comprehensive notes covering arrays, linked lists, and trees with examples.',
+      students: 120,
+      lastUpdated: '2 days ago',
+      type: 'notes',
+      icon: '📝',
+      color: 'blue'
+    },
+    {
+      id: 2,
+      title: 'Algorithm Analysis',
+      course: 'CS201 - Assignment 2',
+      description: 'Practice problems on time complexity and space complexity analysis.',
+      students: 85,
+      lastUpdated: 'Due: 1 week',
+      type: 'assignment',
+      icon: '📋',
+      color: 'purple'
+    },
+    {
+      id: 3,
+      title: 'Web Dev Template',
+      course: 'CS301 - Project 1',
+      description: 'Starter template for React.js project with authentication setup.',
+      students: 45,
+      lastUpdated: '1 week ago',
+      type: 'template',
+      icon: '🎯',
+      color: 'yellow'
+    },
+    {
+      id: 4,
+      title: 'Database Design Quiz',
+      course: 'CS401 - Quiz 3',
+      description: 'Multiple choice questions on ER diagrams and normalization.',
+      students: 65,
+      lastUpdated: 'Due: 3 days',
+      type: 'quiz',
+      icon: '✍️',
+      color: 'red'
+    },
+    {
+      id: 5,
+      title: 'ML Lab Manual',
+      course: 'CS501 - Lab 2',
+      description: 'Step-by-step guide for implementing machine learning algorithms.',
+      students: 40,
+      lastUpdated: '5 days ago',
+      type: 'lab',
+      icon: '🔬',
+      color: 'indigo'
+    },
+    {
+      id: 6,
+      title: 'OS Study Guide',
+      course: 'CS601 - Final Review',
+      description: 'Comprehensive review materials for operating systems final exam.',
+      students: 95,
+      lastUpdated: '1 day ago',
+      type: 'guide',
+      icon: '📖',
+      color: 'teal'
+    }
+  ]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -27,7 +89,7 @@ const TeacherDashboard = () => {
   const [pendingRequests, setPendingRequests] = useState({ incoming: [], outgoing: [] });
   const { currentUser: user, role } = useAuth();
   const navigate = useNavigate();
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const API_URL = process.env.REACT_APP_API_URL;
   const [connections, setConnections] = useState([]);
   const [connectionLoading, setConnectionLoading] = useState(true);
   const [profileData, setProfileData] = useState({
@@ -40,7 +102,6 @@ const TeacherDashboard = () => {
     institution: "",
     designation: "",
     expertise: [],
-    skills: [],
     achievements: [],
     publications: [],
     bio: "",
@@ -104,80 +165,7 @@ const TeacherDashboard = () => {
     if (activeSection === 'events') {
       fetchEvents();
     }
-    
-    // Refresh profile data when user navigates to profile section
-    if (activeSection === 'profile') {
-      const refreshProfileData = async () => {
-        if (!user) return;
-        
-        try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            console.log("Refreshing profile data for section view:", userData);
-            
-            // Process expertise data
-            const expertiseData = userData.expertise ?
-              (typeof userData.expertise === 'string' ?
-                userData.expertise.split(',').map(item => item.trim()) :
-                userData.expertise) :
-              [];
-              
-            // Process skills data
-            const skillsData = userData.skills ?
-              (typeof userData.skills === 'string' ?
-                userData.skills.split(',').map(skill => skill.trim()) :
-                userData.skills) :
-              [];
-              
-            // Format office hours data
-            let officeHoursData = userData.officeHours || [];
-            if (typeof officeHoursData === 'string') {
-              try {
-                officeHoursData = officeHoursData.split(',').map(slot => {
-                  const [day, time] = slot.split(':').map(s => s.trim());
-                  return { day, time };
-                });
-              } catch (e) {
-                console.error('Error parsing office hours:', e);
-                officeHoursData = [];
-              }
-            }
-            
-            // Update profile data
-            setProfileData(prev => ({
-              ...prev,
-              name: userData.name || user.displayName || "",
-              email: userData.email || user.email || "",
-              phone: userData.phone || "",
-              skills: skillsData,
-              expertise: expertiseData,
-              bio: userData.bio || "",
-              department: userData.department || "",
-              college: userData.college || userData.institution || "",
-              jobTitle: userData.jobTitle || userData.designation || "",
-              location: userData.location || userData.address || "",
-              linkedIn: userData.linkedIn || "",
-              github: userData.github || "",
-              workExperience: userData.workExperience || [],
-              education: userData.education || [],
-              officeHours: officeHoursData,
-              officeLocation: userData.officeLocation || "",
-              researchInterests: userData.researchInterests || "",
-              coursesTaught: userData.coursesTaught || "",
-              certifications: userData.certifications || []
-            }));
-          }
-        } catch (error) {
-          console.error("Error refreshing profile data:", error);
-        }
-      };
-      
-      refreshProfileData();
-    }
-  }, [activeSection, user]);
+  }, [activeSection]);
 
   useEffect(() => {
     const fetchTeacherProfile = async () => {
@@ -231,7 +219,6 @@ const TeacherDashboard = () => {
             institution: userData.institution || "",
             designation: userData.designation || "",
             expertise: expertiseData,
-            skills: skillsData,
             achievements: userData.achievements || [],
             publications: userData.publications || [],
             bio: userData.bio || "",
@@ -266,20 +253,6 @@ const TeacherDashboard = () => {
     };
 
     fetchTeacherProfile();
-    
-    // Function to refresh profile data when coming back to the dashboard
-    const refreshProfileData = () => {
-      console.log("Refreshing profile data on focus");
-      fetchTeacherProfile();
-    };
-    
-    // Add event listener to refresh profile when window gets focus
-    window.addEventListener('focus', refreshProfileData);
-    
-    // Cleanup function
-    return () => {
-      window.removeEventListener('focus', refreshProfileData);
-    };
   }, [user]);
 
   useEffect(() => {
@@ -474,33 +447,35 @@ const TeacherDashboard = () => {
 
   const handleSectionClick = (section) => {
     setActiveSection(section);
-    // Close sidebar on mobile when a section is selected
-    if (isMobile) {
-      setIsNavExpanded(false);
-    }
   };
 
   const handleDeleteMaterial = async (materialId) => {
-    if (!user) return;
-    
     try {
-      const response = await fetch(`${API_URL}/api/materials/${materialId}`, {
+      setLoading(true);
+      // Call API to delete material
+      const response = await fetch(`${API_URL}/api/materials/${materialId}?firebaseUID=${user.uid}&role=teacher`, {
         method: 'DELETE',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${await user.getIdToken()}`
         }
       });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // Remove deleted material from state
-        setMaterials(materials.filter(m => m.id !== materialId));
-      } else {
-        console.error('Failed to delete material:', data.message);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete material');
       }
-    } catch (error) {
-      console.error('Error deleting material:', error);
+
+      // Remove material from local state
+      setMaterials(prevMaterials => prevMaterials.filter(material => material.id !== materialId));
+
+      // Show success message
+      alert('Material deleted successfully');
+    } catch (err) {
+      console.error('Error deleting material:', err);
+      alert(`Failed to delete material: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -677,139 +652,13 @@ const TeacherDashboard = () => {
     return timestamp.toLocaleDateString();
   };
 
-  // Reset location state after we've used it to prevent it from persisting on refresh
-  useEffect(() => {
-    if (location.state?.activeSection) {
-      // Clear the state after using it
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.state]);
-
-  // Fetch data on load
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
-      
-      try {
-        setLoading(true);
-        setError('');
-        
-        // Fetch profile data
-        const profileRes = await fetch(`${API_URL}/api/teachers/${user.uid}`, {
-          headers: {
-            'Authorization': `Bearer ${await user.getIdToken()}`
-          }
-        });
-        
-        const profileData = await profileRes.json();
-        
-        if (profileData.success) {
-          setProfileData(profileData.teacher);
-        } else {
-          throw new Error(profileData.message || 'Failed to fetch profile');
-        }
-        
-        // Fetch courses
-        const coursesRes = await fetch(`${API_URL}/api/courses/teacher/${user.uid}`, {
-          headers: {
-            'Authorization': `Bearer ${await user.getIdToken()}`
-          }
-        });
-        
-        const coursesData = await coursesRes.json();
-        
-        if (coursesData.success) {
-          setMaterials(coursesData.courses || []);
-        } else {
-          throw new Error(coursesData.message || 'Failed to fetch courses');
-        }
-        
-        // Fetch materials
-        const materialsRes = await fetch(`${API_URL}/api/materials`, {
-          headers: {
-            'Authorization': `Bearer ${await user.getIdToken()}`
-          }
-        });
-        
-        const materialsData = await materialsRes.json();
-        
-        if (materialsData.success) {
-          setMaterials(materialsData.materials || []);
-        } else {
-          throw new Error(materialsData.message || 'Failed to fetch materials');
-        }
-        
-      } catch (err) {
-        console.error('Error fetching teacher data:', err);
-        setError('Failed to load data. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, [user, API_URL]);
-
-  // Fetch materials
-  useEffect(() => {
-    const fetchMaterials = async () => {
-      if (!user) return;
-      
-      try {
-        // Fetch materials
-        const materialsRes = await fetch(`${API_URL}/api/materials`, {
-          headers: {
-            'Authorization': `Bearer ${await user.getIdToken()}`
-          }
-        });
-        
-        const materialsData = await materialsRes.json();
-        
-        if (materialsData.success) {
-          setMaterials(materialsData.materials || []);
-        } else {
-          console.error('Failed to fetch materials:', materialsData.message);
-        }
-      } catch (err) {
-        console.error('Error fetching materials:', err);
-      }
-    };
-    
-    // Only fetch materials when on the resources tab
-    if (activeSection === 'resources') {
-      fetchMaterials();
-    }
-  }, [user, API_URL, activeSection]);
-
-  // Add resize listener to handle mobile detection
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth <= 768;
-      setIsMobile(mobile);
-      if (!mobile && !isNavExpanded) {
-        setIsNavExpanded(true);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isNavExpanded]);
-
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
       {/* Sidebar */}
       <div
-        className={`h-full transition-all duration-300 shadow-lg
-                   ${isNavExpanded ? 'w-64' : 'w-20'} 
-                   ${isMobile ? 'fixed z-50' : 'relative'}`}
-        style={{ 
-          backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(255, 255, 255, 0.98)',
-          top: '0',
-          left: isMobile && !isNavExpanded ? '-100%' : '0',
-          height: '100%',
-          overflow: 'auto',
-          width: isMobile && isNavExpanded ? '100%' : ''
-        }}
+        className={`h-full transition-all duration-300 bg-white dark:bg-gray-800 shadow-lg
+                   ${isNavExpanded ? 'w-64' : 'w-20'}`}
+        style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}
       >
         <div className="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
           {isNavExpanded && (
@@ -849,33 +698,14 @@ const TeacherDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className={`flex-1 overflow-auto ${isMobile ? 'w-full' : ''}`}>
-        <header className="bg-white dark:bg-gray-800 shadow-md p-4 sticky top-0 z-40"
+      <div className="flex-1 overflow-auto">
+        <header className="bg-white dark:bg-gray-800 shadow-md p-4 sticky top-0 z-10"
                 style={{ backgroundColor: isDarkMode ? '#1e293b' : 'white' }}>
           <div className="flex justify-between items-center">
-            {isMobile && (
-              <button
-                className="p-2 mr-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 z-50"
-                onClick={() => setIsNavExpanded(!isNavExpanded)}
-              >
-                {isNavExpanded ? '✕' : '☰'}
-              </button>
-            )}
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white truncate">
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
               {menuItems.find(item => item.id === activeSection)?.label}
             </h1>
-            <div className="flex items-center gap-4 z-50 relative">
-              {/* Dark mode toggle */}
-              <button
-                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
-                onClick={() => {
-                  document.documentElement.classList.toggle('dark');
-                  setIsDarkMode(!isDarkMode);
-                }}
-              >
-                {isDarkMode ? '☀️' : '🌙'}
-              </button>
-            
+            <div className="flex items-center gap-4">
               <div className="relative" ref={notificationRef}>
                 <button
                   className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -965,15 +795,7 @@ const TeacherDashboard = () => {
           </div>
         </header>
 
-        {/* Mobile sidebar overlay */}
-        {isMobile && isNavExpanded && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40"
-            onClick={() => setIsNavExpanded(false)}
-          ></div>
-        )}
-
-        <main className="p-3 md:p-6">
+        <main className="p-6">
           {activeSection === 'overview' && (
             <Overview
               connections={connections}
@@ -1033,12 +855,7 @@ const TeacherDashboard = () => {
           )}
 
           {activeSection === 'resources' && (
-            <Resources 
-              materials={materials} 
-              handleDeleteMaterial={handleDeleteMaterial}
-              loading={loading}
-              isDarkMode={isDarkMode}
-            />
+            <Resources />
           )}
 
           {activeSection === 'students' && (
