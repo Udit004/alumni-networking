@@ -29,7 +29,7 @@ const mentorshipApplicationRoutes = require('./routes/mentorshipApplicationRoute
 // Chat routes removed
 const courseRoutes = require('./routes/coursesNew');
 const courseApplicationRoutes = require('./routes/courseApplications');
-const firestoreNotificationRoutes = require('./routes/firestoreNotifications');
+// Firebase notification routes removed
 const announcementRoutes = require('./routes/announcementRoutes');
 const activityRoutes = require('./routes/activityRoutes');
 
@@ -86,7 +86,7 @@ app.use('/api/mentorship-applications', mentorshipApplicationRoutes);
 // Chat routes removed
 app.use('/api/courses', courseRoutes);
 app.use('/api/course-applications', courseApplicationRoutes);
-app.use('/api/notifications', firestoreNotificationRoutes);
+// Firebase notification routes removed
 app.use('/api/activities', activityRoutes);
 // Register announcement routes
 app.use('/', announcementRoutes);

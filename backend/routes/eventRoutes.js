@@ -4,7 +4,7 @@ const Event = require("../models/Event");
 const User = require("../models/user");
 const mongoose = require("mongoose");
 const { auth } = require('../middleware/auth');
-const admin = require('firebase-admin');
+// Firebase admin removed
 const { insertDocument } = require('../utils/directDbInsert');
 
 // Verify User model is loaded correctly
@@ -277,47 +277,7 @@ router.post("/", async (req, res) => {
             .populate("registeredUsers.userId", "name email")
             .populate("createdBy", "name email");
 
-        // 📣 Step 5: Send notification to all students using Firestore
-        try {
-            // Find all students
-            const students = await User.find({ role: 'student' });
-            console.log(`Found ${students.length} students to notify about the new event`);
-
-            // Send notification to each student
-            for (const student of students) {
-                try {
-                    if (!student.firebaseUID) {
-                        console.log(`Skipping notification for student ${student._id} - no Firebase UID`);
-                        continue;
-                    }
-
-                    // Create notification data
-                    const notificationData = {
-                        userId: student.firebaseUID,
-                        title: 'New Event Available',
-                        message: `A new event "${title}" has been created. Check it out!`,
-                        type: 'event',
-                        itemId: newEvent._id.toString(),
-                        createdBy: createdById ? createdById.toString() : 'system',
-                        read: false,
-                        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-                        createdAt: new Date().toISOString()
-                    };
-
-                    // Add to Firestore
-                    const docRef = await admin.firestore().collection('notifications').add(notificationData);
-                    console.log(`Notification created for student ${student.firebaseUID} with ID: ${docRef.id}`);
-                } catch (studentError) {
-                    console.error(`Error sending notification to student ${student.firebaseUID}:`, studentError);
-                    // Continue with next student even if one fails
-                }
-            }
-
-            console.log("✅ Notifications sent to all students about the new event");
-        } catch (notificationError) {
-            console.error("❌ Error sending notifications:", notificationError);
-            // Continue even if notification fails
-        }
+        // Firebase notification code removed
 
         res.status(201).json({
             message: "Event created successfully",
