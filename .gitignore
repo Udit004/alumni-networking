@@ -1,11 +1,56 @@
+# Dependencies
 node_modules/
+
+# Environment variables
 .env
-.env.production
-firebaseConfig.js  # If you have sensitive Firebase keys
+.env.*
 .env.local
 .env.development
 .env.test
-.env.test.local
+.env.production
+.env.*.local
 
-config/firebase-admin-sdk.json
-config/serviceAccountKey.json
+# Firebase configuration
+firebaseConfig.js
+firebase-admin-sdk.json
+serviceAccountKey.json
+**/config/firebase*.json
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Build directories
+/build
+/dist
+/frontend/build
+
+# Temporary files
+.DS_Store
+.temp
+.tmp
+.cache
+temp_*
+*.temp
+*.tmp
+
+# Uploads directory content (but keep the directory)
+/backend/uploads/*
+!/backend/uploads/.gitkeep
+
+# Debug files
+**/check-*.js
+**/debug-*.js
+**/test-*.js
+
+# Deployment specific
+.vercel
