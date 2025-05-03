@@ -189,9 +189,9 @@ export const getUserNotifications = async (userId, limitCount = 20) => {
   try {
     // First try to get notifications from the backend API
     try {
-      // Always use the deployed URL
+      // Use the API URL from config
       const baseUrls = [
-        'https://alumni-networking.onrender.com'
+        API_URLS.main
       ];
 
       // Get the auth token first to avoid multiple attempts if not authenticated
@@ -330,9 +330,9 @@ export const markNotificationAsRead = async (notificationId) => {
   try {
     // First try to mark notification as read in the backend API
     try {
-      // Always use the deployed URL
+      // Use the API URL from config
       const baseUrls = [
-        'https://alumni-networking.onrender.com'
+        API_URLS.main
       ];
 
       // Get the auth token
@@ -416,9 +416,9 @@ export const markAllNotificationsAsRead = async (userId) => {
   try {
     // First try to mark all notifications as read in the backend API
     try {
-      // Always use the deployed URL
+      // Use the API URL from config
       const baseUrls = [
-        'https://alumni-networking.onrender.com'
+        API_URLS.main
       ];
 
       // Get the auth token

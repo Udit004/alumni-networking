@@ -55,8 +55,7 @@ const EnrolledEvents = ({ onEventsLoaded }) => {
         // Define fallback URLs for API endpoints to handle different environments
         const baseUrls = [
           config.apiUrl,
-          'https://alumni-networking.onrender.com',
-          'http://localhost:5000'
+          process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : 'https://alumni-networking.onrender.com'
         ];
 
         if (!user) {

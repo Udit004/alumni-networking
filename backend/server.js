@@ -42,6 +42,8 @@ const MONGO_URI = process.env.MONGO_URI;
 // CORS Configuration with all allowed origins
 const allowedOrigins = [
     'http://localhost:3000',
+    'http://localhost:3001',  // Added for development on alternate port
+    'http://localhost:3002',  // Added for potential future port changes
     'https://alumni-networking.vercel.app',
     'https://alumni-networking-89f98.web.app',
     'https://alumni-networking-89f98.firebaseapp.com',

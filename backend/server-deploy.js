@@ -47,7 +47,11 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/alumni-net
 // CORS Configuration with all allowed origins
 const allowedOrigins = [
     'http://localhost:3000',
+    'http://localhost:3001',  // Added for development on alternate port
+    'http://localhost:3002',  // Added for potential future port changes
     'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',  // Added for development on alternate port
+    'http://127.0.0.1:3002',  // Added for potential future port changes
     'https://alumni-networking.vercel.app',
     'https://alumni-networking-89f98.web.app',
     'https://alumni-networking-89f98.firebaseapp.com',
@@ -62,7 +66,7 @@ app.use(cors({
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             return callback(null, true);
         }
-        
+
         // For debugging - log blocked origins
         console.log('Blocked origin:', origin);
         const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
@@ -118,9 +122,9 @@ app.get("/api/health", (req, res) => {
 
 // Test CORS endpoint
 app.get("/api/test-cors", (req, res) => {
-    res.status(200).json({ 
-        status: "ok", 
-        message: "CORS test successful!", 
+    res.status(200).json({
+        status: "ok",
+        message: "CORS test successful!",
         timestamp: new Date().toISOString(),
         origin: req.headers.origin || 'No origin header'
     });

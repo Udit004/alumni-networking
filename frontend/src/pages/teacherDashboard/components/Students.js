@@ -108,9 +108,9 @@ const getTeacherCourses = async (token, userId) => {
     console.log('API_URLS object:', API_URLS);
     console.log('Courses API URL:', API_URLS.courses);
 
-    // Use the deployed URL directly to ensure it works
-    const apiUrl = 'https://alumni-networking.onrender.com/api/courses';
-    console.log(`Using hardcoded API URL: ${apiUrl}`);
+    // Use the API URL from the config
+    const apiUrl = API_URLS.courses;
+    console.log(`Using API URL from config: ${apiUrl}`);
     console.log(`Fetching courses for teacher with ID: ${userId}`);
 
     // Use the correct endpoint with the teacher's user ID
@@ -154,8 +154,8 @@ const getUserDetails = async (token, firebaseUID) => {
       return null;
     }
 
-    // Use the deployed URL directly to ensure it works
-    const apiUrl = 'https://alumni-networking.onrender.com/api/users/firebase';
+    // Use the API URL from the config
+    const apiUrl = `${API_URLS.users}/firebase`;
     console.log(`Fetching user details for Firebase UID: ${firebaseUID}`);
 
     try {
@@ -177,7 +177,7 @@ const getUserDetails = async (token, firebaseUID) => {
 
       // Try to fetch from course applications as a fallback
       try {
-        const courseAppUrl = 'https://alumni-networking.onrender.com/api/course-applications';
+        const courseAppUrl = API_URLS.courseApplications;
         const appResponse = await axios.get(
           `${courseAppUrl}/student/${firebaseUID}`,
           {
@@ -220,9 +220,9 @@ const getCourseStudents = async (token, courseId, userId) => {
     console.log('API_URLS object for students:', API_URLS);
     console.log('Courses API URL for students:', API_URLS.courses);
 
-    // Use the deployed URL directly to ensure it works
-    const apiUrl = 'https://alumni-networking.onrender.com/api/courses';
-    console.log(`Using hardcoded API URL for students: ${apiUrl}`);
+    // Use the API URL from the config
+    const apiUrl = API_URLS.courses;
+    console.log(`Using API URL from config for students: ${apiUrl}`);
     console.log(`Fetching students for course ${courseId} with teacher ID: ${userId}`);
 
     // Use the correct endpoint with the course ID
@@ -292,7 +292,7 @@ const getCourseStudents = async (token, courseId, userId) => {
     // Try to fetch course applications directly for this course
     let courseApplications = [];
     try {
-      const courseAppUrl = 'https://alumni-networking.onrender.com/api/course-applications';
+      const courseAppUrl = API_URLS.courseApplications;
       const appResponse = await axios.get(
         `${courseAppUrl}/course/${courseId}`,
         {

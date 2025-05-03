@@ -4,10 +4,14 @@
  * This file contains configuration for API endpoints and timeouts.
  */
 
-// Always use the deployed URL
+// Use different API URLs based on environment
 const getApiBaseUrl = () => {
-  // Always use the deployed URL regardless of environment
-  return 'https://alumni-networking.onrender.com';
+  // Use localhost:5000 for development and the deployed URL for production
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:5000';
+  } else {
+    return 'https://alumni-networking.onrender.com';
+  }
 };
 
 // Base URL for API requests
@@ -20,7 +24,9 @@ export const DEFAULT_TIMEOUT = 30000; // Increased to 30 seconds for better reli
 console.log('🔧 API Configuration:', {
   environment: process.env.NODE_ENV,
   BASE_URL,
-  note: 'Using deployed API URL for all environments'
+  note: process.env.NODE_ENV === 'development'
+    ? 'Using localhost:5000 for development'
+    : 'Using deployed API URL for production'
 });
 
 // API endpoints
