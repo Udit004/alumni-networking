@@ -5,11 +5,9 @@ exports.protect = async (req, res, next) => {
     try {
         const token = req.headers.authorization?.split('Bearer ')[1];
 
-        // Check if we should use mock authentication
-        const useMockAuth = process.env.NODE_ENV === 'development' && process.env.SKIP_AUTH === 'true';
-
-        // For deployed environments, we can also enable mock auth with RENDER_MOCK_AUTH
-        const useDeployedMockAuth = process.env.RENDER === 'true' && process.env.RENDER_MOCK_AUTH === 'true';
+        // Disable mock authentication for security
+        const useMockAuth = false;
+        const useDeployedMockAuth = false;
 
         if (!token) {
             // Use mock user if configured to do so
@@ -154,9 +152,9 @@ exports.attemptAuth = async (req, res, next) => {
     try {
         const token = req.headers.authorization?.split('Bearer ')[1];
 
-        // Check if we should use mock authentication
-        const useMockAuth = process.env.NODE_ENV === 'development' && process.env.SKIP_AUTH === 'true';
-        const useDeployedMockAuth = process.env.RENDER === 'true' && process.env.RENDER_MOCK_AUTH === 'true';
+        // Disable mock authentication for security
+        const useMockAuth = false;
+        const useDeployedMockAuth = false;
 
         if (!token) {
             // Use mock user if configured to do so

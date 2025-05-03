@@ -9,10 +9,9 @@ if (process.env.RENDER || process.env.NODE_ENV === 'production') {
   process.env.RENDER = 'true';
   console.log('🌐 Running in deployed/production environment');
 
-  // Enable mock authentication in deployed environment if needed
-  if (process.env.RENDER_MOCK_AUTH === 'true') {
-    console.log('⚠️ WARNING: Mock authentication enabled in production environment');
-  }
+  // Disable mock authentication in production for security
+  process.env.RENDER_MOCK_AUTH = 'false';
+  console.log('🔒 Production environment: Mock authentication disabled for security');
 } else {
   console.log('🖥️ Running in local/development environment');
 
@@ -21,11 +20,9 @@ if (process.env.RENDER || process.env.NODE_ENV === 'production') {
     process.env.NODE_ENV = 'development';
   }
 
-  // Enable skip auth in development by default if not set
-  if (process.env.SKIP_AUTH !== 'false' && process.env.SKIP_AUTH !== 'true') {
-    process.env.SKIP_AUTH = 'true';
-    console.log('⚠️ Development mode: SKIP_AUTH enabled by default');
-  }
+  // Disable skip auth in development for consistency with production
+  process.env.SKIP_AUTH = 'false';
+  console.log('🔒 Development mode: SKIP_AUTH disabled for consistency with production');
 }
 
 // Initialize Firebase Admin SDK
