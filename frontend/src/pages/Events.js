@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import config from "../config";
 import axios from "axios";
@@ -34,7 +34,7 @@ const safeEventObject = (event) => {
 };
 
 const Events = () => {
-  const { user, role, loading: authLoading } = useAuth();
+  const { currentUser: user, userRole: role, loading: authLoading } = useAuth();
   const [events, setEvents] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);

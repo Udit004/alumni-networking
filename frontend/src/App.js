@@ -32,6 +32,7 @@ import { initializeFirestoreCollections } from './utils/firestoreInit';
 import StudentEditProfile from './pages/StudentEditProfile';
 import TestConnection from './TestConnection';
 import AuthDebugger from './components/AuthDebugger';
+import DiagnosticsPage from './pages/DiagnosticsPage';
 
 function App() {
   const [firestoreInitialized, setFirestoreInitialized] = useState(false);
@@ -218,6 +219,7 @@ function App() {
                   <CourseDetail />
                 </PrivateRoute>
               } />
+              <Route path="/diagnostics" element={<DiagnosticsPage />} />
             </Routes>
           </main>
           <Footer />

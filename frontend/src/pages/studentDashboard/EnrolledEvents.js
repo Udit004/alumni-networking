@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth } from '../../AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import "./EnrolledEvents.css";
 import config from '../../config';
 
@@ -23,7 +23,7 @@ const EnrolledEvents = ({ onEventsLoaded }) => {
   const [error, setError] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const { user } = useAuth();
+  const { currentUser: user } = useAuth();
   const [activeTab, setActiveTab] = useState('upcoming');
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
 

@@ -82,24 +82,44 @@ export function AuthProvider({ children }) {
 
   // Function to get the user's ID token with refresh logic
   const getUserToken = async () => {
-    if (!currentUser) return null;
+    if (!currentUser) {
+      console.warn('❌ getUserToken: No current user available');
+      return null;
+    }
+
     try {
+      console.log('🔄 getUserToken: Getting token for user:', currentUser.uid);
+
       // Get token with expiration info
       const tokenResult = await currentUser.getIdTokenResult();
       const expirationTime = new Date(tokenResult.expirationTime).getTime();
       const now = Date.now();
+      const minutesRemaining = Math.floor((expirationTime - now) / 60000);
 
       // If token expires in less than 5 minutes, force refresh
       if (expirationTime - now < 5 * 60 * 1000) {
-        console.log('🔄 Token close to expiration, refreshing...');
-        return await currentUser.getIdToken(true); // Force refresh
+        console.log(`🔄 getUserToken: Token expires soon (${minutesRemaining} minutes), refreshing...`);
+        const newToken = await currentUser.getIdToken(true); // Force refresh
+        console.log(`✅ getUserToken: Token refreshed successfully, new length: ${newToken.length}`);
+        return newToken;
       }
 
-      console.log(`🔑 Using valid token (expires in ${Math.floor((expirationTime - now) / 60000)} minutes)`);
+      console.log(`🔑 getUserToken: Using valid token (expires in ${minutesRemaining} minutes), length: ${tokenResult.token.length}`);
       return tokenResult.token;
     } catch (error) {
-      console.error("❌ Error getting user token:", error);
-      return null;
+      console.error("❌ getUserToken Error:", error);
+      console.error("❌ getUserToken Stack:", error.stack);
+
+      // Try one more time with force refresh
+      try {
+        console.log('🔄 getUserToken: Attempting force refresh after error...');
+        const forceToken = await currentUser.getIdToken(true);
+        console.log(`✅ getUserToken: Force refresh successful, token length: ${forceToken.length}`);
+        return forceToken;
+      } catch (retryError) {
+        console.error("❌ getUserToken Retry Error:", retryError);
+        return null;
+      }
     }
   };
 

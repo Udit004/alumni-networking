@@ -35,7 +35,7 @@ export const makeAuthenticatedRequest = async ({
     if (!token) {
       console.warn('🔴 No authentication token available for request to', endpoint);
     } else {
-      console.log(`🔑 Using token for ${endpoint} (length: ${token.length})`);
+      console.log(`🔑 Using token for ${endpoint} (length: ${token.length}, first 10 chars: ${token.substring(0, 10)}...)`);
     }
 
     // Create request config
@@ -44,7 +44,9 @@ export const makeAuthenticatedRequest = async ({
       url: `${baseUrl}${endpoint}`,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : ''
+        'Authorization': token ? `Bearer ${token}` : '',
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
       },
       timeout,
       credentials: 'include',
@@ -60,15 +62,45 @@ export const makeAuthenticatedRequest = async ({
       config.params = params;
     }
 
-    console.log(`Making ${method} request to ${endpoint}`);
-    const response = await axios(config);
+    console.log(`🌐 Making ${method} request to ${baseUrl}${endpoint}`);
 
-    // Handle different response formats
-    if (response.data && response.data.success === false) {
-      throw new Error(response.data.message || 'API request failed');
+    // Try with retries for network issues
+    let retries = 0;
+    const maxRetries = 2;
+
+    while (retries <= maxRetries) {
+      try {
+        const response = await axios(config);
+        console.log(`✅ ${method} request to ${endpoint} successful:`,
+          response.status,
+          typeof response.data === 'object' ? 'data received' : response.data
+        );
+
+        // Handle different response formats
+        if (response.data && response.data.success === false) {
+          throw new Error(response.data.message || 'API request failed');
+        }
+
+        return response.data;
+      } catch (retryError) {
+        retries++;
+
+        // Only retry on network errors or 5xx server errors
+        if (
+          retries <= maxRetries &&
+          (!retryError.response || retryError.response.status >= 500)
+        ) {
+          console.log(`🔄 Retry ${retries}/${maxRetries} for ${endpoint} after error:`,
+            retryError.message
+          );
+          await new Promise(resolve => setTimeout(resolve, 1000 * retries)); // Exponential backoff
+          continue;
+        }
+
+        // If we get here, either we've exhausted retries or it's a non-retryable error
+        throw retryError;
+      }
     }
-
-    return response.data;
   } catch (error) {
     console.error(`❌ API request to ${endpoint} failed:`, error);
 
@@ -76,26 +108,60 @@ export const makeAuthenticatedRequest = async ({
     const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
     const errorStatus = error.response?.status;
 
-    // Log detailed error information
+    // Log detailed error information based on error type
     if (errorStatus === 401 || errorStatus === 403) {
       console.error(`🔒 Authentication error (${errorStatus}) for ${endpoint}:`, {
         message: errorMessage,
         responseData: error.response?.data,
-        config: error.config
+        config: error.config ? {
+          url: error.config.url,
+          method: error.config.method,
+          hasAuthHeader: !!error.config.headers?.Authorization
+        } : 'No config available'
       });
 
       // For auth errors, suggest token refresh
       console.log('💡 Suggestion: Try refreshing the token or logging in again');
+    } else if (error.code === 'ECONNABORTED') {
+      console.error(`⏱️ Request timeout for ${endpoint}:`, {
+        timeout: timeout,
+        url: `${baseUrl}${endpoint}`
+      });
+    } else if (!error.response) {
+      console.error(`🌐 Network error for ${endpoint}:`, {
+        message: error.message,
+        url: `${baseUrl}${endpoint}`
+      });
+
+      // Check if the API is available
+      try {
+        console.log(`🔍 Checking if API at ${baseUrl} is available...`);
+        const isLocalhost = baseUrl.includes('localhost');
+
+        // For deployed environments, try to check the API health
+        if (!isLocalhost) {
+          console.log(`💡 This appears to be a deployed environment (${baseUrl})`);
+          console.log('💡 Suggestion: Check if the backend service is running and accessible');
+        } else {
+          console.log(`💡 This appears to be a local environment (${baseUrl})`);
+          console.log('💡 Suggestion: Make sure your local backend server is running');
+        }
+      } catch (checkError) {
+        console.error('Failed to check API availability:', checkError);
+      }
     }
 
-    // Throw a standardized error object
+    // Throw a standardized error object with more details
     throw {
       message: errorMessage,
       status: errorStatus,
       isAuthError: errorStatus === 401 || errorStatus === 403,
+      isNetworkError: !error.response,
+      isTimeout: error.code === 'ECONNABORTED',
       originalError: error,
       endpoint: endpoint,
-      baseUrl: baseUrl
+      baseUrl: baseUrl,
+      url: `${baseUrl}${endpoint}`
     };
   }
 };
