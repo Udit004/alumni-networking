@@ -224,6 +224,68 @@ app.get("/api/health", (req, res) => {
     res.status(200).json({ status: "ok", message: "Backend is running" });
 });
 
+// Authentication test endpoint
+app.get("/api/auth-test", async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        console.log('🔍 Auth Test: Authorization header present:', !!authHeader);
+
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({
+                success: false,
+                message: 'No token provided',
+                authHeader: authHeader ? 'Present but invalid format' : 'Missing'
+            });
+        }
+
+        const token = authHeader.split(' ')[1];
+        console.log('🔍 Auth Test: Token length:', token.length);
+        console.log('🔍 Auth Test: Token first 10 chars:', token.substring(0, 10) + '...');
+
+        try {
+            // Verify the token
+            const admin = require('./config/firebase-admin');
+            const decodedToken = await admin.auth().verifyIdToken(token);
+
+            return res.status(200).json({
+                success: true,
+                message: 'Token verified successfully',
+                user: {
+                    uid: decodedToken.uid,
+                    email: decodedToken.email,
+                    role: decodedToken.role || 'Not specified in token'
+                },
+                tokenInfo: {
+                    issuer: decodedToken.iss,
+                    audience: decodedToken.aud,
+                    expiresAt: new Date(decodedToken.exp * 1000).toISOString(),
+                    issuedAt: new Date(decodedToken.iat * 1000).toISOString(),
+                    expiresIn: Math.floor((decodedToken.exp * 1000 - Date.now()) / 1000) + ' seconds'
+                }
+            });
+        } catch (verifyError) {
+            console.error('❌ Auth Test: Token verification failed:', verifyError.message);
+
+            return res.status(401).json({
+                success: false,
+                message: 'Token verification failed',
+                error: verifyError.message,
+                tokenInfo: {
+                    length: token.length,
+                    firstChars: token.substring(0, 10) + '...'
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ Auth Test: Unexpected error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error in auth test',
+            error: error.message
+        });
+    }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('❌ Error:', err);

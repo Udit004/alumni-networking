@@ -31,6 +31,7 @@ import './App.css';
 import { initializeFirestoreCollections } from './utils/firestoreInit';
 import StudentEditProfile from './pages/StudentEditProfile';
 import TestConnection from './TestConnection';
+import AuthDebugger from './components/AuthDebugger';
 
 function App() {
   const [firestoreInitialized, setFirestoreInitialized] = useState(false);
@@ -220,6 +221,8 @@ function App() {
             </Routes>
           </main>
           <Footer />
+          {/* Add the AuthDebugger component */}
+          <AuthDebugger />
         </div>
       </AuthProvider>
     </Router>
