@@ -15,6 +15,7 @@ import {
 } from './components';
 import AlumniNetwork from './components/Network';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
+import { getUserConnections } from '../../services/connectionService';
 import axios from 'axios';
 
 const AlumniDashboard = () => {
@@ -417,37 +418,21 @@ const AlumniDashboard = () => {
   const fetchConnections = async (connectionIds) => {
     try {
       setConnectionLoading(true);
-      console.log('Fetching connections for IDs:', connectionIds);
-      const connectionProfiles = [];
+      console.log('Fetching connections using optimized service');
 
-      // Process each connection in batches
-      for (const connectionId of connectionIds) {
-        const userDocRef = doc(db, "users", connectionId);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          console.log('Found connection:', userData);
-          connectionProfiles.push({
-            id: userDoc.id,
-            name: userData.name || "",
-            role: userData.role || "",
-            jobTitle: userData.jobTitle || "",
-            company: userData.company || "",
-            institution: userData.institution || "",
-            department: userData.department || "",
-            photoURL: userData.photoURL || "",
-            skills: userData.skills || []
-          });
-        } else {
-          console.log('Connection not found for ID:', connectionId);
-        }
+      // Use the optimized getUserConnections function from connectionService
+      // instead of fetching each connection individually
+      if (currentUser && currentUser.uid) {
+        const connectionProfiles = await getUserConnections(currentUser.uid);
+        console.log('Connections loaded:', connectionProfiles.length);
+        setConnections(connectionProfiles);
+      } else {
+        console.log('No current user, cannot fetch connections');
+        setConnections([]);
       }
-
-      console.log('Final connection profiles:', connectionProfiles);
-      setConnections(connectionProfiles);
     } catch (error) {
       console.error("Error fetching connections:", error);
+      setConnections([]);
     } finally {
       setConnectionLoading(false);
     }
@@ -672,9 +657,9 @@ const AlumniDashboard = () => {
       {/* Sidebar */}
       <div
         className={`h-full transition-all duration-300 shadow-lg
-                   ${isNavExpanded ? 'w-64' : 'w-20'} 
+                   ${isNavExpanded ? 'w-64' : 'w-20'}
                    ${isMobile ? 'fixed z-50' : 'relative'}`}
-        style={{ 
+        style={{
           backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(255, 255, 255, 0.98)',
           top: '0',
           left: isMobile && !isNavExpanded ? '-100%' : '0',
@@ -782,7 +767,7 @@ const AlumniDashboard = () => {
               >
                 {isDarkMode ? '☀️' : '🌙'}
               </button>
-            
+
               {/* Notification button */}
               <div className="relative" ref={notificationRef}>
                 <button
@@ -868,7 +853,7 @@ const AlumniDashboard = () => {
 
         {/* Mobile sidebar overlay */}
         {isMobile && isNavExpanded && (
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40"
             onClick={() => setIsNavExpanded(false)}
           ></div>

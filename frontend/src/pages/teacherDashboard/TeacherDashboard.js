@@ -6,7 +6,7 @@ import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { Overview, Profile, Notifications, Courses, Events, Resources, Students, Announcements } from './components';
 import TeacherNetwork from './components/Network';
-import { getConnectionRequests, sendConnectionRequest } from '../../services/connectionService';
+import { getConnectionRequests, sendConnectionRequest, getUserConnections } from '../../services/connectionService';
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
 
 const TeacherDashboard = () => {
@@ -277,32 +277,20 @@ const TeacherDashboard = () => {
   const fetchConnections = async (connectionIds) => {
     try {
       setConnectionLoading(true);
-      const connectionProfiles = [];
 
-      // Process each connection in batches
-      for (const connectionId of connectionIds) {
-        const userDocRef = doc(db, "users", connectionId);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          connectionProfiles.push({
-            id: userDoc.id,
-            name: userData.name || "",
-            role: userData.role || "",
-            jobTitle: userData.jobTitle || "",
-            company: userData.company || "",
-            institution: userData.institution || "",
-            department: userData.department || "",
-            photoURL: userData.photoURL || "",
-            skills: userData.skills || []
-          });
-        }
+      // Use the optimized getUserConnections function from connectionService
+      // instead of fetching each connection individually
+      if (user && user.uid) {
+        console.log('Fetching connections using optimized service');
+        const connectionProfiles = await getUserConnections(user.uid);
+        setConnections(connectionProfiles);
+      } else {
+        console.log('No current user, cannot fetch connections');
+        setConnections([]);
       }
-
-      setConnections(connectionProfiles);
     } catch (error) {
       console.error("Error fetching connections:", error);
+      setConnections([]);
     } finally {
       setConnectionLoading(false);
     }
@@ -359,11 +347,11 @@ const TeacherDashboard = () => {
         try {
           console.log(`Trying to fetch events from ${baseUrl}...`);
           const token = await user.getIdToken();
-          
+
           // Use the user-specific endpoint to get events created by this user, including role
           const response = await fetch(`${baseUrl}/api/events/user/${user?.uid}?firebaseUID=${user?.uid}&role=${role}`, {
             method: 'GET',
-            headers: { 
+            headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
             },

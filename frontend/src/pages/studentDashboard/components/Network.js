@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../../context/AuthContext';
-import { 
-  getConnectionRequests, 
-  getUserConnections, 
-  sendConnectionRequest, 
-  acceptConnectionRequest, 
-  rejectConnectionRequest 
+import {
+  getConnectionRequests,
+  getUserConnections,
+  sendConnectionRequest,
+  acceptConnectionRequest,
+  rejectConnectionRequest
 } from '../../../services/connectionService';
 
 const Network = ({ currentUser, isDarkMode }) => {
@@ -19,7 +19,7 @@ const Network = ({ currentUser, isDarkMode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { currentUser: authUser } = useAuth();
-  
+
   useEffect(() => {
     if (authUser?.uid) {
       fetchNetworkData();
@@ -30,59 +30,59 @@ const Network = ({ currentUser, isDarkMode }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get user's connections
       const userConnections = await getUserConnections(authUser.uid);
       setConnections(userConnections);
-      
+
       // Get connection requests
       const requests = await getConnectionRequests(authUser.uid);
       setPendingRequests(requests);
-      
+
       // Fetch recommendations
       const recommendationsQuery = query(
         collection(db, 'users'),
         where('role', 'in', ['student', 'teacher', 'alumni'])
       );
-      
+
       const recommendationsSnapshot = await getDocs(recommendationsQuery);
       const recommendationsData = [];
-      
+
       const currentUserDoc = await getDoc(doc(db, 'users', authUser.uid));
       const userData = currentUserDoc.data();
-      
+
       recommendationsSnapshot.forEach((doc) => {
         const user = { id: doc.id, ...doc.data() };
-        
+
         // Skip if it's the current user, already connected, or has pending request
         const isCurrentUser = doc.id === authUser.uid;
         const isConnected = userConnections.some(conn => conn.id === doc.id);
-        const hasPendingRequest = requests.incoming.some(req => req.sender.id === doc.id) || 
+        const hasPendingRequest = requests.incoming.some(req => req.sender.id === doc.id) ||
                                 requests.outgoing.some(req => req.recipient.id === doc.id);
-        
+
         if (!isCurrentUser && !isConnected && !hasPendingRequest) {
           // Calculate relevance score based on various factors
           let relevanceScore = 0;
-          
+
           // Same program
           if (user.program === userData.program) {
             relevanceScore += 5;
           }
-          
+
           // Same batch
           if (user.batch === userData.batch) {
             relevanceScore += 3;
           }
-          
+
           // Shared skills
           const userSkills = Array.isArray(user.skills) ? user.skills : [];
           const currentUserSkills = Array.isArray(userData.skills) ? userData.skills : [];
-          const sharedSkills = userSkills.filter(skill => 
+          const sharedSkills = userSkills.filter(skill =>
             currentUserSkills.includes(skill)
           ).length;
-          
+
           relevanceScore += sharedSkills * 2;
-          
+
           recommendationsData.push({
             ...user,
             relevanceScore,
@@ -90,11 +90,11 @@ const Network = ({ currentUser, isDarkMode }) => {
           });
         }
       });
-      
+
       // Sort recommendations by relevance score
       recommendationsData.sort((a, b) => b.relevanceScore - a.relevanceScore);
       setRecommendations(recommendationsData);
-      
+
     } catch (err) {
       console.error('Error fetching network data:', err);
       setError('Failed to load network data. Please try again.');
@@ -112,15 +112,15 @@ const Network = ({ currentUser, isDarkMode }) => {
 
       setLoading(true);
       console.log(`Sending connection request from ${authUser.uid} to ${userId}`);
-      
+
       const result = await sendConnectionRequest(authUser.uid, userId);
-      
+
       if (result.success) {
         console.log('Connection request sent successfully:', result);
-        
+
         // Show success message to user
         alert('Connection request sent successfully!');
-        
+
         // Refresh network data to show updated status
         await fetchNetworkData();
       } else {
@@ -171,7 +171,7 @@ const Network = ({ currentUser, isDarkMode }) => {
       .slice(0, 2)
       .join('');
   };
-  
+
   const getRandomColor = (id) => {
     const colors = [
       'bg-blue-500',
@@ -183,7 +183,7 @@ const Network = ({ currentUser, isDarkMode }) => {
       'bg-pink-500',
       'bg-teal-500'
     ];
-    
+
     // Use the id to deterministically pick a color
     const index = id?.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length || 0;
     return colors[index];
@@ -193,20 +193,20 @@ const Network = ({ currentUser, isDarkMode }) => {
     const isPendingIncoming = pendingRequests.incoming.some(req => req.sender.id === person.id);
     const isPendingOutgoing = pendingRequests.outgoing.some(req => req.recipient.id === person.id);
     const isConnected = connections.some(conn => conn.id === person.id);
-    
+
     // Convert skills to array if it exists, otherwise use empty array
-    const skills = Array.isArray(person.skills) ? person.skills : 
+    const skills = Array.isArray(person.skills) ? person.skills :
                   (typeof person.skills === 'string' ? person.skills.split(',').map(s => s.trim()) : []);
-    
+
     // Generate a unique key based on the person's id and the context
     // This ensures that the same person in different contexts (incoming/outgoing/connections) gets a unique key
-    const cardKey = person.requestId ? `${person.id}-request-${person.requestId}` : 
-                   (isPendingIncoming ? `${person.id}-incoming` : 
+    const cardKey = person.requestId ? `${person.id}-request-${person.requestId}` :
+                   (isPendingIncoming ? `${person.id}-incoming` :
                    (isPendingOutgoing ? `${person.id}-outgoing` : `${person.id}`));
-    
+
     // Get the background color for avatar
     const avatarColor = getRandomColor(person.id);
-    
+
     return (
       <div key={cardKey} className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 dark:border-gray-700">
         <div className="p-5">
@@ -222,7 +222,7 @@ const Network = ({ currentUser, isDarkMode }) => {
                 {getInitials(person.name || person.displayName)}
               </div>
             )}
-            
+
             <div className="flex-1 min-w-0">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
                 {person.name || person.displayName}
@@ -249,7 +249,7 @@ const Network = ({ currentUser, isDarkMode }) => {
               )}
             </div>
           </div>
-          
+
           <div className="mt-4 flex justify-end">
             {isPendingIncoming && (
               <div className="flex gap-2">
@@ -267,7 +267,7 @@ const Network = ({ currentUser, isDarkMode }) => {
                 </button>
               </div>
             )}
-            
+
             {isPendingOutgoing && (
               <span className="px-4 py-2 text-sm font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -276,7 +276,7 @@ const Network = ({ currentUser, isDarkMode }) => {
                 Request Pending
               </span>
             )}
-            
+
             {!isPendingIncoming && !isPendingOutgoing && !isConnected && (
               <button
                 onClick={() => handleConnect(person.id)}
@@ -288,7 +288,7 @@ const Network = ({ currentUser, isDarkMode }) => {
                 Connect
               </button>
             )}
-            
+
             {isConnected && (
               <span className="px-4 py-2 text-sm font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -372,8 +372,9 @@ const Network = ({ currentUser, isDarkMode }) => {
 
           {/* Loading State */}
           {loading && (
-            <div className="flex justify-center items-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+            <div className="flex flex-col justify-center items-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading your network data...</p>
             </div>
           )}
 
@@ -394,7 +395,7 @@ const Network = ({ currentUser, isDarkMode }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {activeTab === 'connections' && (
                 connections.length > 0 ? (
-                  connections.filter(person => 
+                  connections.filter(person =>
                     person.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     person.role?.toLowerCase().includes(searchTerm.toLowerCase())
                   ).map(renderPersonCard)
@@ -407,7 +408,7 @@ const Network = ({ currentUser, isDarkMode }) => {
                     </div>
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No connections yet</h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">Start building your professional network by connecting with alumni, students, and teachers.</p>
-                    <button 
+                    <button
                       onClick={() => setActiveTab('recommendations')}
                       className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium"
                     >
@@ -446,10 +447,10 @@ const Network = ({ currentUser, isDarkMode }) => {
                         {pendingRequests.incoming.filter(request =>
                           request.sender.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           request.sender.role?.toLowerCase().includes(searchTerm.toLowerCase())
-                        ).map(request => renderPersonCard({ 
-                          ...request.sender, 
-                          isPendingIncoming: true, 
-                          requestId: request.id 
+                        ).map(request => renderPersonCard({
+                          ...request.sender,
+                          isPendingIncoming: true,
+                          requestId: request.id
                         }))}
                       </div>
                     </div>
@@ -463,10 +464,10 @@ const Network = ({ currentUser, isDarkMode }) => {
                         {pendingRequests.outgoing.filter(request =>
                           request.recipient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           request.recipient.role?.toLowerCase().includes(searchTerm.toLowerCase())
-                        ).map(request => renderPersonCard({ 
-                          ...request.recipient, 
-                          isPendingOutgoing: true, 
-                          requestId: request.id 
+                        ).map(request => renderPersonCard({
+                          ...request.recipient,
+                          isPendingOutgoing: true,
+                          requestId: request.id
                         }))}
                       </div>
                     </div>

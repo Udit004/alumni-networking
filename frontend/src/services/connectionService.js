@@ -18,6 +18,51 @@ import {
 } from 'firebase/firestore';
 import { createConnectionRequestNotification, createConnectionAcceptanceNotification } from './notificationService';
 
+// Simple in-memory cache for connection data
+const connectionsCache = {
+  data: {},
+  timestamp: {},
+  // Cache expiration time in milliseconds (5 minutes)
+  expirationTime: 5 * 60 * 1000,
+
+  // Get cached connections for a user
+  get: function(userId) {
+    const cachedData = this.data[userId];
+    const cachedTime = this.timestamp[userId];
+
+    if (cachedData && cachedTime) {
+      // Check if cache is still valid
+      const now = Date.now();
+      if (now - cachedTime < this.expirationTime) {
+        console.log(`Using cached connections for user ${userId}`);
+        return cachedData;
+      } else {
+        console.log(`Cache expired for user ${userId}`);
+        // Clean up expired cache
+        delete this.data[userId];
+        delete this.timestamp[userId];
+      }
+    }
+    return null;
+  },
+
+  // Store connections in cache
+  set: function(userId, connections) {
+    this.data[userId] = connections;
+    this.timestamp[userId] = Date.now();
+    console.log(`Cached ${connections.length} connections for user ${userId}`);
+  },
+
+  // Invalidate cache for a user
+  invalidate: function(userId) {
+    if (this.data[userId]) {
+      delete this.data[userId];
+      delete this.timestamp[userId];
+      console.log(`Invalidated connections cache for user ${userId}`);
+    }
+  }
+};
+
 // Ensure collections exist - this is a one-time setup function
 export const setupFirestoreCollections = async () => {
   try {
@@ -226,6 +271,10 @@ export const acceptConnectionRequest = async (requestId) => {
     await batch.commit();
     console.log('Connection request accepted successfully');
 
+    // Invalidate cache for both users since their connections have changed
+    connectionsCache.invalidate(requestData.from);
+    connectionsCache.invalidate(requestData.to);
+
     return true;
   } catch (error) {
     console.error('Error accepting connection request:', error);
@@ -275,6 +324,10 @@ export const removeConnection = async (userId, connectionId) => {
     await updateDoc(connectionRef, {
       connections: arrayRemove(userId)
     });
+
+    // Invalidate cache for both users since their connections have changed
+    connectionsCache.invalidate(userId);
+    connectionsCache.invalidate(connectionId);
 
     return {
       success: true,
@@ -370,33 +423,71 @@ export const getConnectionRequests = async (userId) => {
 // Get all connections for a user
 export const getUserConnections = async (userId) => {
   try {
+    // Check cache first
+    const cachedConnections = connectionsCache.get(userId);
+    if (cachedConnections) {
+      return cachedConnections;
+    }
+
+    console.log('Fetching connections for user:', userId);
     // Get the user document
     const userRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userRef);
 
     if (!userDoc.exists()) {
-      throw new Error('User not found');
+      console.error('User not found:', userId);
+      return [];
     }
 
     const userData = userDoc.data();
     const connectionIds = userData.connections || [];
 
     if (connectionIds.length === 0) {
+      console.log('User has no connections');
+      // Cache empty result to avoid repeated lookups
+      connectionsCache.set(userId, []);
       return [];
     }
 
-    // Fetch connection profiles
+    // Filter out any self-connections
+    const filteredConnectionIds = connectionIds.filter(id => id !== userId);
+
+    if (filteredConnectionIds.length === 0) {
+      console.log('No valid connections after filtering');
+      // Cache empty result to avoid repeated lookups
+      connectionsCache.set(userId, []);
+      return [];
+    }
+
+    console.log(`Fetching ${filteredConnectionIds.length} connection profiles in batch`);
+
+    // Batch fetch all connections at once
     const connections = [];
-    for (const connectionId of connectionIds) {
-      // Skip if the connection ID is the same as the current user
-      if (connectionId === userId) {
-        console.log('Skipping self-connection for user:', userId);
-        continue;
-      }
 
-      const connectionRef = doc(db, 'users', connectionId);
-      const connectionDoc = await getDoc(connectionRef);
+    // Process connections in batches of 10 to avoid potential Firestore limitations
+    const batchSize = 10;
+    const batches = [];
 
+    for (let i = 0; i < filteredConnectionIds.length; i += batchSize) {
+      batches.push(filteredConnectionIds.slice(i, i + batchSize));
+    }
+
+    // Process each batch concurrently
+    const batchResults = await Promise.all(
+      batches.map(async (batchIds) => {
+        // Create an array of promises for each connection in the batch
+        const batchPromises = batchIds.map(connectionId => getDoc(doc(db, 'users', connectionId)));
+
+        // Wait for all promises in this batch to resolve
+        return await Promise.all(batchPromises);
+      })
+    );
+
+    // Flatten the batch results and process them
+    const connectionDocs = batchResults.flat();
+
+    // Process the connection documents
+    connectionDocs.forEach(connectionDoc => {
       if (connectionDoc.exists()) {
         const connectionData = connectionDoc.data();
         connections.push({
@@ -412,12 +503,18 @@ export const getUserConnections = async (userId) => {
           skills: connectionData.skills || []
         });
       }
-    }
+    });
+
+    console.log(`Successfully fetched ${connections.length} connections`);
+
+    // Store in cache for future use
+    connectionsCache.set(userId, connections);
 
     return connections;
   } catch (error) {
     console.error('Error getting user connections:', error);
-    throw error;
+    // Return empty array instead of throwing to match other service patterns
+    return [];
   }
 };
 

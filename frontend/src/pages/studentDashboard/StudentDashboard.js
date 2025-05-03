@@ -5,7 +5,7 @@ import "./StudentDashboard.css";
 import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import Network from "./components/Network";
-import { getConnectionRequests } from "../../services/connectionService";
+import { getConnectionRequests, getUserConnections } from "../../services/connectionService";
 import { getUserNotifications, markNotificationAsRead, markAllNotificationsAsRead, subscribeToUserNotifications } from '../../services/notificationService';
 import Profile from "./components/Profile";
 import EnrolledEvents, { getUpcomingEventsCount } from "./EnrolledEvents";
@@ -198,32 +198,20 @@ const StudentDashboard = () => {
   const fetchConnections = async (connectionIds) => {
     try {
       setConnectionLoading(true);
-      const connectionProfiles = [];
 
-      // Process each connection in batches
-      for (const connectionId of connectionIds) {
-        const userDocRef = doc(db, "users", connectionId);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          connectionProfiles.push({
-            id: userDoc.id,
-            name: userData.name || "",
-            role: userData.role || "",
-            jobTitle: userData.jobTitle || "",
-            company: userData.company || "",
-            institution: userData.institution || "",
-            department: userData.department || "",
-            photoURL: userData.photoURL || "",
-            skills: userData.skills || []
-          });
-        }
+      // Use the optimized getUserConnections function from connectionService
+      // instead of fetching each connection individually
+      if (currentUser && currentUser.uid) {
+        console.log('Fetching connections using optimized service');
+        const connectionProfiles = await getUserConnections(currentUser.uid);
+        setConnections(connectionProfiles);
+      } else {
+        console.log('No current user, cannot fetch connections');
+        setConnections([]);
       }
-
-      setConnections(connectionProfiles);
     } catch (error) {
       console.error("Error fetching connections:", error);
+      setConnections([]);
     } finally {
       setConnectionLoading(false);
     }

@@ -26,7 +26,7 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -380,8 +380,9 @@ const TeacherNetwork = ({ currentUser, isDarkMode }) => {
 
           {/* Loading State */}
           {loading && (
-            <div className="flex justify-center items-center py-8 md:py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+            <div className="flex flex-col justify-center items-center py-8 md:py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading your network data...</p>
             </div>
           )}
 

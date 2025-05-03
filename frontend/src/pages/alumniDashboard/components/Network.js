@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useAuth } from '../../../context/AuthContext';
-import { 
-  getConnectionRequests, 
-  getUserConnections, 
-  sendConnectionRequest, 
-  acceptConnectionRequest, 
-  rejectConnectionRequest 
+import {
+  getConnectionRequests,
+  getUserConnections,
+  sendConnectionRequest,
+  acceptConnectionRequest,
+  rejectConnectionRequest
 } from '../../../services/connectionService';
 
 const AlumniNetwork = ({ currentUser, isDarkMode }) => {
@@ -19,7 +19,7 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { currentUser: authUser } = useAuth();
-  
+
   useEffect(() => {
     if (authUser?.uid) {
       fetchNetworkData();
@@ -30,75 +30,75 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get user's connections
       const userConnections = await getUserConnections(authUser.uid);
       setConnections(userConnections);
-      
+
       // Get connection requests
       const requests = await getConnectionRequests(authUser.uid);
       setPendingRequests(requests);
-      
+
       // Fetch recommendations - alumni might be interested in connecting with other alumni in similar industries
       // current students from their alma mater, and professors from their field
       const recommendationsQuery = query(
         collection(db, 'users'),
         where('role', 'in', ['student', 'teacher', 'alumni'])
       );
-      
+
       const recommendationsSnapshot = await getDocs(recommendationsQuery);
       const recommendationsData = [];
-      
+
       const currentUserDoc = await getDoc(doc(db, 'users', authUser.uid));
       const userData = currentUserDoc.data();
-      
+
       recommendationsSnapshot.forEach((doc) => {
         const user = { id: doc.id, ...doc.data() };
-        
+
         // Skip if it's the current user, already connected, or has pending request
         const isCurrentUser = doc.id === authUser.uid;
         const isConnected = userConnections.some(conn => conn.id === doc.id);
-        const hasPendingRequest = requests.incoming.some(req => req.sender.id === doc.id) || 
+        const hasPendingRequest = requests.incoming.some(req => req.sender.id === doc.id) ||
                                 requests.outgoing.some(req => req.recipient.id === doc.id);
-        
+
         if (!isCurrentUser && !isConnected && !hasPendingRequest) {
           // Calculate relevance score based on various factors relevant to alumni
           let relevanceScore = 0;
-          
+
           // Same company
           if (user.company === userData.company) {
             relevanceScore += 5;
           }
-          
+
           // Same industry
           if (user.industry === userData.industry) {
             relevanceScore += 4;
           }
-          
+
           // Same alma mater
           if (user.institution === userData.institution) {
             relevanceScore += 3;
           }
-          
+
           // Alumni might be interested in connecting with current students from their program
           if (user.role === 'student' && user.program === userData.program) {
             relevanceScore += 4;
           }
-          
+
           // Alumni might be interested in connecting with teachers from their field
           if (user.role === 'teacher' && user.department === userData.department) {
             relevanceScore += 3;
           }
-          
+
           // Shared skills
           const userSkills = Array.isArray(user.skills) ? user.skills : [];
           const currentUserSkills = Array.isArray(userData.skills) ? userData.skills : [];
-          const sharedSkills = userSkills.filter(skill => 
+          const sharedSkills = userSkills.filter(skill =>
             currentUserSkills.includes(skill)
           ).length;
-          
+
           relevanceScore += sharedSkills * 2;
-          
+
           recommendationsData.push({
             ...user,
             relevanceScore,
@@ -106,11 +106,11 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
           });
         }
       });
-      
+
       // Sort recommendations by relevance score
       recommendationsData.sort((a, b) => b.relevanceScore - a.relevanceScore);
       setRecommendations(recommendationsData);
-      
+
     } catch (err) {
       console.error('Error fetching network data:', err);
       setError('Failed to load network data. Please try again.');
@@ -128,15 +128,15 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
 
       setLoading(true);
       console.log(`Sending connection request from ${authUser.uid} to ${userId}`);
-      
+
       const result = await sendConnectionRequest(authUser.uid, userId);
-      
+
       if (result.success) {
         console.log('Connection request sent successfully:', result);
-        
+
         // Show success message to user
         alert('Connection request sent successfully!');
-        
+
         // Refresh network data to show updated status
         await fetchNetworkData();
       } else {
@@ -184,14 +184,14 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
     const randomSuffix = Math.random().toString(36).substr(2, 9);
     return `${person.id}-${type}-${randomSuffix}`;
   };
-  
+
   // Render person card for different contexts (connection, recommendation, request)
   const renderPersonCard = (person, cardType, requestId = null) => {
     if (!person) return null;
-    
+
     // Create a unique key for this card instance
     const uniqueCardId = generateCardId(person, cardType);
-    
+
     // Extract profile data
     const name = person.name || person.displayName || 'Unknown User';
     const role = person.role ? `${person.role.charAt(0).toUpperCase()}${person.role.slice(1)}` : 'User';
@@ -199,19 +199,19 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
     const position = person.position || person.jobTitle || '';
     const program = person.program || '';
     const institution = person.institution || '';
-    
+
     // Format skills/expertise for display
-    const skills = Array.isArray(person.skills) 
-      ? person.skills 
-      : (typeof person.skills === 'string' 
-        ? person.skills.split(',').map(s => s.trim()) 
+    const skills = Array.isArray(person.skills)
+      ? person.skills
+      : (typeof person.skills === 'string'
+        ? person.skills.split(',').map(s => s.trim())
         : []);
-    
+
     // Determine card actions based on context
     const isConnection = cardType === 'connection';
     const isIncoming = cardType === 'incoming';
     const isOutgoing = cardType === 'outgoing';
-    
+
     return (
       <div key={uniqueCardId} className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 dark:border-gray-700">
         <div className="p-5">
@@ -228,19 +228,19 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
                 {name.charAt(0).toUpperCase()}
               </div>
             )}
-            
+
             {/* User info */}
             <div className="flex-1 min-w-0">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
                 {name}
               </h3>
-              
+
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                 <span className="capitalize">{role}</span>
                 {position && ` • ${position}`}
                 {company && ` at ${company}`}
               </p>
-              
+
               {(program || institution) && (
                 <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                   {program && `${program}`}
@@ -248,7 +248,7 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
                   {institution && `${institution}`}
                 </p>
               )}
-              
+
               {skills.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {skills.slice(0, 3).map((skill, index) => (
@@ -268,7 +268,7 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
               )}
             </div>
           </div>
-          
+
           {/* Connection actions */}
           <div className="mt-4 flex justify-end">
             {isIncoming && (
@@ -287,7 +287,7 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
                 </button>
               </div>
             )}
-            
+
             {isOutgoing && (
               <span className="px-4 py-2 text-sm font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -296,7 +296,7 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
                 Request Pending
               </span>
             )}
-            
+
             {!isIncoming && !isOutgoing && !isConnection && (
               <button
                 onClick={() => handleConnect(person.id)}
@@ -308,7 +308,7 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
                 Connect
               </button>
             )}
-            
+
             {isConnection && (
               <span className="px-4 py-2 text-sm font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -394,8 +394,9 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
 
           {/* Loading State */}
           {loading && (
-            <div className="flex justify-center items-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+            <div className="flex flex-col justify-center items-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading your network data...</p>
             </div>
           )}
 
@@ -420,7 +421,7 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
                   {connections.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                       {connections
-                        .filter(person => 
+                        .filter(person =>
                           (person.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                           (person.role?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                           (person.company?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -454,7 +455,7 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
                   {recommendations.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                       {recommendations
-                        .filter(person => 
+                        .filter(person =>
                           (person.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                           (person.role?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                           (person.company?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -485,7 +486,7 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 px-1">Incoming Requests</h3>
                       <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                         {pendingRequests.incoming
-                          .filter(request => 
+                          .filter(request =>
                             (request.sender.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                             (request.sender.role?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                             (request.sender.company?.toLowerCase() || '').includes(searchTerm.toLowerCase())
@@ -501,7 +502,7 @@ const AlumniNetwork = ({ currentUser, isDarkMode }) => {
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 px-1">Outgoing Requests</h3>
                       <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                         {pendingRequests.outgoing
-                          .filter(request => 
+                          .filter(request =>
                             (request.recipient.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                             (request.recipient.role?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                             (request.recipient.company?.toLowerCase() || '').includes(searchTerm.toLowerCase())
