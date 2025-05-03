@@ -31,7 +31,7 @@ import './App.css';
 import { initializeFirestoreCollections } from './utils/firestoreInit';
 import StudentEditProfile from './pages/StudentEditProfile';
 import TestConnection from './TestConnection';
-import AuthDebugger from './components/AuthDebugger';
+
 import DiagnosticsPage from './pages/DiagnosticsPage';
 
 function App() {
@@ -223,8 +223,6 @@ function App() {
             </Routes>
           </main>
           <Footer />
-          {/* Add the AuthDebugger component */}
-          <AuthDebugger />
         </div>
       </AuthProvider>
     </Router>
