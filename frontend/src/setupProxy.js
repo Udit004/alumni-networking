@@ -4,7 +4,7 @@ module.exports = function(app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'https://alumni-networking.onrender.com',
+      target: 'http://localhost:5000',
       changeOrigin: true,
     })
   );

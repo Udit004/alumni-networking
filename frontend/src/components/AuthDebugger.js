@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
-import { API_URLS } from '../config/apiConfig';
+import { testAuthentication } from '../utils/authTester';
 
 /**
  * Component for debugging authentication issues
@@ -15,76 +14,12 @@ const AuthDebugger = () => {
   const runAuthTest = async () => {
     setLoading(true);
     try {
-      // Get token
-      const token = await getUserToken();
-      if (!token) {
-        setTestResult({
-          success: false,
-          message: 'No token available',
-          tokenInfo: null
-        });
-        setLoading(false);
-        return;
-      }
-      
-      console.log(`🔑 Got token for auth test (length: ${token.length})`);
-      console.log(`🔑 Token first 10 chars: ${token.substring(0, 10)}...`);
-      
-      // Test with deployed backend
-      try {
-        console.log(`🌐 Testing with deployed backend: ${API_URLS.main}`);
-        const deployedResponse = await axios.get(`${API_URLS.main}/api/auth-test`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        console.log('✅ Deployed backend authentication successful:', deployedResponse.data);
-        setTestResult({
-          success: true,
-          message: 'Authentication successful with deployed backend',
-          tokenInfo: deployedResponse.data.tokenInfo,
-          user: deployedResponse.data.user,
-          backend: 'deployed'
-        });
-      } catch (deployedError) {
-        console.error('❌ Deployed backend authentication failed:', deployedError.response?.data || deployedError.message);
-        
-        // Try with local backend
-        try {
-          console.log('🖥️ Testing with local backend: http://localhost:5000');
-          const localResponse = await axios.get('http://localhost:5000/api/auth-test', {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          console.log('✅ Local backend authentication successful:', localResponse.data);
-          setTestResult({
-            success: true,
-            message: 'Authentication successful with local backend',
-            tokenInfo: localResponse.data.tokenInfo,
-            user: localResponse.data.user,
-            backend: 'local'
-          });
-        } catch (localError) {
-          console.error('❌ Local backend authentication failed:', localError.response?.data || localError.message);
-          
-          setTestResult({
-            success: false,
-            message: 'Authentication failed with both backends',
-            deployedError: deployedError.response?.data || deployedError.message,
-            localError: localError.response?.data || localError.message
-          });
-        }
-      }
+      const result = await testAuthentication(getUserToken);
+      setTestResult(result);
     } catch (error) {
-      console.error('❌ Authentication test failed with unexpected error:', error);
       setTestResult({
         success: false,
-        message: 'Authentication test failed with unexpected error',
+        message: 'Test failed with error',
         error: error.message
       });
     } finally {
@@ -94,7 +29,7 @@ const AuthDebugger = () => {
 
   if (!showDebugger) {
     return (
-      <button 
+      <button
         onClick={() => setShowDebugger(true)}
         className="fixed bottom-4 right-4 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md shadow-md text-sm"
       >
@@ -107,7 +42,7 @@ const AuthDebugger = () => {
     <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-w-md w-full max-h-[80vh] overflow-auto">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Authentication Debugger</h3>
-        <button 
+        <button
           onClick={() => setShowDebugger(false)}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
@@ -161,7 +96,7 @@ const AuthDebugger = () => {
           <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
             {testResult.message}
           </p>
-          
+
           {testResult.success && testResult.tokenInfo && (
             <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
               <p><strong>Backend:</strong> {testResult.backend}</p>
@@ -170,7 +105,6 @@ const AuthDebugger = () => {
               <p><strong>Expires at:</strong> {testResult.tokenInfo.expiresAt}</p>
             </div>
           )}
-          
           {!testResult.success && testResult.deployedError && (
             <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
               <p><strong>Deployed backend error:</strong></p>
@@ -179,7 +113,7 @@ const AuthDebugger = () => {
               </pre>
             </div>
           )}
-          
+
           {!testResult.success && testResult.localError && (
             <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
               <p><strong>Local backend error:</strong></p>
@@ -190,7 +124,6 @@ const AuthDebugger = () => {
           )}
         </div>
       )}
-      
       <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
         <p>
           If authentication is failing, try:

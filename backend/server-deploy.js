@@ -47,7 +47,11 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/alumni-net
 // CORS Configuration with all allowed origins
 const allowedOrigins = [
     'http://localhost:3000',
+    'http://localhost:3001',  // Added for development on alternate port
+    'http://localhost:3002',  // Added for potential future port changes
     'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',  // Added for development on alternate port
+    'http://127.0.0.1:3002',  // Added for potential future port changes
     'https://alumni-networking.vercel.app',
     'https://alumni-networking-89f98.web.app',
     'https://alumni-networking-89f98.firebaseapp.com',
@@ -62,7 +66,7 @@ app.use(cors({
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             return callback(null, true);
         }
-        
+
         // For debugging - log blocked origins
         console.log('Blocked origin:', origin);
         const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
@@ -116,11 +120,73 @@ app.get("/api/health", (req, res) => {
     res.status(200).json({ status: "ok", message: "Backend is running" });
 });
 
+// Authentication test endpoint
+app.get("/api/auth-test", async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        console.log('🔍 Auth Test: Authorization header present:', !!authHeader);
+
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({
+                success: false,
+                message: 'No token provided',
+                authHeader: authHeader ? 'Present but invalid format' : 'Missing'
+            });
+        }
+
+        const token = authHeader.split(' ')[1];
+        console.log('🔍 Auth Test: Token length:', token.length);
+        console.log('🔍 Auth Test: Token first 10 chars:', token.substring(0, 10) + '...');
+
+        try {
+            // Verify the token
+            const admin = require('./config/firebase-admin');
+            const decodedToken = await admin.auth().verifyIdToken(token);
+
+            return res.status(200).json({
+                success: true,
+                message: 'Token verified successfully',
+                user: {
+                    uid: decodedToken.uid,
+                    email: decodedToken.email,
+                    role: decodedToken.role || 'Not specified in token'
+                },
+                tokenInfo: {
+                    issuer: decodedToken.iss,
+                    audience: decodedToken.aud,
+                    expiresAt: new Date(decodedToken.exp * 1000).toISOString(),
+                    issuedAt: new Date(decodedToken.iat * 1000).toISOString(),
+                    expiresIn: Math.floor((decodedToken.exp * 1000 - Date.now()) / 1000) + ' seconds'
+                }
+            });
+        } catch (verifyError) {
+            console.error('❌ Auth Test: Token verification failed:', verifyError.message);
+
+            return res.status(401).json({
+                success: false,
+                message: 'Token verification failed',
+                error: verifyError.message,
+                tokenInfo: {
+                    length: token.length,
+                    firstChars: token.substring(0, 10) + '...'
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ Auth Test: Unexpected error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error in auth test',
+            error: error.message
+        });
+    }
+});
+
 // Test CORS endpoint
 app.get("/api/test-cors", (req, res) => {
-    res.status(200).json({ 
-        status: "ok", 
-        message: "CORS test successful!", 
+    res.status(200).json({
+        status: "ok",
+        message: "CORS test successful!",
         timestamp: new Date().toISOString(),
         origin: req.headers.origin || 'No origin header'
     });

@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "gridfs-stream": "^1.1.1",
+    "multer-gridfs-storage": "^5.0.2",
     "react-toastify": "^11.0.5"
   },
   "devDependencies": {

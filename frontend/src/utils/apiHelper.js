@@ -8,7 +8,7 @@ import { API_URLS, DEFAULT_TIMEOUT } from '../config/apiConfig';
 
 /**
  * Makes an authenticated API request with consistent error handling
- * 
+ *
  * @param {Object} options - Request options
  * @param {string} options.endpoint - API endpoint path (without base URL)
  * @param {string} options.method - HTTP method (GET, POST, PUT, DELETE)
@@ -29,53 +29,73 @@ export const makeAuthenticatedRequest = async ({
   timeout = DEFAULT_TIMEOUT
 }) => {
   try {
-    // Get authentication token
+    // Get authentication token with refresh logic
     const token = await getToken();
-    
+
+    if (!token) {
+      console.warn('🔴 No authentication token available for request to', endpoint);
+    } else {
+      console.log(`🔑 Using token for ${endpoint} (length: ${token.length})`);
+    }
+
     // Create request config
     const config = {
       method,
       url: `${baseUrl}${endpoint}`,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': token ? `Bearer ${token}` : ''
       },
       timeout,
       credentials: 'include',
       withCredentials: true
     };
-    
+
     // Add data or params if provided
     if (data) {
       config.data = data;
     }
-    
+
     if (Object.keys(params).length > 0) {
       config.params = params;
     }
-    
+
     console.log(`Making ${method} request to ${endpoint}`);
     const response = await axios(config);
-    
+
     // Handle different response formats
     if (response.data && response.data.success === false) {
       throw new Error(response.data.message || 'API request failed');
     }
-    
+
     return response.data;
   } catch (error) {
-    console.error(`API request to ${endpoint} failed:`, error);
-    
+    console.error(`❌ API request to ${endpoint} failed:`, error);
+
     // Format error message for consistent handling
     const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
     const errorStatus = error.response?.status;
-    
+
+    // Log detailed error information
+    if (errorStatus === 401 || errorStatus === 403) {
+      console.error(`🔒 Authentication error (${errorStatus}) for ${endpoint}:`, {
+        message: errorMessage,
+        responseData: error.response?.data,
+        config: error.config
+      });
+
+      // For auth errors, suggest token refresh
+      console.log('💡 Suggestion: Try refreshing the token or logging in again');
+    }
+
     // Throw a standardized error object
     throw {
       message: errorMessage,
       status: errorStatus,
       isAuthError: errorStatus === 401 || errorStatus === 403,
-      originalError: error
+      originalError: error,
+      endpoint: endpoint,
+      baseUrl: baseUrl
     };
   }
 };
