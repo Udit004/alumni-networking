@@ -3,6 +3,31 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
+// Set environment variables for deployment detection
+// This helps with conditional logic for deployed vs local environments
+if (process.env.RENDER || process.env.NODE_ENV === 'production') {
+  process.env.RENDER = 'true';
+  console.log('🌐 Running in deployed/production environment');
+
+  // Enable mock authentication in deployed environment if needed
+  if (process.env.RENDER_MOCK_AUTH === 'true') {
+    console.log('⚠️ WARNING: Mock authentication enabled in production environment');
+  }
+} else {
+  console.log('🖥️ Running in local/development environment');
+
+  // Set development environment variable if not set
+  if (!process.env.NODE_ENV) {
+    process.env.NODE_ENV = 'development';
+  }
+
+  // Enable skip auth in development by default if not set
+  if (process.env.SKIP_AUTH !== 'false' && process.env.SKIP_AUTH !== 'true') {
+    process.env.SKIP_AUTH = 'true';
+    console.log('⚠️ Development mode: SKIP_AUTH enabled by default');
+  }
+}
+
 // Initialize Firebase Admin SDK
 console.log("🔥 Initializing Firebase Admin SDK from server.js");
 const admin = require('./config/firebase-admin'); // Import Firebase Admin with lazy initialization

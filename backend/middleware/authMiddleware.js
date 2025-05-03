@@ -5,19 +5,44 @@ exports.protect = async (req, res, next) => {
     try {
         const token = req.headers.authorization?.split('Bearer ')[1];
 
+        // Check if we should use mock authentication
+        const useMockAuth = process.env.NODE_ENV === 'development' && process.env.SKIP_AUTH === 'true';
+
+        // For deployed environments, we can also enable mock auth with RENDER_MOCK_AUTH
+        const useDeployedMockAuth = process.env.RENDER === 'true' && process.env.RENDER_MOCK_AUTH === 'true';
+
         if (!token) {
-            // For development, use a mock user if SKIP_AUTH is true
-            if (process.env.NODE_ENV === 'development' && process.env.SKIP_AUTH === 'true') {
-                console.log('⚠️ Development mode with SKIP_AUTH: Using mock user');
+            // Use mock user if configured to do so
+            if (useMockAuth || useDeployedMockAuth) {
+                console.log('⚠️ Using mock user due to missing token (SKIP_AUTH or RENDER_MOCK_AUTH enabled)');
+
+                // Extract user ID from request if available
+                const userId = req.query.userId || req.params.userId ||
+                               req.body.userId || req.body.user_id ||
+                               req.body.uid || 'mock-user-id';
+
+                // Extract role from request if available
+                const role = req.query.role || req.body.role || 'student';
+
                 req.user = {
-                    id: req.query.userId || req.params.userId || 'mock-user-id',
-                    email: 'mock@example.com',
-                    role: req.query.role || 'student'
+                    id: userId,
+                    uid: userId, // Add uid for compatibility
+                    email: `${userId}@example.com`,
+                    role: role
                 };
+
+                console.log(`🔑 Using mock user: ${userId} with role ${role}`);
                 return next();
             }
 
-            return res.status(401).json({ success: false, message: 'No authentication token provided' });
+            return res.status(401).json({
+                success: false,
+                message: 'No authentication token provided',
+                authInfo: {
+                    headerPresent: !!req.headers.authorization,
+                    tokenFormat: req.headers.authorization ? 'Invalid format' : 'Missing'
+                }
+            });
         }
 
         try {
@@ -27,22 +52,48 @@ exports.protect = async (req, res, next) => {
             // Add user info to request
             req.user = {
                 id: decodedToken.uid,
+                uid: decodedToken.uid, // Add uid for compatibility
                 email: decodedToken.email,
-                role: decodedToken.role || 'student' // Default to student if role not set
+                role: decodedToken.role || 'student', // Default to student if role not set
+                // Add additional user info if available
+                displayName: decodedToken.name || decodedToken.displayName,
+                photoURL: decodedToken.picture || decodedToken.photoURL,
+                // Add token info for debugging
+                tokenInfo: {
+                    iss: decodedToken.iss,
+                    aud: decodedToken.aud,
+                    exp: decodedToken.exp,
+                    auth_time: decodedToken.auth_time
+                }
             };
 
+            console.log(`✅ Authenticated user: ${req.user.id} with role ${req.user.role}`);
             next();
         } catch (verifyError) {
-            console.error('Auth Middleware Token Verification Error:', verifyError);
+            console.error('Token verification failed, using mock user for development:', verifyError);
 
-            // For development, use a mock user if SKIP_AUTH is true
-            if (process.env.NODE_ENV === 'development' && process.env.SKIP_AUTH === 'true') {
-                console.log('⚠️ Development mode with SKIP_AUTH: Using mock user after token verification failure');
+            // Use mock user if configured to do so
+            if (useMockAuth || useDeployedMockAuth) {
+                console.log('⚠️ Using mock user after token verification failure');
+
+                // If token starts with "eyJ", it's likely a real JWT token
+                // Use the first 10 characters as a mock UID to maintain some consistency
+                let userId = 'mock-user-id';
+                if (token && token.startsWith('eyJ')) {
+                    userId = token.substring(0, 10);
+                }
+
+                // Extract role from request if available
+                const role = req.query.role || req.body.role || 'teacher';
+
                 req.user = {
-                    id: req.query.userId || req.params.userId || 'mock-user-id',
-                    email: 'mock@example.com',
-                    role: req.query.role || 'student'
+                    id: userId,
+                    uid: userId, // Add uid for compatibility
+                    email: `${userId.replace(/[^a-zA-Z0-9]/g, '')}@example.com`,
+                    role: role
                 };
+
+                console.log(`User for request: ${JSON.stringify(req.user, null, 2)}`);
                 return next();
             }
 
@@ -50,7 +101,20 @@ exports.protect = async (req, res, next) => {
         }
     } catch (error) {
         console.error('Auth Middleware Error:', error);
-        res.status(401).json({ success: false, message: 'Authentication failed', error: error.message });
+
+        // Provide more detailed error information
+        res.status(401).json({
+            success: false,
+            message: 'Authentication failed',
+            error: error.message,
+            errorType: error.name || 'Unknown',
+            // Include token info for debugging (without revealing the full token)
+            tokenInfo: req.headers.authorization ? {
+                format: req.headers.authorization.startsWith('Bearer ') ? 'Bearer' : 'Unknown',
+                length: req.headers.authorization.split(' ')[1]?.length || 0,
+                prefix: req.headers.authorization.split(' ')[1]?.substring(0, 10) || ''
+            } : null
+        });
     }
 };
 
@@ -59,7 +123,34 @@ exports.attemptAuth = async (req, res, next) => {
     try {
         const token = req.headers.authorization?.split('Bearer ')[1];
 
+        // Check if we should use mock authentication
+        const useMockAuth = process.env.NODE_ENV === 'development' && process.env.SKIP_AUTH === 'true';
+        const useDeployedMockAuth = process.env.RENDER === 'true' && process.env.RENDER_MOCK_AUTH === 'true';
+
         if (!token) {
+            // Use mock user if configured to do so
+            if (useMockAuth || useDeployedMockAuth) {
+                console.log('⚠️ Using mock user in attemptAuth (SKIP_AUTH or RENDER_MOCK_AUTH enabled)');
+
+                // Extract user ID from request if available
+                const userId = req.query.userId || req.params.userId ||
+                               req.body.userId || req.body.user_id ||
+                               req.body.uid || 'mock-user-id';
+
+                // Extract role from request if available
+                const role = req.query.role || req.body.role || 'student';
+
+                req.user = {
+                    id: userId,
+                    uid: userId,
+                    email: `${userId}@example.com`,
+                    role: role,
+                    isMockUser: true
+                };
+
+                return next();
+            }
+
             // Continue without authentication
             console.log('No token provided, continuing without authentication');
             return next();
@@ -72,18 +163,55 @@ exports.attemptAuth = async (req, res, next) => {
             // Add user info to request
             req.user = {
                 id: decodedToken.uid,
+                uid: decodedToken.uid,
                 email: decodedToken.email,
-                role: decodedToken.role || 'student' // Default to student if role not set
+                role: decodedToken.role || 'student', // Default to student if role not set
+                // Add additional user info if available
+                displayName: decodedToken.name || decodedToken.displayName,
+                photoURL: decodedToken.picture || decodedToken.photoURL,
+                // Add token info for debugging
+                tokenInfo: {
+                    iss: decodedToken.iss,
+                    aud: decodedToken.aud,
+                    exp: decodedToken.exp,
+                    auth_time: decodedToken.auth_time
+                }
             };
+
+            console.log(`✅ Authenticated user in attemptAuth: ${req.user.id} with role ${req.user.role}`);
         } catch (verifyError) {
-            console.error('Token verification failed in attemptAuth middleware:', verifyError.message);
-            // Continue without setting req.user
+            console.log('Token verification failed in attemptAuth middleware:', verifyError.message);
+
+            // Use mock user if configured to do so
+            if (useMockAuth || useDeployedMockAuth) {
+                console.log('⚠️ Using mock user in attemptAuth after token verification failure');
+
+                // If token starts with "eyJ", it's likely a real JWT token
+                // Use the first 10 characters as a mock UID to maintain some consistency
+                let userId = 'mock-user-id';
+                if (token && token.startsWith('eyJ')) {
+                    userId = token.substring(0, 10);
+                }
+
+                // Extract role from request if available
+                const role = req.query.role || req.body.role || 'student';
+
+                req.user = {
+                    id: userId,
+                    uid: userId,
+                    email: `${userId.replace(/[^a-zA-Z0-9]/g, '')}@example.com`,
+                    role: role,
+                    isMockUser: true
+                };
+            }
+            // Continue without setting req.user if not using mock auth
         }
 
         // Always continue to the next middleware
         next();
     } catch (error) {
         console.error('Error in attemptAuth middleware:', error);
+        // Don't let errors in this middleware block the request
         next();
     }
 };

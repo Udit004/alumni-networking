@@ -1,62 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const Course = require('../models/Course');
-const admin = require('firebase-admin');
 
-// Authentication middleware - DEVELOPMENT VERSION (more permissive)
-const authenticateToken = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-
-    // For development, if no token is provided, create a mock user
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('No token provided, using mock user for development');
-      req.user = {
-        uid: 'dev-user-123',
-        email: 'dev@example.com',
-        role: 'teacher' // Default role for development
-      };
-      return next();
-    }
-
-    try {
-      // Try to verify the token
-      const token = authHeader.split(' ')[1];
-      const decodedToken = await admin.auth().verifyIdToken(token);
-
-      // Skip Firestore check in production to avoid authentication issues
-      // Just use the token data directly
-      req.user = {
-        uid: decodedToken.uid,
-        email: decodedToken.email,
-        role: decodedToken.role || 'teacher' // Default to teacher for development
-      };
-
-      console.log('Using token data for user:', req.user);
-    } catch (tokenError) {
-      console.warn('Token verification failed, using mock user for development:', tokenError);
-      // If token verification fails, still allow the request with mock data
-      req.user = {
-        uid: authHeader.split(' ')[1].substring(0, 20), // Use part of the token as UID
-        email: 'dev@example.com',
-        role: 'teacher' // Default role for development
-      };
-    }
-
-    console.log('User for request:', req.user);
-    next();
-  } catch (error) {
-    console.error('Authentication error:', error);
-    // For development, still allow the request even if authentication fails
-    req.user = {
-      uid: 'error-user-' + Date.now(),
-      email: 'error@example.com',
-      role: 'teacher'
-    };
-    console.log('Using fallback user due to error:', req.user);
-    next();
-  }
-};
+// Import the centralized authentication middleware
+const { protect: authenticateToken, attemptAuth } = require('../middleware/authMiddleware');
 
 // ===== SPECIAL ROUTES (MUST BE DEFINED BEFORE GENERIC ROUTES) =====
 
@@ -122,9 +69,57 @@ router.get('/student/:studentId', authenticateToken, async (req, res) => {
 });
 
 // Get all courses
-router.get('/', async (req, res) => {
+router.get('/', attemptAuth, async (req, res) => {
   try {
-    const courses = await Course.find();
+    let courses;
+
+    // If user is authenticated, we can show more details
+    if (req.user) {
+      console.log(`Fetching courses for authenticated user: ${req.user.id} with role ${req.user.role}`);
+
+      // If user is a teacher, show their courses with full details
+      if (req.user.role === 'teacher') {
+        courses = await Course.find({ teacherId: req.user.id });
+        console.log(`Found ${courses.length} courses for teacher ${req.user.id}`);
+      }
+      // If user is a student, show all courses but mark which ones they're enrolled in
+      else if (req.user.role === 'student') {
+        courses = await Course.find();
+
+        // Mark courses the student is enrolled in
+        courses = courses.map(course => {
+          const isEnrolled = course.students.some(student => student.studentId === req.user.id);
+          return {
+            ...course.toObject(),
+            isEnrolled
+          };
+        });
+
+        console.log(`Found ${courses.length} courses, marking enrollment for student ${req.user.id}`);
+      }
+      // For admin or other roles, show all courses
+      else {
+        courses = await Course.find();
+        console.log(`Found ${courses.length} courses for user with role ${req.user.role}`);
+      }
+    }
+    // For unauthenticated users, show limited course info
+    else {
+      console.log('Fetching courses for unauthenticated user');
+      courses = await Course.find({}, {
+        title: 1,
+        description: 1,
+        teacherName: 1,
+        startDate: 1,
+        endDate: 1,
+        status: 1,
+        category: 1,
+        tags: 1,
+        thumbnail: 1
+      });
+      console.log(`Found ${courses.length} courses (limited info for public view)`);
+    }
+
     res.json({ success: true, courses });
   } catch (error) {
     console.error('Error fetching courses:', error);
@@ -480,15 +475,52 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 });
 
 // Get a specific course by ID (THIS MUST BE THE LAST ROUTE)
-router.get('/:id', async (req, res) => {
+router.get('/:id', attemptAuth, async (req, res) => {
   try {
     // Create a safe query that handles both ObjectId and string IDs
     const courseQuery = createIdQuery(req.params.id);
     const course = await Course.findOne(courseQuery);
+
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
-    res.json({ success: true, course });
+
+    // If user is authenticated, we can show more details
+    if (req.user) {
+      console.log(`Fetching course ${req.params.id} for authenticated user: ${req.user.id} with role ${req.user.role}`);
+
+      // Add user-specific data
+      let courseData = course.toObject();
+
+      // If user is a student, check if they're enrolled
+      if (req.user.role === 'student') {
+        courseData.isEnrolled = course.students.some(student => student.studentId === req.user.id);
+      }
+
+      // If user is the teacher of this course or an admin, add additional data
+      if (req.user.id === course.teacherId || req.user.role === 'admin') {
+        courseData.isTeacher = true;
+      }
+
+      return res.json({ success: true, course: courseData });
+    }
+
+    // For unauthenticated users, show limited course info
+    console.log(`Fetching course ${req.params.id} for unauthenticated user`);
+    const limitedCourse = {
+      _id: course._id,
+      title: course.title,
+      description: course.description,
+      teacherName: course.teacherName,
+      startDate: course.startDate,
+      endDate: course.endDate,
+      status: course.status,
+      category: course.category,
+      tags: course.tags,
+      thumbnail: course.thumbnail
+    };
+
+    res.json({ success: true, course: limitedCourse });
   } catch (error) {
     console.error('Error fetching course:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch course', error: error.message });
