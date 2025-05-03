@@ -37,16 +37,51 @@ router.get('/teacher/:teacherId', authenticateToken, async (req, res) => {
   try {
     const { teacherId } = req.params;
 
+    // Log detailed information for debugging
+    console.log(`Accessing teacher courses with:
+      - Requested teacherId: ${teacherId}
+      - User in request: ${JSON.stringify(req.user)}
+    `);
+
     // Verify the user is requesting their own courses or is an admin
-    if (req.user.uid !== teacherId && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Unauthorized access' });
+    // Check both uid and id properties for compatibility
+    const userIdMatches = (req.user.uid === teacherId || req.user.id === teacherId);
+    const isAdmin = (req.user.role === 'admin');
+
+    if (!userIdMatches && !isAdmin) {
+      console.log(`Unauthorized access attempt:
+        - Requested teacherId: ${teacherId}
+        - User ID: ${req.user.id || req.user.uid}
+        - User role: ${req.user.role}
+      `);
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized access',
+        details: 'You can only view your own created courses'
+      });
     }
 
+    // For development/debugging, log the query we're about to execute
+    console.log(`Searching for courses with teacherId: ${teacherId}`);
+
+    // Find courses created by this teacher
     const courses = await Course.find({ teacherId });
-    res.json({ success: true, courses });
+
+    console.log(`Found ${courses.length} courses for teacher ${teacherId}`);
+
+    // Return the courses
+    res.json({
+      success: true,
+      count: courses.length,
+      courses
+    });
   } catch (error) {
     console.error('Error fetching teacher courses:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch teacher courses', error: error.message });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch teacher courses',
+      error: error.message
+    });
   }
 });
 
@@ -55,16 +90,51 @@ router.get('/student/:studentId', authenticateToken, async (req, res) => {
   try {
     const { studentId } = req.params;
 
+    // Log detailed information for debugging
+    console.log(`Accessing student courses with:
+      - Requested studentId: ${studentId}
+      - User in request: ${JSON.stringify(req.user)}
+    `);
+
     // Verify the user is requesting their own courses or is an admin
-    if (req.user.uid !== studentId && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Unauthorized access' });
+    // Check both uid and id properties for compatibility
+    const userIdMatches = (req.user.uid === studentId || req.user.id === studentId);
+    const isAdmin = (req.user.role === 'admin');
+
+    if (!userIdMatches && !isAdmin) {
+      console.log(`Unauthorized access attempt:
+        - Requested studentId: ${studentId}
+        - User ID: ${req.user.id || req.user.uid}
+        - User role: ${req.user.role}
+      `);
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized access',
+        details: 'You can only view your own enrolled courses'
+      });
     }
 
+    // For development/debugging, log the query we're about to execute
+    console.log(`Searching for courses with students.studentId: ${studentId}`);
+
+    // Find courses where the student is enrolled
     const courses = await Course.find({ 'students.studentId': studentId });
-    res.json({ success: true, courses });
+
+    console.log(`Found ${courses.length} courses for student ${studentId}`);
+
+    // Return the courses
+    res.json({
+      success: true,
+      count: courses.length,
+      courses
+    });
   } catch (error) {
     console.error('Error fetching student courses:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch student courses', error: error.message });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch student courses',
+      error: error.message
+    });
   }
 });
 
@@ -171,9 +241,13 @@ const { createIdQuery, isValidObjectId } = require('../utils/mongoUtils');
 router.get('/:id/students', authenticateToken, async (req, res) => {
   try {
     const courseId = req.params.id;
-    const teacherId = req.user.uid;
+    const userId = req.user.id || req.user.uid;
 
-    console.log(`Fetching students for course ID: ${courseId}`);
+    // Log detailed information for debugging
+    console.log(`Fetching students for course:
+      - Course ID: ${courseId}
+      - User in request: ${JSON.stringify(req.user)}
+    `);
 
     // Create a safe query that handles both ObjectId and string IDs
     const courseQuery = createIdQuery(courseId);
@@ -190,10 +264,21 @@ router.get('/:id/students', authenticateToken, async (req, res) => {
     }
 
     // Verify the user is the course teacher or an admin
-    if (course.teacherId !== teacherId && req.user.role !== 'admin') {
+    // Check both uid and id properties for compatibility
+    const isTeacher = (course.teacherId === req.user.uid || course.teacherId === req.user.id);
+    const isAdmin = (req.user.role === 'admin');
+
+    if (!isTeacher && !isAdmin) {
+      console.log(`Unauthorized attempt to view students:
+        - Course ID: ${courseId}
+        - Course Teacher ID: ${course.teacherId}
+        - User ID: ${userId}
+        - User role: ${req.user.role}
+      `);
       return res.status(403).json({
         success: false,
-        message: 'Unauthorized to view students in this course'
+        message: 'Unauthorized to view students in this course',
+        details: 'Only the course teacher or an admin can view enrolled students'
       });
     }
 
@@ -281,9 +366,30 @@ router.post('/:id/enroll', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { studentId, studentName } = req.body;
 
+    // Log detailed information for debugging
+    console.log(`Enrolling student in course:
+      - Course ID: ${id}
+      - Student ID: ${studentId}
+      - Student Name: ${studentName}
+      - User in request: ${JSON.stringify(req.user)}
+    `);
+
     // Verify the user is enrolling themselves or is an admin
-    if (req.user.uid !== studentId && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Unauthorized to enroll' });
+    // Check both uid and id properties for compatibility
+    const userIdMatches = (req.user.uid === studentId || req.user.id === studentId);
+    const isAdmin = (req.user.role === 'admin');
+
+    if (!userIdMatches && !isAdmin) {
+      console.log(`Unauthorized enrollment attempt:
+        - Student ID: ${studentId}
+        - User ID: ${req.user.id || req.user.uid}
+        - User role: ${req.user.role}
+      `);
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized to enroll',
+        details: 'You can only enroll yourself in courses'
+      });
     }
 
     // Create a safe query that handles both ObjectId and string IDs
@@ -327,16 +433,39 @@ router.post('/:id/unenroll', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { studentId } = req.body;
 
-    // Verify the user is unenrolling themselves, is the teacher, or is an admin
+    // Log detailed information for debugging
+    console.log(`Unenrolling student from course:
+      - Course ID: ${id}
+      - Student ID: ${studentId}
+      - User in request: ${JSON.stringify(req.user)}
+    `);
+
     // Create a safe query that handles both ObjectId and string IDs
     const courseQuery = createIdQuery(id);
     const course = await Course.findOne(courseQuery);
+
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
 
-    if (req.user.uid !== studentId && req.user.uid !== course.teacherId && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Unauthorized to unenroll' });
+    // Verify the user is unenrolling themselves, is the teacher, or is an admin
+    // Check both uid and id properties for compatibility
+    const isStudent = (req.user.uid === studentId || req.user.id === studentId);
+    const isTeacher = (req.user.uid === course.teacherId || req.user.id === course.teacherId);
+    const isAdmin = (req.user.role === 'admin');
+
+    if (!isStudent && !isTeacher && !isAdmin) {
+      console.log(`Unauthorized unenrollment attempt:
+        - Student ID: ${studentId}
+        - User ID: ${req.user.id || req.user.uid}
+        - Teacher ID: ${course.teacherId}
+        - User role: ${req.user.role}
+      `);
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized to unenroll',
+        details: 'You can only unenroll yourself, or as a teacher/admin, unenroll students from your courses'
+      });
     }
 
     // Remove student from the course
@@ -419,6 +548,12 @@ router.delete('/:id/materials/:materialId', authenticateToken, async (req, res) 
 // Update a course
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
+    // Log detailed information for debugging
+    console.log(`Updating course:
+      - Course ID: ${req.params.id}
+      - User in request: ${JSON.stringify(req.user)}
+    `);
+
     // Create a safe query that handles both ObjectId and string IDs
     const courseQuery = createIdQuery(req.params.id);
     const course = await Course.findOne(courseQuery);
@@ -429,8 +564,22 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 
     // Verify the user is the course teacher or an admin
-    if (req.user.uid !== course.teacherId && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Unauthorized to update this course' });
+    // Check both uid and id properties for compatibility
+    const isTeacher = (req.user.uid === course.teacherId || req.user.id === course.teacherId);
+    const isAdmin = (req.user.role === 'admin');
+
+    if (!isTeacher && !isAdmin) {
+      console.log(`Unauthorized course update attempt:
+        - Course ID: ${req.params.id}
+        - Course Teacher ID: ${course.teacherId}
+        - User ID: ${req.user.id || req.user.uid}
+        - User role: ${req.user.role}
+      `);
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized to update this course',
+        details: 'Only the course teacher or an admin can update this course'
+      });
     }
 
     // Update the course
@@ -487,18 +636,27 @@ router.get('/:id', attemptAuth, async (req, res) => {
 
     // If user is authenticated, we can show more details
     if (req.user) {
-      console.log(`Fetching course ${req.params.id} for authenticated user: ${req.user.id} with role ${req.user.role}`);
+      console.log(`Fetching course ${req.params.id} for authenticated user: ${req.user.id || req.user.uid} with role ${req.user.role}`);
 
       // Add user-specific data
       let courseData = course.toObject();
 
       // If user is a student, check if they're enrolled
+      // Check both id and uid properties for compatibility
+      const userId = req.user.id || req.user.uid;
+
       if (req.user.role === 'student') {
-        courseData.isEnrolled = course.students.some(student => student.studentId === req.user.id);
+        courseData.isEnrolled = course.students.some(student =>
+          student.studentId === userId || student.studentId === req.user.id || student.studentId === req.user.uid
+        );
       }
 
       // If user is the teacher of this course or an admin, add additional data
-      if (req.user.id === course.teacherId || req.user.role === 'admin') {
+      // Check both id and uid properties for compatibility
+      const isTeacher = (userId === course.teacherId);
+      const isAdmin = (req.user.role === 'admin');
+
+      if (isTeacher || isAdmin) {
         courseData.isTeacher = true;
       }
 
