@@ -50,13 +50,25 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // Function to get the user's ID token
+  // Function to get the user's ID token with refresh logic
   const getUserToken = async () => {
     if (!currentUser) return null;
     try {
-      return await currentUser.getIdToken();
+      // Get token with expiration info
+      const tokenResult = await currentUser.getIdTokenResult();
+      const expirationTime = new Date(tokenResult.expirationTime).getTime();
+      const now = Date.now();
+
+      // If token expires in less than 5 minutes, force refresh
+      if (expirationTime - now < 5 * 60 * 1000) {
+        console.log('🔄 Token close to expiration, refreshing...');
+        return await currentUser.getIdToken(true); // Force refresh
+      }
+
+      console.log(`🔑 Using valid token (expires in ${Math.floor((expirationTime - now) / 60000)} minutes)`);
+      return tokenResult.token;
     } catch (error) {
-      console.error("Error getting user token:", error);
+      console.error("❌ Error getting user token:", error);
       return null;
     }
   };

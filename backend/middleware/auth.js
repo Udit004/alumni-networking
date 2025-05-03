@@ -12,9 +12,14 @@ const auth = async (req, res, next) => {
 
         // First try to authenticate with the token
         if (token) {
+            console.log('🔍 Auth token received, length:', token.length);
+            console.log('🔍 Token first 10 chars:', token.substring(0, 10) + '...');
+
             try {
                 // Verify the token
+                console.log('🔄 Verifying Firebase token...');
                 const decodedToken = await admin.auth().verifyIdToken(token);
+                console.log('✅ Token verified successfully for user:', decodedToken.uid);
 
                 // Set the user in the request
                 req.user = {
@@ -24,14 +29,15 @@ const auth = async (req, res, next) => {
                     authMethod: 'token'
                 };
 
-                console.log('Authenticated user with token:', req.user.uid);
+                console.log('👤 Authenticated user with token:', req.user.uid, 'Role:', req.user.role);
                 return next();
             } catch (verifyError) {
-                console.error('Token verification failed:', verifyError.message);
+                console.error('❌ Token verification failed:', verifyError.message);
+                console.error('❌ Error details:', verifyError);
                 // Continue to fallback authentication
             }
         } else {
-            console.log('No auth token provided');
+            console.log('⚠️ No auth token provided');
         }
 
         // Fallback: Check for firebaseUID in query params
@@ -96,11 +102,14 @@ const verifyToken = async (req, res, next) => {
         // First try to authenticate with the token
         const token = authHeader?.split('Bearer ')[1];
         if (token) {
+            console.log('🔍 verifyToken: Auth token received, length:', token.length);
+            console.log('🔍 verifyToken: Token first 10 chars:', token.substring(0, 10) + '...');
+
             try {
                 // Verify the Firebase token
-                console.log('Verifying token...');
+                console.log('🔄 verifyToken: Verifying Firebase token...');
                 const decodedToken = await admin.auth().verifyIdToken(token);
-                console.log('Token verified for user:', decodedToken.uid);
+                console.log('✅ verifyToken: Token verified for user:', decodedToken.uid);
 
                 // Add user info to request
                 req.user = {
@@ -110,9 +119,11 @@ const verifyToken = async (req, res, next) => {
                     authMethod: 'token'
                 };
 
+                console.log('👤 verifyToken: User authenticated with role:', req.user.role);
                 return next();
             } catch (verifyError) {
-                console.error('Token verification failed:', verifyError.message);
+                console.error('❌ verifyToken: Token verification failed:', verifyError.message);
+                console.error('❌ verifyToken: Error details:', verifyError);
 
                 // For development only - bypass auth if token verification fails
                 if (process.env.NODE_ENV === 'development') {
