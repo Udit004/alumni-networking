@@ -550,20 +550,49 @@ const StudentDashboard = () => {
         try {
           console.log(`Trying to fetch enrolled courses from API...`);
 
-          // Create request config with authentication headers
-          const config = await addAuthHeaders({
-            timeout: DEFAULT_TIMEOUT
-          });
+          // Define base URLs to try in order
+          const baseUrls = [
+            API_URLS.main, // From apiConfig.js
+            'https://alumni-networking.onrender.com',
+            'http://localhost:5000'
+          ];
 
-          const response = await axios.get(
-            `${API_URLS.courses}/student/${currentUser.uid}`,
-            config
-          );
+          let success = false;
+          let enrolledCourses = [];
 
-          if (response.data && response.data.success) {
-            const enrolledCourses = response.data.courses || [];
+          // Try each base URL until one works
+          for (const baseUrl of baseUrls) {
+            try {
+              console.log(`Trying to fetch courses from ${baseUrl}...`);
+
+              // Create request config with authentication headers
+              const config = await addAuthHeaders({
+                timeout: 5000 // Shorter timeout to avoid long waits
+              });
+
+              const response = await axios.get(
+                `${baseUrl}/api/courses/student/${currentUser.uid}`,
+                config
+              );
+
+              if (response.data && response.data.success) {
+                enrolledCourses = response.data.courses || [];
+                console.log(`Found ${enrolledCourses.length} enrolled courses from ${baseUrl}`);
+                success = true;
+                break;
+              } else {
+                console.log(`Invalid response from ${baseUrl}:`, response.data);
+              }
+            } catch (urlErr) {
+              console.log(`Failed to fetch courses from ${baseUrl}:`, urlErr.message);
+              // Continue to next URL
+            }
+          }
+
+          if (success) {
             setEnrolledCoursesCount(enrolledCourses.length);
-            console.log(`Found ${enrolledCourses.length} enrolled courses from API`);
+          } else {
+            throw new Error('Failed to fetch courses from any API endpoint');
           }
         } catch (coursesError) {
           console.error("Error fetching courses from API:", coursesError);
@@ -573,7 +602,14 @@ const StudentDashboard = () => {
             console.log('Using Firestore fallback for courses...');
             const courses = await getStudentCourses(currentUser.uid);
             console.log('Courses from Firestore:', courses);
-            setEnrolledCoursesCount(courses.length);
+
+            if (courses && Array.isArray(courses)) {
+              setEnrolledCoursesCount(courses.length);
+            } else {
+              // If Firestore returns invalid data, use a default value
+              console.warn('Invalid data from Firestore, using default count');
+              setEnrolledCoursesCount(0);
+            }
           } catch (firestoreError) {
             console.error("Error fetching courses from Firestore:", firestoreError);
             // Set default value if both API and Firestore fail

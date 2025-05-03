@@ -27,6 +27,36 @@ const Courses = ({ isDarkMode }) => {
     fetchEnrolledCourses();
   }, [currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Mock courses data for fallback
+  const mockCourses = [
+    {
+      _id: 'mock-course-1',
+      id: 'mock-course-1',
+      title: 'Introduction to Web Development',
+      description: 'Learn the basics of HTML, CSS, and JavaScript',
+      teacherName: 'John Smith',
+      startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+      endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
+      status: 'active',
+      progress: 35,
+      enrollmentDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), // 15 days ago
+      grade: 'B+'
+    },
+    {
+      _id: 'mock-course-2',
+      id: 'mock-course-2',
+      title: 'Advanced React Programming',
+      description: 'Master React hooks, context API, and Redux',
+      teacherName: 'Sarah Johnson',
+      startDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), // 45 days ago
+      endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days from now
+      status: 'active',
+      progress: 75,
+      enrollmentDate: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000), // 40 days ago
+      grade: 'A'
+    }
+  ];
+
   const fetchEnrolledCourses = async () => {
     if (!currentUser) return;
 
@@ -35,8 +65,19 @@ const Courses = ({ isDarkMode }) => {
       const token = await currentUser.getIdToken();
       let success = false;
       let responseData = null;
+      let lastError = null;
 
-      for (const baseUrl of baseUrls) {
+      // Define base URLs to try in order
+      const baseUrlsToTry = [
+        'https://alumni-networking.onrender.com', // Deployed URL first
+        'http://localhost:5000', // Then local URL
+        process.env.REACT_APP_API_URL || 'http://localhost:5000' // Then from env
+      ];
+
+      // Remove duplicates
+      const uniqueBaseUrls = [...new Set(baseUrlsToTry)];
+
+      for (const baseUrl of uniqueBaseUrls) {
         try {
           console.log(`Trying to fetch enrolled courses from ${baseUrl}...`);
           const response = await axios.get(
@@ -45,7 +86,8 @@ const Courses = ({ isDarkMode }) => {
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-              }
+              },
+              timeout: 5000 // Add timeout to avoid long waits
             }
           );
           console.log(`Response from ${baseUrl}:`, response.data);
@@ -54,10 +96,11 @@ const Courses = ({ isDarkMode }) => {
           break; // Exit the loop if successful
         } catch (err) {
           console.log(`Failed to connect to ${baseUrl}:`, err.message);
+          lastError = err;
         }
       }
 
-      if (success && responseData.success) {
+      if (success && responseData && responseData.success) {
         // Process the courses data
         const enrolledCourses = responseData.courses.map(course => ({
           ...course,
@@ -71,9 +114,47 @@ const Courses = ({ isDarkMode }) => {
         setCourses(enrolledCourses);
         setError(null);
       } else {
-        console.error('Failed to fetch enrolled courses:', responseData?.message);
-        setError('Failed to load courses. Please try again later.');
-        setCourses([]);
+        console.error('Failed to fetch enrolled courses from API:', responseData?.message || lastError?.message);
+
+        // Try Firestore fallback
+        try {
+          console.log('Using Firestore fallback for student courses...');
+          const { getStudentCourses } = await import('../../../services/firestoreFallbackService');
+          const firestoreCourses = await getStudentCourses(currentUser.uid);
+          console.log('Courses from Firestore:', firestoreCourses);
+
+          if (firestoreCourses && Array.isArray(firestoreCourses) && firestoreCourses.length > 0) {
+            // Process the Firestore courses data
+            const processedCourses = firestoreCourses.map(course => ({
+              ...course,
+              // Add default values for fields that might not be in the Firestore data
+              _id: course.id || course._id,
+              id: course.id || course._id,
+              progress: course.progress || calculateProgress(course),
+              status: determineStatus(course),
+              enrollmentDate: course.enrollmentDate || new Date(),
+              grade: course.grade || 'N/A',
+              title: course.title || 'Untitled Course',
+              description: course.description || 'No description available',
+              teacherName: course.teacherName || 'Unknown Teacher'
+            }));
+
+            setCourses(processedCourses);
+            setError(null);
+            return; // Exit early if Firestore data is available
+          } else {
+            console.log('No courses found in Firestore or invalid data');
+            // Continue to mock data if Firestore returns empty or invalid data
+          }
+        } catch (firestoreError) {
+          console.error('Error fetching courses from Firestore:', firestoreError);
+          // Continue to mock data if Firestore fails
+        }
+
+        // If both API and Firestore fail, use mock data
+        console.log('Using mock course data as fallback');
+        setCourses(mockCourses);
+        setError('Could not connect to the server. Showing sample data instead.');
       }
     } catch (err) {
       console.error('Error fetching enrolled courses:', err);
