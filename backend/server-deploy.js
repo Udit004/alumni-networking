@@ -59,22 +59,27 @@ const allowedOrigins = [
     'https://alumni-networking-frontend.vercel.app'
 ];
 
-// CORS Configuration
+// CORS Configuration with more detailed logging
 app.use(cors({
     origin: function(origin, callback) {
+        console.log('🔍 Request origin:', origin || 'No origin');
+
         // Allow requests with no origin (like mobile apps, curl requests, or requests from the same origin)
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            console.log('✅ Origin allowed:', origin || 'No origin');
             return callback(null, true);
         }
 
         // For debugging - log blocked origins
-        console.log('Blocked origin:', origin);
+        console.log('❌ Blocked origin:', origin);
         const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
         return callback(new Error(msg), false);
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Length', 'X-Requested-With'],
+    credentials: true,
+    maxAge: 86400 // 24 hours
 }));
 
 // Middleware
@@ -182,13 +187,36 @@ app.get("/api/auth-test", async (req, res) => {
     }
 });
 
-// Test CORS endpoint
+// Test CORS endpoint with detailed headers
 app.get("/api/test-cors", (req, res) => {
+    // Log all request headers for debugging
+    console.log('🔍 CORS Test - Request headers:', req.headers);
+
+    // Set explicit CORS headers for this endpoint
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+
+    // Return detailed information about the request
     res.status(200).json({
         status: "ok",
         message: "CORS test successful!",
         timestamp: new Date().toISOString(),
-        origin: req.headers.origin || 'No origin header'
+        requestInfo: {
+            origin: req.headers.origin || 'No origin header',
+            referer: req.headers.referer || 'No referer header',
+            userAgent: req.headers['user-agent'] || 'No user-agent header'
+        },
+        corsInfo: {
+            allowedOrigins: allowedOrigins,
+            responseHeaders: {
+                'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),
+                'Access-Control-Allow-Credentials': res.getHeader('Access-Control-Allow-Credentials'),
+                'Access-Control-Allow-Methods': res.getHeader('Access-Control-Allow-Methods'),
+                'Access-Control-Allow-Headers': res.getHeader('Access-Control-Allow-Headers')
+            }
+        }
     });
 });
 
