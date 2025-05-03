@@ -154,10 +154,41 @@ function createMockFirebaseAdmin() {
         }
       }
 
-      // If token starts with "eyJ", it's likely a real JWT token
-      // Use the first 10 characters as a mock UID to maintain some consistency
-      if (token && token.startsWith('eyJ')) {
-        uid = token.substring(0, 10);
+      // If we have a real token, try to extract the actual UID from it
+      // This is a more reliable approach than using the first 10 characters
+      if (token && token.length > 100) {
+        try {
+          // Try to extract the actual UID from the token
+          // For Firebase tokens, the UID is often in the 'sub' or 'user_id' field
+          // We'll try to extract it from the token payload
+
+          // First, try to decode the token payload (middle part)
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            // The middle part is the payload, base64 encoded
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+
+            // Extract user info if available
+            if (payload.user_id) {
+              uid = payload.user_id;
+              console.log(`🔑 Successfully extracted actual UID from token: ${uid}`);
+            } else if (payload.sub) {
+              uid = payload.sub;
+              console.log(`🔑 Successfully extracted actual UID from token: ${uid}`);
+            } else if (payload.uid) {
+              uid = payload.uid;
+              console.log(`🔑 Successfully extracted actual UID from token: ${uid}`);
+            }
+          }
+        } catch (error) {
+          console.log("⚠️ Could not extract UID from token:", error.message);
+
+          // Fallback to using the first 10 characters as a mock UID
+          if (token.startsWith('eyJ')) {
+            uid = token.substring(0, 10);
+            console.log(`⚠️ Using first 10 characters as mock UID: ${uid}`);
+          }
+        }
       }
 
       // Return a mock decoded token

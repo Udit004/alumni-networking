@@ -76,11 +76,42 @@ exports.protect = async (req, res, next) => {
             if (useMockAuth || useDeployedMockAuth) {
                 console.log('⚠️ Using mock user after token verification failure');
 
-                // If token starts with "eyJ", it's likely a real JWT token
-                // Use the first 10 characters as a mock UID to maintain some consistency
+                // Try to extract the actual user ID from the token
                 let userId = 'mock-user-id';
-                if (token && token.startsWith('eyJ')) {
-                    userId = token.substring(0, 10);
+
+                // If we have a real token, try to extract the actual UID from it
+                if (token && token.length > 100) {
+                    try {
+                        // Try to extract the actual UID from the token
+                        // For Firebase tokens, the UID is often in the 'sub' or 'user_id' field
+
+                        // First, try to decode the token payload (middle part)
+                        const parts = token.split('.');
+                        if (parts.length === 3) {
+                            // The middle part is the payload, base64 encoded
+                            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+
+                            // Extract user info if available
+                            if (payload.user_id) {
+                                userId = payload.user_id;
+                                console.log(`🔑 Successfully extracted actual UID from token: ${userId}`);
+                            } else if (payload.sub) {
+                                userId = payload.sub;
+                                console.log(`🔑 Successfully extracted actual UID from token: ${userId}`);
+                            } else if (payload.uid) {
+                                userId = payload.uid;
+                                console.log(`🔑 Successfully extracted actual UID from token: ${userId}`);
+                            }
+                        }
+                    } catch (error) {
+                        console.log("⚠️ Could not extract UID from token:", error.message);
+
+                        // Fallback to using the first 10 characters as a mock UID
+                        if (token.startsWith('eyJ')) {
+                            userId = token.substring(0, 10);
+                            console.log(`⚠️ Using first 10 characters as mock UID: ${userId}`);
+                        }
+                    }
                 }
 
                 // Extract role from request if available
@@ -186,11 +217,42 @@ exports.attemptAuth = async (req, res, next) => {
             if (useMockAuth || useDeployedMockAuth) {
                 console.log('⚠️ Using mock user in attemptAuth after token verification failure');
 
-                // If token starts with "eyJ", it's likely a real JWT token
-                // Use the first 10 characters as a mock UID to maintain some consistency
+                // Try to extract the actual user ID from the token
                 let userId = 'mock-user-id';
-                if (token && token.startsWith('eyJ')) {
-                    userId = token.substring(0, 10);
+
+                // If we have a real token, try to extract the actual UID from it
+                if (token && token.length > 100) {
+                    try {
+                        // Try to extract the actual UID from the token
+                        // For Firebase tokens, the UID is often in the 'sub' or 'user_id' field
+
+                        // First, try to decode the token payload (middle part)
+                        const parts = token.split('.');
+                        if (parts.length === 3) {
+                            // The middle part is the payload, base64 encoded
+                            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+
+                            // Extract user info if available
+                            if (payload.user_id) {
+                                userId = payload.user_id;
+                                console.log(`🔑 Successfully extracted actual UID from token: ${userId}`);
+                            } else if (payload.sub) {
+                                userId = payload.sub;
+                                console.log(`🔑 Successfully extracted actual UID from token: ${userId}`);
+                            } else if (payload.uid) {
+                                userId = payload.uid;
+                                console.log(`🔑 Successfully extracted actual UID from token: ${userId}`);
+                            }
+                        }
+                    } catch (error) {
+                        console.log("⚠️ Could not extract UID from token:", error.message);
+
+                        // Fallback to using the first 10 characters as a mock UID
+                        if (token.startsWith('eyJ')) {
+                            userId = token.substring(0, 10);
+                            console.log(`⚠️ Using first 10 characters as mock UID: ${userId}`);
+                        }
+                    }
                 }
 
                 // Extract role from request if available
