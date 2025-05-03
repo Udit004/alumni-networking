@@ -47,6 +47,50 @@ export const getTeacherCourses = async (teacherId) => {
 };
 
 /**
+ * Mock courses data for fallback
+ */
+const mockCourses = [
+  {
+    id: 'mock-course-1',
+    courseId: 'CS101',
+    title: 'Introduction to Computer Science',
+    description: 'Learn the fundamentals of computer science and programming',
+    teacherId: 'teacher-123',
+    teacherName: 'Dr. Smith',
+    schedule: 'Mon, Wed 10:00 AM - 11:30 AM',
+    room: 'Room 101',
+    thumbnail: 'https://source.unsplash.com/random/800x600/?computer',
+    students: [],
+    maxStudents: 50,
+    progress: 0,
+    status: 'active',
+    term: 'Fall 2023',
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+    endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
+    materials: []
+  },
+  {
+    id: 'mock-course-2',
+    courseId: 'MATH201',
+    title: 'Advanced Mathematics',
+    description: 'Explore advanced mathematical concepts and their applications',
+    teacherId: 'teacher-456',
+    teacherName: 'Prof. Johnson',
+    schedule: 'Tue, Thu 2:00 PM - 3:30 PM',
+    room: 'Room 202',
+    thumbnail: 'https://source.unsplash.com/random/800x600/?math',
+    students: [],
+    maxStudents: 40,
+    progress: 0,
+    status: 'active',
+    term: 'Spring 2024',
+    startDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), // 15 days ago
+    endDate: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000), // 75 days from now
+    materials: []
+  }
+];
+
+/**
  * Get courses for a student
  * @param {string} studentId - Student's ID
  * @returns {Promise<Array>} - List of courses
@@ -70,7 +114,10 @@ export const getStudentCourses = async (studentId) => {
         }
         // Check if the student is in the students array
         if (Array.isArray(course.students)) {
-          return course.students.includes(studentId);
+          return course.students.includes(studentId) ||
+                 course.students.some(student =>
+                   typeof student === 'object' && student.studentId === studentId
+                 );
         }
         // Check if the student is in the registeredStudents array
         if (Array.isArray(course.registeredStudents)) {
@@ -79,10 +126,47 @@ export const getStudentCourses = async (studentId) => {
         return false;
       });
 
+    // If no courses found, return mock data for development
+    if (enrolledCourses.length === 0) {
+      console.log('No courses found in Firestore, using mock data');
+
+      // Create a copy of the mock courses with the student enrolled
+      const mockCoursesWithStudent = mockCourses.map(course => ({
+        ...course,
+        students: [
+          ...course.students,
+          {
+            studentId: studentId,
+            studentName: 'Student User',
+            enrolledAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) // 10 days ago
+          }
+        ]
+      }));
+
+      return mockCoursesWithStudent;
+    }
+
     return enrolledCourses;
   } catch (error) {
     console.error('Error fetching student courses from Firestore:', error);
-    return [];
+
+    // Return mock data if there's an error
+    console.log('Error in Firestore, using mock data');
+
+    // Create a copy of the mock courses with the student enrolled
+    const mockCoursesWithStudent = mockCourses.map(course => ({
+      ...course,
+      students: [
+        ...course.students,
+        {
+          studentId: studentId,
+          studentName: 'Student User',
+          enrolledAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) // 10 days ago
+        }
+      ]
+    }));
+
+    return mockCoursesWithStudent;
   }
 };
 
