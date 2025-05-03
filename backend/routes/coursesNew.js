@@ -169,14 +169,22 @@ router.post('/', authenticateToken, async (req, res) => {
 
 // ===== COURSE-SPECIFIC ROUTES =====
 
+// Import MongoDB utilities
+const { createIdQuery, isValidObjectId } = require('../utils/mongoUtils');
+
 // Get students enrolled in a specific course (teacher only)
 router.get('/:id/students', authenticateToken, async (req, res) => {
   try {
     const courseId = req.params.id;
     const teacherId = req.user.uid;
 
+    console.log(`Fetching students for course ID: ${courseId}`);
+
+    // Create a safe query that handles both ObjectId and string IDs
+    const courseQuery = createIdQuery(courseId);
+
     // Get the course
-    const course = await Course.findById(courseId);
+    const course = await Course.findOne(courseQuery);
 
     // Check if course exists
     if (!course) {
@@ -283,7 +291,9 @@ router.post('/:id/enroll', authenticateToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Unauthorized to enroll' });
     }
 
-    const course = await Course.findById(id);
+    // Create a safe query that handles both ObjectId and string IDs
+    const courseQuery = createIdQuery(id);
+    const course = await Course.findOne(courseQuery);
 
     // Check if course exists
     if (!course) {
@@ -323,7 +333,9 @@ router.post('/:id/unenroll', authenticateToken, async (req, res) => {
     const { studentId } = req.body;
 
     // Verify the user is unenrolling themselves, is the teacher, or is an admin
-    const course = await Course.findById(id);
+    // Create a safe query that handles both ObjectId and string IDs
+    const courseQuery = createIdQuery(id);
+    const course = await Course.findOne(courseQuery);
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
@@ -349,7 +361,9 @@ router.post('/:id/materials', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const material = req.body;
 
-    const course = await Course.findById(id);
+    // Create a safe query that handles both ObjectId and string IDs
+    const courseQuery = createIdQuery(id);
+    const course = await Course.findOne(courseQuery);
 
     // Check if course exists
     if (!course) {
@@ -382,7 +396,9 @@ router.delete('/:id/materials/:materialId', authenticateToken, async (req, res) 
   try {
     const { id, materialId } = req.params;
 
-    const course = await Course.findById(id);
+    // Create a safe query that handles both ObjectId and string IDs
+    const courseQuery = createIdQuery(id);
+    const course = await Course.findOne(courseQuery);
 
     // Check if course exists
     if (!course) {
@@ -408,7 +424,9 @@ router.delete('/:id/materials/:materialId', authenticateToken, async (req, res) 
 // Update a course
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id);
+    // Create a safe query that handles both ObjectId and string IDs
+    const courseQuery = createIdQuery(req.params.id);
+    const course = await Course.findOne(courseQuery);
 
     // Check if course exists
     if (!course) {
@@ -421,8 +439,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 
     // Update the course
-    const updatedCourse = await Course.findByIdAndUpdate(
-      req.params.id,
+    // Use findOneAndUpdate with our safe query instead of findByIdAndUpdate
+    const updatedCourse = await Course.findOneAndUpdate(
+      courseQuery, // Use the same query we used to find the course
       { ...req.body, updatedAt: Date.now() },
       { new: true, runValidators: true }
     );
@@ -437,7 +456,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
 // Delete a course
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id);
+    // Create a safe query that handles both ObjectId and string IDs
+    const courseQuery = createIdQuery(req.params.id);
+    const course = await Course.findOne(courseQuery);
 
     // Check if course exists
     if (!course) {
@@ -449,7 +470,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Unauthorized to delete this course' });
     }
 
-    await Course.findByIdAndDelete(req.params.id);
+    // Use findOneAndDelete with our safe query instead of findByIdAndDelete
+    await Course.findOneAndDelete(courseQuery);
     res.json({ success: true, message: 'Course deleted successfully' });
   } catch (error) {
     console.error('Error deleting course:', error);
@@ -460,7 +482,9 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // Get a specific course by ID (THIS MUST BE THE LAST ROUTE)
 router.get('/:id', async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id);
+    // Create a safe query that handles both ObjectId and string IDs
+    const courseQuery = createIdQuery(req.params.id);
+    const course = await Course.findOne(courseQuery);
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }

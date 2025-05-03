@@ -5,6 +5,7 @@
 
 import axios from 'axios';
 import { API_URLS, DEFAULT_TIMEOUT } from '../config/apiConfig';
+import { getAuthToken } from './tokenManager';
 
 /**
  * Makes an authenticated API request with consistent error handling
@@ -14,7 +15,7 @@ import { API_URLS, DEFAULT_TIMEOUT } from '../config/apiConfig';
  * @param {string} options.method - HTTP method (GET, POST, PUT, DELETE)
  * @param {Object} options.data - Request payload for POST/PUT requests
  * @param {Object} options.params - URL query parameters
- * @param {Function} options.getToken - Function to get the authentication token
+ * @param {Function} options.getToken - Function to get the authentication token (optional, uses centralized token manager if not provided)
  * @param {string} options.baseUrl - Base URL override (optional)
  * @param {number} options.timeout - Request timeout override (optional)
  * @returns {Promise} - Promise resolving to the API response data
@@ -29,8 +30,11 @@ export const makeAuthenticatedRequest = async ({
   timeout = DEFAULT_TIMEOUT
 }) => {
   try {
+    // Use provided token function or fall back to centralized token manager
+    const tokenFn = getToken || getAuthToken;
+
     // Get authentication token with refresh logic
-    const token = await getToken();
+    const token = await tokenFn();
 
     if (!token) {
       console.warn('🔴 No authentication token available for request to', endpoint);

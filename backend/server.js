@@ -2,7 +2,10 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
-const admin = require('./config/firebase-admin'); // Import Firebase Admin
+
+// Initialize Firebase Admin SDK
+console.log("🔥 Initializing Firebase Admin SDK from server.js");
+const admin = require('./config/firebase-admin'); // Import Firebase Admin with lazy initialization
 
 // Import models before routes
 require("./models/user");
@@ -282,8 +285,8 @@ app.get("/api/auth-test", async (req, res) => {
         console.log('🔍 Auth Test: Token first 10 chars:', token.substring(0, 10) + '...');
 
         try {
-            // Verify the token
-            const admin = require('./config/firebase-admin');
+            // Use the already initialized Firebase Admin instance
+            // No need to require it again as it's already initialized at the top of the file
             const decodedToken = await admin.auth().verifyIdToken(token);
 
             return res.status(200).json({

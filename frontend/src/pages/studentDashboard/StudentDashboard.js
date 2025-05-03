@@ -18,6 +18,7 @@ import Courses from "./components/Courses";
 import axios from 'axios';
 import { API_URLS, DEFAULT_TIMEOUT } from '../../config/apiConfig';
 import { getUserEvents, getStudentCourses } from '../../services/firestoreFallbackService';
+import { getAuthToken, addAuthHeaders } from '../../utils/tokenManager';
 
 const StudentDashboard = () => {
   const [isNavExpanded, setIsNavExpanded] = useState(window.innerWidth > 768);
@@ -402,18 +403,16 @@ const StudentDashboard = () => {
         // Fetch job applications count
         try {
           console.log('Fetching job applications count...');
-          const token = await currentUser.getIdToken();
+
+          // Create request config with authentication headers
+          const config = await addAuthHeaders({
+            timeout: DEFAULT_TIMEOUT
+          });
 
           // Try to get applications from the user-specific endpoint
           const jobAppResponse = await axios.get(
             `${API_URLS.main}/api/job-applications/user/${currentUser.uid}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              timeout: DEFAULT_TIMEOUT
-            }
+            config
           );
 
           console.log('Job applications response:', jobAppResponse.data);
@@ -440,16 +439,15 @@ const StudentDashboard = () => {
           // Try fallback to the general endpoint
           try {
             console.log('Using fallback for job applications...');
-            const token = await currentUser.getIdToken();
+
+            // Create request config with authentication headers
+            const config = await addAuthHeaders({
+              timeout: DEFAULT_TIMEOUT
+            });
+
             const fallbackResponse = await axios.get(
               `${API_URLS.main}/api/job-applications`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                },
-                timeout: DEFAULT_TIMEOUT
-              }
+              config
             );
 
             let allApplications = [];
@@ -478,18 +476,16 @@ const StudentDashboard = () => {
         // Fetch mentorships count - we want to show total applications, not just enrolled
         try {
           console.log('Fetching mentorship applications count...');
-          const token = await currentUser.getIdToken();
+
+          // Create request config with authentication headers
+          const config = await addAuthHeaders({
+            timeout: DEFAULT_TIMEOUT
+          });
 
           // Fetch mentorship applications for the specific user
           const mentorshipAppResponse = await axios.get(
             `${API_URLS.main}/api/mentorship-applications/user/${currentUser.uid}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              timeout: DEFAULT_TIMEOUT
-            }
+            config
           );
 
           console.log('Mentorship applications response:', mentorshipAppResponse.data);
@@ -516,16 +512,15 @@ const StudentDashboard = () => {
           // Try fallback to the general endpoint
           try {
             console.log('Using fallback for mentorship applications...');
-            const token = await currentUser.getIdToken();
+
+            // Create request config with authentication headers
+            const config = await addAuthHeaders({
+              timeout: DEFAULT_TIMEOUT
+            });
+
             const fallbackResponse = await axios.get(
               `${API_URLS.main}/api/mentorship-applications`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                },
-                timeout: DEFAULT_TIMEOUT
-              }
+              config
             );
 
             let allApplications = [];
@@ -554,16 +549,15 @@ const StudentDashboard = () => {
         // Fetch enrolled courses count
         try {
           console.log(`Trying to fetch enrolled courses from API...`);
-          const token = await currentUser.getIdToken();
+
+          // Create request config with authentication headers
+          const config = await addAuthHeaders({
+            timeout: DEFAULT_TIMEOUT
+          });
+
           const response = await axios.get(
             `${API_URLS.courses}/student/${currentUser.uid}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              timeout: DEFAULT_TIMEOUT
-            }
+            config
           );
 
           if (response.data && response.data.success) {
@@ -680,9 +674,9 @@ const StudentDashboard = () => {
       {/* Sidebar */}
       <div
         className={`h-full transition-all duration-300 shadow-lg
-                   ${isNavExpanded ? 'w-64' : 'w-20'} 
+                   ${isNavExpanded ? 'w-64' : 'w-20'}
                    ${isMobile ? 'fixed z-50' : 'relative'}`}
-        style={{ 
+        style={{
           backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(255, 255, 255, 0.98)',
           top: '0',
           left: isMobile && !isNavExpanded ? '-100%' : '0',
@@ -749,7 +743,7 @@ const StudentDashboard = () => {
               >
                 {isDarkMode ? '☀️' : '🌙'}
               </button>
-            
+
               <div className="relative" ref={notificationRef}>
                 <button
                   className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -823,7 +817,7 @@ const StudentDashboard = () => {
                 )}
               </div>
               <div className="relative" ref={profileRef}>
-                <button 
+                <button
                   className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white"
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                 >
@@ -833,7 +827,7 @@ const StudentDashboard = () => {
                     '👤'
                   )}
                 </button>
-                
+
                 {/* Profile Menu */}
                 {showProfileMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
@@ -870,7 +864,7 @@ const StudentDashboard = () => {
 
         {/* Mobile sidebar overlay */}
         {isMobile && isNavExpanded && (
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40"
             onClick={() => setIsNavExpanded(false)}
           ></div>
