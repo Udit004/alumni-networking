@@ -1,14 +1,14 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../AuthContext"; 
+import { useAuth } from "../context/AuthContext";
 
 
 const ProtectedRoute = ({ element, allowedRoles }) => {
-  const { user, role, loading } = useAuth();
+  const { currentUser, role, loading } = useAuth();
 
   if (loading) return <p>Loading...</p>; // Prevent blank screen while fetching role
 
-  if (!user) {
+  if (!currentUser) {
     console.log("Redirecting: No user found");
     return <Navigate to="/login" />;
   }
