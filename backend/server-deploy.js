@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const { corsPreflightHandler } = require('./middleware/corsMiddleware');
 require("dotenv").config();
 
 // Set NODE_ENV if not already set
@@ -59,7 +60,7 @@ const allowedOrigins = [
     'https://alumni-networking-frontend.vercel.app'
 ];
 
-// CORS Configuration with more detailed logging
+// CORS Configuration with more detailed logging and improved headers
 app.use(cors({
     origin: function(origin, callback) {
         console.log('🔍 Request origin:', origin || 'No origin');
@@ -75,14 +76,26 @@ app.use(cors({
         const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
         return callback(new Error(msg), false);
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Accept'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Cache-Control',
+        'Accept',
+        'Origin',
+        'Accept-Encoding',
+        'Accept-Language',
+        'Access-Control-Request-Headers',
+        'Access-Control-Request-Method'
+    ],
     exposedHeaders: ['Content-Length', 'X-Requested-With'],
     credentials: true,
     maxAge: 86400 // 24 hours
 }));
 
 // Middleware
+app.use(corsPreflightHandler); // Add CORS preflight handler
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -195,8 +208,9 @@ app.get("/api/test-cors", (req, res) => {
     // Set explicit CORS headers for this endpoint
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers',
+        'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Accept-Encoding, Accept-Language');
 
     // Return detailed information about the request
     res.status(200).json({
@@ -206,7 +220,9 @@ app.get("/api/test-cors", (req, res) => {
         requestInfo: {
             origin: req.headers.origin || 'No origin header',
             referer: req.headers.referer || 'No referer header',
-            userAgent: req.headers['user-agent'] || 'No user-agent header'
+            userAgent: req.headers['user-agent'] || 'No user-agent header',
+            host: req.headers.host || 'No host header',
+            method: req.method
         },
         corsInfo: {
             allowedOrigins: allowedOrigins,
@@ -216,7 +232,21 @@ app.get("/api/test-cors", (req, res) => {
                 'Access-Control-Allow-Methods': res.getHeader('Access-Control-Allow-Methods'),
                 'Access-Control-Allow-Headers': res.getHeader('Access-Control-Allow-Headers')
             }
+        },
+        environment: {
+            nodeEnv: process.env.NODE_ENV,
+            isProduction: process.env.NODE_ENV === 'production',
+            isRender: !!process.env.RENDER
         }
+    });
+});
+
+// Simple CORS test endpoint that returns minimal data
+app.get("/api/cors-check", (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: "CORS is working correctly",
+        origin: req.headers.origin || 'No origin'
     });
 });
 
