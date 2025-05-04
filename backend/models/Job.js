@@ -10,9 +10,14 @@ const jobSchema = new mongoose.Schema({
   salary: { type: String },
   contactEmail: { type: String, required: true },
   applicationDeadline: { type: Date, required: true },
-  creatorId: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
+  creatorId: { type: String, required: true, index: true },
+  createdAt: { type: Date, default: Date.now, index: true },
   applicants: { type: Number, default: 0 }
 });
 
-module.exports = mongoose.model('Job', jobSchema); 
+// Add indexes for frequently queried fields
+jobSchema.index({ creatorId: 1, createdAt: -1 }); // For getting jobs by creator sorted by date
+jobSchema.index({ applicationDeadline: 1 }); // For querying by deadline
+jobSchema.index({ type: 1, location: 1 }); // For filtering by type and location
+
+module.exports = mongoose.model('Job', jobSchema);

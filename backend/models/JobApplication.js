@@ -4,11 +4,13 @@ const jobApplicationSchema = new mongoose.Schema({
   jobId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Job',
-    required: true
+    required: true,
+    index: true
   },
   userId: {
     type: String,
-    required: true
+    required: true,
+    index: true
   },
   name: {
     type: String,
@@ -48,12 +50,18 @@ const jobApplicationSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ['pending', 'accepted', 'rejected'],
-    default: 'pending'
+    default: 'pending',
+    index: true
   },
   appliedAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+    index: true
   }
 });
 
-module.exports = mongoose.model('JobApplication', jobApplicationSchema); 
+// Add compound indexes for common query patterns
+jobApplicationSchema.index({ userId: 1, appliedAt: -1 }); // For getting user applications sorted by date
+jobApplicationSchema.index({ jobId: 1, status: 1 }); // For filtering applications by job and status
+
+module.exports = mongoose.model('JobApplication', jobApplicationSchema);

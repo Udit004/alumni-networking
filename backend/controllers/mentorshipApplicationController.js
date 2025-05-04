@@ -2,6 +2,7 @@ const MentorshipApplication = require('../models/MentorshipApplication');
 const Mentorship = require('../models/Mentorship');
 const mongoose = require('mongoose');
 const { insertDocument } = require('../utils/directDbInsert');
+const { getCachedData, getCachedDocument } = require('../services/cachedDataService');
 
 // Direct MongoDB insertion function
 async function createMentorshipApplicationDirectly(applicationData) {
@@ -78,7 +79,7 @@ exports.applyForMentorship = async (req, res) => {
         console.log('Mentorship details:', mentorship ? {
           id: mentorship._id,
           title: mentorship.title,
-          mentor: mentorship.mentor
+          mentorId: mentorship.mentorId
         } : 'Mentorship not found');
 
         // Create activity data
@@ -268,111 +269,145 @@ exports.getMentorshipApplicationsForUser = async (req, res) => {
     - Exclude test data: ${excludeTestData}
     `);
 
-    // MongoDB query tailored to find applications by userId
-    console.log('Performing MongoDB query for applications');
+    // Generate a cache key based on the user ID and query parameters
+    const cacheKey = `mentorshipApplications:user:${userId}:${firebaseUID}:${excludeTestData}`;
 
-    // The main query - use an $or to try multiple possible user ID formats
-    const query = {
-      $or: [
-        { userId: userId },
-        { userId: firebaseUID }
-      ]
-    };
+    // Try to get data from cache first
+    let filteredApplications = await getCachedData(
+      'MentorshipApplication',
+      null,
+      null,
+      cacheKey
+    );
 
-    // Special case handling for the known user with specific ID
-    if (userId === 'e9AMLzvvdjhL28f534BsWqCixnN2') {
-      // Add the specific ID we know exists in the database to our query
-      query.$or.push({ userId: "4EOWySj0hHfLOCWFxi3JeJYsqTj2" });
-      console.log('Adding special case query for known user ID: 4EOWySj0hHfLOCWFxi3JeJYsqTj2');
-    }
+    // If not in cache, fetch from database
+    if (!filteredApplications) {
+      console.log('Cache miss. Performing MongoDB query for applications');
 
-    console.log('Final query:', JSON.stringify(query));
+      // The main query - use an $or to try multiple possible user ID formats
+      const query = {
+        $or: [
+          { userId: userId },
+          { userId: firebaseUID },
+          { firebaseUID: userId },
+          { firebaseUID: firebaseUID }
+        ]
+      };
 
-    const applications = await MentorshipApplication.find(query)
-    .populate({
-      path: 'mentorshipId',
-      select: 'title description mentor startDate endDate expectations duration commitment'
-    })
-    .sort({ appliedAt: -1 });
-
-    console.log(`MongoDB query found ${applications.length} applications`);
-    if (applications.length > 0) {
-      console.log('Sample application found:', {
-        id: applications[0]._id,
-        userId: applications[0].userId,
-        name: applications[0].name,
-        mentorshipId: applications[0].mentorshipId
-      });
-    }
-
-    // Enhance application data with more details if needed
-    const enhancedApplications = await Promise.all(applications.map(async (app) => {
-      const appData = app.toObject();
-
-      // If mentorshipId is a string but hasn't been populated, try to fetch it directly
-      if (typeof appData.mentorshipId === 'string') {
-        try {
-          // First check if the mentorshipId is a valid MongoDB ObjectId
-          const isValidObjectId = mongoose.isValidObjectId(appData.mentorshipId);
-
-          if (isValidObjectId) {
-            const mentorship = await Mentorship.findById(appData.mentorshipId)
-              .select('title description mentor startDate endDate expectations duration commitment');
-
-            if (mentorship) {
-              appData.mentorshipId = mentorship.toObject();
-              console.log(`Manually populated mentorship: ${mentorship.title}`);
-            } else {
-              // Mentorship not found, add title
-              appData.mentorshipTitle = "Unknown Mentorship Program";
-            }
-          } else {
-            // Not a valid ObjectId, just use the string as title
-            console.log(`Mentorship ID "${appData.mentorshipId}" is not a valid ObjectId, using as title`);
-            appData.mentorshipTitle = appData.mentorshipId.includes('test')
-              ? "Test Mentorship Program"
-              : appData.mentorshipId;
-          }
-        } catch (err) {
-          console.log(`Could not fetch mentorship details: ${err.message}`);
-          // Add fallback title
-          appData.mentorshipTitle = "Mentorship Program";
-        }
+      // Special case handling for the known user with specific ID
+      if (userId === 'e9AMLzvvdjhL28f534BsWqCixnN2') {
+        // Add the specific ID we know exists in the database to our query
+        query.$or.push({ userId: "4EOWySj0hHfLOCWFxi3JeJYsqTj2" });
+        console.log('Adding special case query for known user ID: 4EOWySj0hHfLOCWFxi3JeJYsqTj2');
       }
 
-      // Add an indicator if this is a test application
-      appData.isTestData =
-        (appData.name && appData.name.toLowerCase().includes('debug')) ||
-        (appData.name && appData.name.toLowerCase().includes('test')) ||
-        (appData.email && appData.email.toLowerCase().includes('test')) ||
-        (appData.mentorshipTitle && appData.mentorshipTitle.toLowerCase().includes('test')) ||
-        (appData.email === 'debug-test@example.com') ||
-        (typeof appData.mentorshipId === 'string' && appData.mentorshipId.includes('test'));
+      console.log('Final query:', JSON.stringify(query));
 
-      return appData;
-    }));
+      // Use projection to limit fields returned for better performance
+      const options = {
+        sort: { appliedAt: -1 },
+        populate: {
+          path: 'mentorshipId',
+          select: 'title description mentor startDate endDate expectations duration commitment'
+        }
+      };
 
-    // Filter out test data if requested
-    const filteredApplications = excludeTestData
-      ? enhancedApplications.filter(app => !app.isTestData)
-      : enhancedApplications;
+      // Use lean query for better performance
+      const applications = await MentorshipApplication.find(query)
+        .populate(options.populate)
+        .sort(options.sort)
+        .lean();
 
-    console.log(`Returning ${filteredApplications.length} applications (filtered out ${enhancedApplications.length - filteredApplications.length} test applications)`);
+      console.log(`MongoDB query found ${applications.length} applications`);
+      if (applications.length > 0) {
+        console.log('Sample application found:', {
+          id: applications[0]._id,
+          userId: applications[0].userId,
+          name: applications[0].name,
+          mentorshipId: applications[0].mentorshipId
+        });
+      }
+
+      // Enhance application data with more details if needed
+      const enhancedApplications = await Promise.all(applications.map(async (appData) => {
+        // If mentorshipId is a string but hasn't been populated, try to fetch it directly
+        if (typeof appData.mentorshipId === 'string') {
+          try {
+            // First check if the mentorshipId is a valid MongoDB ObjectId
+            const isValidObjectId = mongoose.isValidObjectId(appData.mentorshipId);
+
+            if (isValidObjectId) {
+              // Use cached document for better performance
+              const mentorship = await getCachedDocument(
+                'Mentorship',
+                appData.mentorshipId,
+                { select: 'title description mentor startDate endDate expectations duration commitment' }
+              );
+
+              if (mentorship) {
+                appData.mentorshipId = mentorship;
+                console.log(`Populated mentorship from cache: ${mentorship.title}`);
+              } else {
+                // Mentorship not found, add title as a new property
+                appData = { ...appData, mentorshipTitle: "Unknown Mentorship Program" };
+              }
+            } else {
+              // Not a valid ObjectId, just use the string as title
+              console.log(`Mentorship ID "${appData.mentorshipId}" is not a valid ObjectId, using as title`);
+              const titleValue = appData.mentorshipId.includes('test')
+                ? "Test Mentorship Program"
+                : appData.mentorshipId;
+              appData = { ...appData, mentorshipTitle: titleValue };
+            }
+          } catch (err) {
+            console.log(`Could not fetch mentorship details: ${err.message}`);
+            // Add fallback title
+            appData = { ...appData, mentorshipTitle: "Mentorship Program" };
+          }
+        }
+
+        // Add an indicator if this is a test application
+        const isTestData =
+          (appData.name && appData.name.toLowerCase().includes('debug')) ||
+          (appData.name && appData.name.toLowerCase().includes('test')) ||
+          (appData.email && appData.email.toLowerCase().includes('test')) ||
+          (appData.mentorshipTitle && appData.mentorshipTitle.toLowerCase().includes('test')) ||
+          (appData.email === 'debug-test@example.com') ||
+          (typeof appData.mentorshipId === 'string' && appData.mentorshipId.includes('test'));
+
+        // Add the isTestData property to the object
+        appData = { ...appData, isTestData };
+
+        return appData;
+      }));
+
+      // Filter out test data if requested
+      filteredApplications = excludeTestData
+        ? enhancedApplications.filter(app => !app.isTestData)
+        : enhancedApplications;
+
+      console.log(`Processed ${filteredApplications.length} applications (filtered out ${enhancedApplications.length - filteredApplications.length} test applications)`);
+
+      // Cache the results for future requests
+      getCachedData('MentorshipApplication', null, null, cacheKey, filteredApplications);
+    } else {
+      console.log(`Cache hit! Using cached mentorship applications for user ${userId}`);
+    }
 
     // Log real applications for debugging
     if (filteredApplications.length > 0) {
-      console.log('Real applications found:');
-      filteredApplications.forEach((app, index) => {
-        console.log(`Real App ${index+1}:`, {
+      console.log('Applications found:', filteredApplications.length);
+      // Only log the first few applications to avoid console spam
+      filteredApplications.slice(0, 3).forEach((app, index) => {
+        console.log(`App ${index+1}:`, {
           id: app._id,
           name: app.name,
-          email: app.email,
           mentorshipId: typeof app.mentorshipId === 'object' ? app.mentorshipId.title : app.mentorshipId,
           status: app.status
         });
       });
     } else {
-      console.log('No real applications found for this user');
+      console.log('No applications found for this user');
     }
 
     res.status(200).json({

@@ -2,6 +2,7 @@ const JobApplication = require('../models/JobApplication');
 const Job = require('../models/Job');
 const mongoose = require('mongoose');
 const { insertDocument } = require('../utils/directDbInsert');
+const { getCachedData, getCachedDocument } = require('../services/cachedDataService');
 
 exports.applyForJob = async (req, res) => {
   try {
@@ -141,21 +142,78 @@ exports.getJobApplicationsForUser = async (req, res) => {
     const userId = req.params.userId;
     console.log(`Looking for job applications for user: ${userId}`);
 
-    // Direct approach - find all applications with matching userId as a string
-    const applications = await JobApplication.find({
-      userId: userId
-    });
+    // Generate a cache key based on the user ID
+    const cacheKey = `jobApplications:user:${userId}`;
 
-    console.log(`Found ${applications.length} job applications for user ${userId}`);
+    // Try to get data from cache first
+    let applications = await getCachedData(
+      'JobApplication',
+      null,
+      null,
+      cacheKey
+    );
 
-    // Log the applications for debugging
+    // If not in cache, fetch from database
+    if (!applications) {
+      console.log('Cache miss. Performing MongoDB query for job applications');
+
+      // Use lean query for better performance
+      applications = await JobApplication.find({ userId: userId })
+        .populate({
+          path: 'jobId',
+          select: 'title company location type applicationDeadline'
+        })
+        .sort({ appliedAt: -1 })
+        .lean();
+
+      console.log(`Found ${applications.length} job applications for user ${userId}`);
+
+      // Cache the results for future requests (5 minute expiration)
+      if (applications.length > 0) {
+        // Process applications to ensure all required data is present
+        const processedApplications = await Promise.all(applications.map(async (appData) => {
+          // If jobId is a string but hasn't been populated, try to fetch it directly
+          if (typeof appData.jobId === 'string') {
+            try {
+              // Check if the jobId is a valid MongoDB ObjectId
+              const isValidObjectId = mongoose.isValidObjectId(appData.jobId);
+
+              if (isValidObjectId) {
+                // Use cached document for better performance
+                const job = await getCachedDocument(
+                  'Job',
+                  appData.jobId,
+                  { select: 'title company location type applicationDeadline' }
+                );
+
+                if (job) {
+                  appData.jobId = job;
+                  console.log(`Populated job from cache: ${job.title}`);
+                }
+              }
+            } catch (err) {
+              console.log(`Could not fetch job details: ${err.message}`);
+            }
+          }
+          return appData;
+        }));
+
+        // Store processed applications in cache
+        getCachedData('JobApplication', null, null, cacheKey, processedApplications);
+        applications = processedApplications;
+      }
+    } else {
+      console.log(`Cache hit! Using cached job applications for user ${userId}`);
+    }
+
+    // Log the applications for debugging (only first few to avoid console spam)
     if (applications.length > 0) {
-      applications.forEach((app, index) => {
+      console.log(`Returning ${applications.length} job applications`);
+      applications.slice(0, 3).forEach((app, index) => {
         console.log(`Application ${index+1}:`, {
           id: app._id,
-          jobId: app.jobId,
+          jobId: typeof app.jobId === 'object' ? app.jobId.title : app.jobId,
           name: app.name,
-          skills: app.skills,
           status: app.status
         });
       });
